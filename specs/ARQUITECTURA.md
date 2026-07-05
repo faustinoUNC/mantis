@@ -97,6 +97,6 @@ specs/              # STORY-XXX.md — fuente de verdad
 ## 8. Seguridad
 
 - RLS en todas las tablas desde la primera migración (no como afterthought).
-- Políticas por rol usando claim de rol en JWT (custom claim vía trigger en `auth.users`).
+- Políticas por rol vía función `public.rol_actual()` (SECURITY DEFINER acotada: devuelve solo el rol del propio `auth.uid()` si está activo; EXECUTE revocado para anon). Sin claim JWT custom — evita configurar el Custom Access Token Hook y el problema de claims desactualizados hasta el refresh. *(Ajustado por STORY-102; antes decía "claim vía trigger", patrón que ya no existe.)*
 - Permisos por columna del funnel: chequeados en la función `avanzar_etapa()` en Postgres (server-side, no solo UI).
 - Inquilinos/propietarios NO tienen registros en `auth.users` — imposible que accedan.

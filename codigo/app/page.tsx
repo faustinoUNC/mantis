@@ -1,10 +1,13 @@
+import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { LoginForm } from "@/components/auth/login-form.client";
+import { obtenerUsuarioActual } from "@/features/auth/service";
 
-// Login shell — la lógica de autenticación llega con la Story 1.2.
-export default function LoginPage() {
+export default async function LoginPage() {
+  // Con sesión activa, directo al panel del rol.
+  const usuario = await obtenerUsuarioActual();
+  if (usuario) redirect("/panel");
   return (
     <main className="flex-1 grid lg:grid-cols-[1.1fr_1fr]">
       {/* Panel de marca */}
@@ -60,25 +63,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form className="flex flex-col gap-5">
-            <Input
-              label="Correo electrónico"
-              type="email"
-              name="email"
-              placeholder="nombre@inmobiliaria.com"
-              autoComplete="email"
-            />
-            <Input
-              label="Contraseña"
-              type="password"
-              name="password"
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-            <Button type="submit" className="mt-1 w-full">
-              Entrar al sistema
-            </Button>
-          </form>
+          <LoginForm />
 
           <div className="regla-plano my-7" />
 
