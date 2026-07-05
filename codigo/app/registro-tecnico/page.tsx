@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { EnrolamientoForm } from "@/components/tecnicos/enrolamiento.client";
-import { listarEspecialidadesActivas } from "@/features/especialidades/service";
+import { RegistroTecnicoForm } from "@/components/tecnicos/enrolamiento.client";
+import { especialidadesParaRegistro } from "@/features/tecnicos/service";
 
-// Página PÚBLICA de enrolamiento de técnicos — mobile-first, estilo editorial.
-export default async function EnrolamientoPage() {
-  const especialidades = await listarEspecialidadesActivas();
+// Página PÚBLICA de registro de técnicos — mobile-first, estilo editorial.
+export default async function RegistroTecnicoPage() {
+  const especialidades = await especialidadesParaRegistro();
 
   return (
     <main className="fondo-tecnico flex-1 px-6 sm:px-[10vw] py-10">
@@ -33,7 +33,7 @@ export default async function EnrolamientoPage() {
         </p>
 
         <div className="animate-aparecer mt-8" style={{ animationDelay: "200ms" }}>
-          <EnrolamientoForm especialidades={especialidades} />
+          <RegistroTecnicoForm especialidades={especialidades} />
         </div>
       </div>
     </main>

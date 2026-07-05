@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -202,8 +202,7 @@ export function Inbox({
   const router = useRouter();
   const [sincronizando, setSincronizando] = useState(false);
   const sincronizado = useRef(false);
-  const pendientes = reportes.filter((r) => r.estado === "pendiente");
-  const procesados = reportes.filter((r) => r.estado !== "pendiente");
+  const pendientes = reportes; // el service ya trae solo pendientes
 
   async function sincronizar() {
     setSincronizando(true);
@@ -222,6 +221,7 @@ export function Inbox({
 
   return (
     <div className="animate-aparecer max-w-2xl">
+      <RefrescoVivo tabla="inbox_reportes" />
       <div className="flex items-center justify-between mb-5">
         <div>
           <p className="text-[13px] font-medium text-muted">
@@ -258,33 +258,6 @@ export function Inbox({
         ))}
       </div>
 
-      {procesados.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-[13px] font-medium text-muted mb-2">Procesados</h2>
-          <Card className="divide-y divide-border">
-            {procesados.map((r) => (
-              <div key={r.id} className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
-                <span className="min-w-0">
-                  <span className="line-clamp-1">{r.asunto ?? "(sin asunto)"}</span>
-                  {r.motivo_descarte && (
-                    <span className="text-[13px] text-muted">Descartado: {r.motivo_descarte}</span>
-                  )}
-                </span>
-                {r.estado === "gestionado" && r.gestion_id ? (
-                  <Link
-                    href={`/gestiones/${r.gestion_id}`}
-                    className="text-brand font-medium shrink-0"
-                  >
-                    Ver gestión →
-                  </Link>
-                ) : (
-                  <Badge tono="neutro">Descartado</Badge>
-                )}
-              </div>
-            ))}
-          </Card>
-        </section>
-      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { TecnicoForm } from "@/components/tecnicos/form-tecnico.client";
 import type { Especialidad } from "@/features/especialidades/types";
 
-export function EnrolamientoForm({
+export function RegistroTecnicoForm({
   especialidades,
 }: {
   especialidades: Especialidad[];

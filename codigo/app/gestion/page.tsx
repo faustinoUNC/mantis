@@ -1,25 +1,55 @@
-import { Tablero } from "@/components/gestiones/tablero.client";
-import { listarEspecialidadesActivas } from "@/features/especialidades/service";
-import { listarPropiedades } from "@/features/cartera/service";
+import { InicioRol } from "@/components/paneles/inicio-rol";
+import { obtenerUsuarioActual } from "@/features/auth/service";
 import { tableroGestiones } from "@/features/gestiones/service";
-import type { Rol } from "@/features/auth/types";
+import { listarInbox } from "@/features/inbox/service";
+import { obtenerMetricas } from "@/features/metricas/service";
+import { listarTecnicos } from "@/features/tecnicos/service";
 
-async function datosTablero() {
-  const [gestiones, propiedades, especialidades] = await Promise.all([
+const MIS_ETAPAS = new Set([
+  "ingresado",
+  "asignacion",
+  "presupuesto",
+  "en_ejecucion",
+  "conformidad",
+]);
+
+export default async function GestionInicio() {
+  const [usuario, gestiones, metricas, inbox, tecnicos] = await Promise.all([
+    obtenerUsuarioActual(),
     tableroGestiones(),
-    listarPropiedades(),
-    listarEspecialidadesActivas(),
+    obtenerMetricas(),
+    listarInbox(),
+    listarTecnicos(),
   ]);
-  return {
-    gestiones,
-    especialidades,
-    propiedades: propiedades
-      .filter((p) => p.activa)
-      .map((p) => ({ id: p.id, direccion: p.direccion })),
-  };
-}
+  const solicitudes = tecnicos.filter((t) => t.estado === "pendiente").length;
 
-export default async function Page() {
-  const datos = await datosTablero();
-  return <Tablero rol={"gestor_mantenimiento" as Rol} {...datos} />;
+  return (
+    <InicioRol
+      nombre={usuario!.nombre}
+      tiles={[
+        { label: "Mis gestiones activas", valor: String(metricas?.activas ?? 0), href: "/tablero" },
+        {
+          label: "Urgentes +24 h sin técnico",
+          valor: String(metricas?.urgentesDemoradas ?? 0),
+          alerta: (metricas?.urgentesDemoradas ?? 0) > 0,
+          href: "/tablero",
+        },
+        {
+          label: "Reportes en el inbox",
+          valor: String(inbox.length),
+          alerta: inbox.length > 0,
+          href: "/inbox",
+        },
+        {
+          label: "Solicitudes de técnicos",
+          valor: String(solicitudes),
+          alerta: solicitudes > 0,
+          href: "/tecnicos",
+        },
+      ]}
+      acciones={gestiones.filter((g) => MIS_ETAPAS.has(g.etapa)).slice(0, 6)}
+      tituloAcciones="Requieren tu acción"
+      vacioAcciones="Nada pendiente de tu lado. ✦"
+    />
+  );
 }

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { InputPassword } from "@/components/ui/input-password.client";
 import { createClient } from "@/shared/lib/supabase/client";
 
 function CampoEditorial({
@@ -57,9 +58,9 @@ export function LoginForm() {
         autoComplete="email"
         required
       />
-      <CampoEditorial
+      <InputPassword
         label="Contraseña"
-        type="password"
+        variante="editorial"
         name="password"
         placeholder="••••••••"
         autoComplete="current-password"

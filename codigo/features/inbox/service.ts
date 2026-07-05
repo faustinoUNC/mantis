@@ -50,6 +50,7 @@ export async function listarInbox(): Promise<Reporte[]> {
     .select(
       "id, canal, remitente, asunto, cuerpo, recibido_en, estado, motivo_descarte, gestion_id"
     )
+    .eq("estado", "pendiente") // lo procesado vive en sus gestiones/auditoría
     .order("creado_en", { ascending: false })
     .limit(50);
   return (data ?? []) as Reporte[];

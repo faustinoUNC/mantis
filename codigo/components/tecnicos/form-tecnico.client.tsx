@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputPassword } from "@/components/ui/input-password.client";
 import type { Especialidad } from "@/features/especialidades/types";
 import {
   crearTecnicoManual,
@@ -68,7 +69,7 @@ export function TecnicoForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Nombre" name="nombre" required placeholder="Nombre y apellido" />
         <Input label="Correo electrónico" name="email" type="email" required placeholder="tu@correo.com" />
-        <Input label="Contraseña" name="password" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" />
+        <InputPassword label="Contraseña" name="password" required minLength={8} placeholder="Mínimo 8 caracteres" />
         <Input label="Teléfono" name="telefono" placeholder="Opcional" />
         <Input label="DNI" name="dni" placeholder="Opcional" />
       </div>

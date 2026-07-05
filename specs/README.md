@@ -74,6 +74,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 **ÉPICA 5 COMPLETA** ✅ (2026-07-05) — realtime en vivo verificado; email real entregado; falta verificar dominio en Resend para destinatarios reales.
 
 | [STORY-701](STORY-701.md) | Finanzas: nota de cobro PDF, cobro y liquidación (7.1–7.3) | ✅ done |
+| [STORY-901](STORY-901.md) | Post-MVP: sidebar+dashboards, nav mobile técnico, inbox vivo, registro | ✅ done |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.
 

@@ -94,10 +94,10 @@ export default async function LoginPage({
         >
           ¿Sos técnico y todavía no tenés cuenta?{" "}
           <Link
-            href="/enrolamiento"
+            href="/registro-tecnico"
             className="font-medium text-brand hover:text-brand-hover"
           >
-            Enrolate acá
+            Registrate acá
           </Link>
         </p>
       </div>

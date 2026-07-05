@@ -133,7 +133,7 @@ export function Tecnicos({
             {ordenados.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm">
-                  Todavía no hay técnicos. Cargalos con “Alta manual” o esperá enrolamientos.
+                  Todavía no hay técnicos. Cargalos con “Alta manual” o esperá registros nuevos.
                 </td>
               </tr>
             )}

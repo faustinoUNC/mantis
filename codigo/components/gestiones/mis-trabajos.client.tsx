@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { TableroVivo } from "@/components/gestiones/tablero-vivo.client";
+import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { GestionResumen } from "@/features/gestiones/types";
@@ -23,7 +23,7 @@ export function MisTrabajos({ gestiones }: { gestiones: GestionResumen[] }) {
 
   return (
     <div className="animate-aparecer max-w-lg">
-      <TableroVivo />
+      <RefrescoVivo tabla="gestiones" />
       <p className="text-[13px] font-medium text-muted">Hoy</p>
       <h1 className="text-2xl font-semibold tracking-tight mt-0.5 mb-5">
         Mis trabajos

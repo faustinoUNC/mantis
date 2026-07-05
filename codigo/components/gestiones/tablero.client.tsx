@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { Rol } from "@/features/auth/types";
 import type { Especialidad } from "@/features/especialidades/types";
-import { TableroVivo } from "@/components/gestiones/tablero-vivo.client";
+import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { crearGestion } from "@/features/gestiones/service";
 import type { GestionResumen, Urgencia, Causa } from "@/features/gestiones/types";
 import { ETAPAS, LABEL_CAUSA } from "@/features/gestiones/types";
@@ -171,7 +171,7 @@ export function Tablero({
 
   return (
     <div className="animate-aparecer">
-      <TableroVivo />
+      <RefrescoVivo tabla="gestiones" />
       <div className="flex items-center justify-between mb-5">
         <div>
           <p className="text-[13px] font-medium text-muted">Funnel</p>

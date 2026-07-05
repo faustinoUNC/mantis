@@ -104,6 +104,17 @@ components:
     contenedor: 'card'
     header: 'fila {typography.label} con borde inferior {colors.border}'
     filas: 'borde inferior {colors.border}; hover {colors.surface-2}'
+  sidebar-nav:
+    uso: 'navegación del staff (admin y gestores) en desktop'
+    estilo: 'panel vertical izquierdo w-56, {colors.surface} + borde derecho {colors.border}; ítems ícono SVG 17px + label 14px medium; activo = {colors.brand-soft} + texto brand-active; pie con badge de rol, nombre y salir'
+    mobile: 'colapsa a barra superior + fila de íconos scrolleable'
+  nav-tecnico:
+    uso: 'navegación del técnico — SIEMPRE inferior fija en mobile'
+    estilo: 'bottom bar {colors.surface} + borde superior; íconos 22px + label 10px; activo esmeralda con stroke 2.1; targets ≥44px; safe-area inset'
+  input-password:
+    estilo: 'input (caja o editorial) + botón ojito (mostrar/ocultar) a la derecha — OBLIGATORIO en todo campo de contraseña'
+  iconos:
+    fuente: 'set propio SVG stroke 1.8 currentColor en components/ui/iconos.tsx — nunca librerías de íconos'
   mapa:
     estilo: 'iframe Google Maps embed con el tratamiento de card (borde {colors.border}, radio {rounded.lg}); botón "Abrir en Google Maps" = button-secondary con pin esmeralda'
     uso: 'preview al cargar dirección (validación visual), detalle de propiedad, detalle de gestión'

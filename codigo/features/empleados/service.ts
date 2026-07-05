@@ -22,6 +22,7 @@ export async function listarEmpleados(): Promise<Empleado[]> {
   const { data } = await supabase
     .from("usuarios")
     .select("id, nombre, email, rol, esta_activo, creado_en")
+    .neq("rol", "tecnico") // los técnicos viven en su propia sección
     .order("creado_en", { ascending: true });
   return (data ?? []) as Empleado[];
 }
@@ -31,6 +32,9 @@ export async function crearEmpleado(
 ): Promise<ActionResult> {
   const permiso = await exigirAdmin();
   if (!permiso.ok) return permiso;
+  if (nuevo.rol === "tecnico") {
+    return { ok: false, error: "Los técnicos se gestionan desde la sección Técnicos." };
+  }
 
   const admin = createAdminClient();
   const { data: creado, error: errorAuth } = await admin.auth.admin.createUser({
@@ -111,6 +115,9 @@ export async function editarEmpleado(
   // silenciosa (0 filas) y la whitelist evita campos extra en el payload.
   const permiso = await exigirAdmin();
   if (!permiso.ok) return permiso;
+  if (cambios.rol === "tecnico") {
+    return { ok: false, error: "Los técnicos se gestionan desde la sección Técnicos." };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase

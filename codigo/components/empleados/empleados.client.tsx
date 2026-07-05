@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputPassword } from "@/components/ui/input-password.client";
 import { Select } from "@/components/ui/select";
 import { NOMBRE_ROL, type Rol } from "@/features/auth/types";
 import {
@@ -14,7 +15,8 @@ import {
 } from "@/features/empleados/service";
 import type { Empleado } from "@/features/empleados/types";
 
-const ROLES = Object.keys(NOMBRE_ROL) as Rol[];
+// Los técnicos se gestionan SOLO en la sección Técnicos (STORY-901).
+const ROLES = (Object.keys(NOMBRE_ROL) as Rol[]).filter((r) => r !== "tecnico");
 
 function OpcionesRol() {
   return ROLES.map((rol) => (
@@ -55,7 +57,7 @@ function FormNuevo({ onListo }: { onListo: () => void }) {
       >
         <Input label="Nombre" name="nombre" required placeholder="Nombre y apellido" />
         <Input label="Correo electrónico" name="email" type="email" required placeholder="nombre@inmobiliaria.com" />
-        <Input label="Contraseña inicial" name="password" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" />
+        <InputPassword label="Contraseña inicial" name="password" required minLength={8} placeholder="Mínimo 8 caracteres" />
         <Select label="Rol" name="rol" defaultValue="gestor_mantenimiento">
           <OpcionesRol />
         </Select>

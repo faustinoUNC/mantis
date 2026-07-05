@@ -162,7 +162,19 @@ export async function crearTecnicoManual(form: FormData): Promise<ActionResult> 
   return altaTecnico(form, "aprobado");
 }
 
-// PÚBLICO (sin sesión): enrolamiento del técnico → solicitud pendiente.
+// PÚBLICO (sin sesión): la RLS de especialidades exige usuario autenticado,
+// así que el registro las lee con admin client (solo activas, solo id+nombre).
+export async function especialidadesParaRegistro() {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("especialidades")
+    .select("id, nombre, requiere_matricula, activa")
+    .eq("activa", true)
+    .order("nombre");
+  return data ?? [];
+}
+
+// PÚBLICO (sin sesión): registro del técnico → solicitud pendiente.
 export async function enrolarTecnico(form: FormData): Promise<ActionResult> {
   return altaTecnico(form, "pendiente");
 }
@@ -347,6 +359,37 @@ export async function estadoSolicitudActual(): Promise<{
     .single();
   if (!data) return null;
   return { estado: data.estado as EstadoTecnico, motivo: data.motivo_rechazo };
+}
+
+// Perfil del propio técnico (STORY-901): RLS le permite leer su fila.
+export async function miPerfilTecnico() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: t } = await supabase
+    .from("tecnicos")
+    .select(
+      "nombre, email, telefono, dni, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidades(nombre))"
+    )
+    .eq("id", user.id)
+    .single();
+  if (!t) return null;
+
+  type TE = { especialidades: { nombre: string } | null };
+  return {
+    nombre: t.nombre,
+    email: t.email,
+    telefono: t.telefono,
+    dni: t.dni,
+    tiene_dni: Boolean(t.doc_dni_path),
+    tiene_matricula: Boolean(t.doc_matricula_path),
+    especialidades: ((t.tecnico_especialidades as unknown as TE[]) ?? [])
+      .map((te) => te.especialidades?.nombre)
+      .filter(Boolean) as string[],
+  };
 }
 
 // ── Agenda ──

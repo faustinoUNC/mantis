@@ -19,32 +19,42 @@ export const RUTA_POR_ROL: Record<Rol, string> = {
   tecnico: "/tecnico",
 };
 
-export const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
+export interface ItemNav {
+  href: string;
+  label: string;
+  icono: string;
+}
+
+export const NAV_POR_ROL: Record<Rol, ItemNav[]> = {
   administrador: [
-    { href: "/admin", label: "Inicio" },
-    { href: "/inbox", label: "Inbox" },
-    { href: "/cartera/propiedades", label: "Cartera" },
-    { href: "/tecnicos", label: "Técnicos" },
-    { href: "/metricas", label: "Métricas" },
-    { href: "/admin/auditoria", label: "Auditoría" },
-    { href: "/admin/empleados", label: "Empleados" },
-    { href: "/admin/especialidades", label: "Especialidades" },
+    { href: "/admin", label: "Inicio", icono: "inicio" },
+    { href: "/tablero", label: "Tablero", icono: "tablero" },
+    { href: "/inbox", label: "Inbox", icono: "inbox" },
+    { href: "/cartera/propiedades", label: "Cartera", icono: "cartera" },
+    { href: "/tecnicos", label: "Técnicos", icono: "tecnicos" },
+    { href: "/metricas", label: "Métricas", icono: "metricas" },
+    { href: "/admin/auditoria", label: "Auditoría", icono: "auditoria" },
+    { href: "/admin/empleados", label: "Empleados", icono: "empleados" },
+    { href: "/admin/especialidades", label: "Especialidades", icono: "especialidades" },
   ],
   gestor_mantenimiento: [
-    { href: "/gestion", label: "Inicio" },
-    { href: "/inbox", label: "Inbox" },
-    { href: "/cartera/propiedades", label: "Cartera" },
-    { href: "/tecnicos", label: "Técnicos" },
-    { href: "/metricas", label: "Métricas" },
+    { href: "/gestion", label: "Inicio", icono: "inicio" },
+    { href: "/tablero", label: "Tablero", icono: "tablero" },
+    { href: "/inbox", label: "Inbox", icono: "inbox" },
+    { href: "/cartera/propiedades", label: "Cartera", icono: "cartera" },
+    { href: "/tecnicos", label: "Técnicos", icono: "tecnicos" },
+    { href: "/metricas", label: "Métricas", icono: "metricas" },
   ],
   gestor_administrativo: [
-    { href: "/administracion", label: "Inicio" },
-    { href: "/cartera/propiedades", label: "Cartera" },
-    { href: "/metricas", label: "Métricas" },
+    { href: "/administracion", label: "Inicio", icono: "inicio" },
+    { href: "/tablero", label: "Tablero", icono: "tablero" },
+    { href: "/cartera/propiedades", label: "Cartera", icono: "cartera" },
+    { href: "/metricas", label: "Métricas", icono: "metricas" },
   ],
   tecnico: [
-    { href: "/tecnico", label: "Mis trabajos" },
-    { href: "/tecnico/agenda", label: "Mi agenda" },
+    { href: "/tecnico", label: "Trabajos", icono: "tecnicos" },
+    { href: "/tecnico/agenda", label: "Agenda", icono: "agenda" },
+    { href: "/tecnico/perfil", label: "Perfil", icono: "perfil" },
   ],
 };
 

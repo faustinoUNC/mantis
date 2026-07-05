@@ -4,10 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { createClient } from "@/shared/lib/supabase/client";
 
-// Tablero vivo (STORY-401 v1.1.0): cuando OTRA persona crea o mueve una
-// gestión, la vista se refresca sola. RLS limita la suscripción a las filas
-// que este usuario puede ver (ownership del gestor incluida).
-export function TableroVivo() {
+// Refresco en vivo genérico: la vista se recarga cuando cambia la tabla
+// indicada (RLS limita qué filas dispara para cada suscriptor). Patrón del
+// proyecto: getSession + setAuth ANTES de suscribirse.
+export function RefrescoVivo({ tabla }: { tabla: string }) {
   const router = useRouter();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -24,13 +24,11 @@ export function TableroVivo() {
       if (desmontado) return;
 
       canal = supabase
-        .channel("tablero-vivo")
+        .channel(`vivo-${tabla}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "gestiones" },
+          { event: "*", schema: "public", table: tabla },
           () => {
-            // Debounce: varios eventos seguidos (transición + asignación)
-            // producen UN solo refresh.
             if (timer.current) clearTimeout(timer.current);
             timer.current = setTimeout(() => router.refresh(), 400);
           }
@@ -43,7 +41,7 @@ export function TableroVivo() {
       if (timer.current) clearTimeout(timer.current);
       if (canal) supabase.removeChannel(canal);
     };
-  }, [router]);
+  }, [router, tabla]);
 
   return null;
 }
