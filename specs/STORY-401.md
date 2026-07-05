@@ -1,6 +1,6 @@
 # Story 4.1 (+4.2/4.3 núcleo): Modelo del funnel, creación de gestiones y tablero Kanban
 
-Status: ready-for-dev
+Status: done
 Versión: 1.0.0
 
 > Nota: por cohesión de implementación, esta spec cubre el núcleo del funnel (modelo + `avanzar_etapa()` + creación + tablero). Las stories 4.4–4.8 tienen specs propias (STORY-404…408). Corresponde a las stories 4.1, 4.2 y 4.3 de epics.md.
@@ -42,5 +42,8 @@ para seguir todo el ciclo de mantenimiento de un vistazo.
 claude-fable-5 (Claude Code, 2026-07-05)
 
 ### Completion Notes List
+
+- E2E del ciclo COMPLETO con 3 roles: Carla creó (urgente, Gas, pagador sugerido propietario) → asignó a Miguel viendo su disponibilidad → Miguel aceptó → inspección + presupuesto → Carla aprobó (pagador) → avance → conformidad con foto → Carla aprobó (costo final $53.000) → admin cerró Facturación → Liquidación → FINALIZADO. Timeline de eventos completo.
+- avanzar_etapa() y responder_asignacion() en Postgres (SECURITY DEFINER con matriz de permisos interna); WITH CHECK de presupuestos/conformidades endurecidos tras advisor.
 
 ### File List

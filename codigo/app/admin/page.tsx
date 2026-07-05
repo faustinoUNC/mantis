@@ -1,11 +1,25 @@
-export default function Page() {
-  return (
-    <div className="animate-aparecer">
-      <span className="text-[13px] font-medium text-muted">Panel</span>
-      <h1 className="text-2xl font-semibold tracking-tight mt-1">Administración general</h1>
-      <p className="text-sm text-muted mt-2">
-        Próximamente: acá van los módulos de este rol.
-      </p>
-    </div>
-  );
+import { Tablero } from "@/components/gestiones/tablero.client";
+import { listarEspecialidadesActivas } from "@/features/especialidades/service";
+import { listarPropiedades } from "@/features/cartera/service";
+import { tableroGestiones } from "@/features/gestiones/service";
+import type { Rol } from "@/features/auth/types";
+
+async function datosTablero() {
+  const [gestiones, propiedades, especialidades] = await Promise.all([
+    tableroGestiones(),
+    listarPropiedades(),
+    listarEspecialidadesActivas(),
+  ]);
+  return {
+    gestiones,
+    especialidades,
+    propiedades: propiedades
+      .filter((p) => p.activa)
+      .map((p) => ({ id: p.id, direccion: p.direccion })),
+  };
+}
+
+export default async function Page() {
+  const datos = await datosTablero();
+  return <Tablero rol={"administrador" as Rol} {...datos} />;
 }

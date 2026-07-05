@@ -58,3 +58,12 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-304](STORY-304.md) | Agenda de disponibilidad (mobile) | ✅ done |
 
 **ÉPICA 3 COMPLETA** ✅ (2026-07-05) — Recortes de alcance v1.3.0: sin seguro del técnico; cobro simple sin compensación contra liquidación de alquiler.
+
+| [STORY-401](STORY-401.md) | Núcleo del funnel: modelo + avanzar_etapa() + tablero (4.1–4.3) | ✅ done |
+| [STORY-404](STORY-404.md) | Asignación con disponibilidad visible | ✅ done |
+| [STORY-405](STORY-405.md) | Inspección, presupuesto y pagador | ✅ done |
+| [STORY-406](STORY-406.md) | Avances del técnico | ✅ done |
+| [STORY-407](STORY-407.md) | Conformidad y validación | ✅ done |
+| [STORY-408](STORY-408.md) | Reasignación de gestor (solo admin) | ✅ done |
+
+**ÉPICA 4 COMPLETA** ✅ (2026-07-05) — ciclo completo verificado E2E con 3 roles. Facturación/liquidación con acción mínima (el módulo completo llega en la Épica 7).
