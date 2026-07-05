@@ -1,0 +1,27 @@
+# Dependencias y builds
+node_modules/
+.next/
+out/
+
+# Entornos y credenciales
+.env
+.env.local
+.env*.local
+
+# MCP (generado por mcp-switch — nunca commitear)
+.mcp.json
+.mcp-profile
+
+# Claude Code local
+.claude/settings.local.json
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Sistema y herramientas
+.DS_Store
+.playwright-mcp/
+*.tsbuildinfo
+next-env.d.ts
+.vercel
