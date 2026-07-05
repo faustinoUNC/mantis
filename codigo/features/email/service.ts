@@ -8,12 +8,23 @@ import { createAdminClient } from "@/shared/lib/supabase/admin";
 
 const REMITENTE = "MANTIS <onboarding@resend.dev>";
 
+// Todo valor dinámico se escapa antes de entrar al HTML del email
+// (la dirección de la propiedad es texto cargado por usuarios).
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function plantilla(titulo: string, cuerpo: string): string {
   return `<!doctype html><body style="margin:0;background:#fafafa;font-family:system-ui,-apple-system,sans-serif;padding:32px 16px">
   <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:28px">
     <p style="margin:0 0 20px;font-weight:800;font-size:15px;letter-spacing:-0.02em;text-transform:uppercase;color:#18181b">Man<span style="color:#059669">—</span>tis</p>
-    <h1 style="margin:0 0 10px;font-size:19px;letter-spacing:-0.01em;color:#18181b">${titulo}</h1>
-    <p style="margin:0;font-size:15px;line-height:1.6;color:#52525b">${cuerpo}</p>
+    <h1 style="margin:0 0 10px;font-size:19px;letter-spacing:-0.01em;color:#18181b">${esc(titulo)}</h1>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:#52525b">${esc(cuerpo)}</p>
     <hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0 14px">
     <p style="margin:0;font-size:12px;color:#a1a1aa">Este correo es informativo — no hace falta responderlo. Ante cualquier consulta, contactá a la inmobiliaria.</p>
   </div></body>`;
