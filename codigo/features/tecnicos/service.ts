@@ -83,6 +83,13 @@ async function altaTecnico(
   if (datos.especialidadIds.length === 0) {
     return { ok: false, error: "Elegí al menos una especialidad." };
   }
+  if (!datos.dni) {
+    return { ok: false, error: "El DNI es obligatorio." };
+  }
+  const docDniArchivo = form.get("doc_dni") as File | null;
+  if (!docDniArchivo || docDniArchivo.size === 0) {
+    return { ok: false, error: "Subí la foto o PDF de tu DNI." };
+  }
 
   const admin = createAdminClient();
 
@@ -125,7 +132,7 @@ async function altaTecnico(
     nombre: datos.nombre,
     email: datos.email,
     telefono: datos.telefono || null,
-    dni: datos.dni || null,
+    dni: datos.dni,
     estado,
     doc_dni_path: docDni,
     doc_matricula_path: docMatricula,
@@ -225,7 +232,7 @@ export async function obtenerTecnico(
   const { data: t } = await supabase
     .from("tecnicos")
     .select(
-      "id, nombre, email, telefono, dni, estado, motivo_rechazo, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidades(nombre))"
+      "id, nombre, email, telefono, dni, estado, motivo_rechazo, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidad_id, especialidades(nombre))"
     )
     .eq("id", id)
     .single();
@@ -245,7 +252,8 @@ export async function obtenerTecnico(
     if (data?.signedUrl) docs.push({ tipo, url: data.signedUrl });
   }
 
-  type TE = { especialidades: { nombre: string } | null };
+  type TE = { especialidad_id: string; especialidades: { nombre: string } | null };
+  const tes = t.tecnico_especialidades as unknown as TE[];
   return {
     id: t.id,
     nombre: t.nombre,
@@ -254,9 +262,8 @@ export async function obtenerTecnico(
     dni: t.dni,
     estado: t.estado as EstadoTecnico,
     motivo_rechazo: t.motivo_rechazo,
-    especialidades: (t.tecnico_especialidades as unknown as TE[])
-      .map((te) => te.especialidades?.nombre)
-      .filter(Boolean) as string[],
+    especialidades: tes.map((te) => te.especialidades?.nombre).filter(Boolean) as string[],
+    especialidad_ids: tes.map((te) => te.especialidad_id),
     esta_activo: null,
     docs,
   };
@@ -303,6 +310,51 @@ export async function rechazarTecnico(
     .eq("id", id);
   if (error) return { ok: false, error: "No se pudo rechazar." };
 
+  revalidatePath("/tecnicos");
+  return { ok: true };
+}
+
+// Editar especialidades de un técnico ya creado (staff de mantenimiento).
+// Si se agrega una que exige matrícula y el técnico no la tiene cargada,
+// se rechaza (coherente con la validación del registro).
+export async function actualizarEspecialidadesTecnico(
+  tecnicoId: string,
+  especialidadIds: string[]
+): Promise<ActionResult> {
+  const permiso = await exigirStaffMantenimiento();
+  if (!permiso.ok) return permiso;
+  if (especialidadIds.length === 0) {
+    return { ok: false, error: "El técnico debe tener al menos una especialidad." };
+  }
+
+  const admin = createAdminClient();
+  const [{ data: tecnico }, { data: exigentes }] = await Promise.all([
+    admin.from("tecnicos").select("doc_matricula_path").eq("id", tecnicoId).single(),
+    admin
+      .from("especialidades")
+      .select("id, nombre")
+      .in("id", especialidadIds)
+      .eq("requiere_matricula", true),
+  ]);
+  if (!tecnico) return { ok: false, error: "Técnico no encontrado." };
+  if ((exigentes?.length ?? 0) > 0 && !tecnico.doc_matricula_path) {
+    return {
+      ok: false,
+      error: `${exigentes!.map((e) => e.nombre).join(", ")} exige matrícula y este técnico no tiene una cargada.`,
+    };
+  }
+
+  // Reemplazo completo del set (simple e idempotente)
+  await admin.from("tecnico_especialidades").delete().eq("tecnico_id", tecnicoId);
+  const { error } = await admin.from("tecnico_especialidades").insert(
+    especialidadIds.map((especialidad_id) => ({
+      tecnico_id: tecnicoId,
+      especialidad_id,
+    }))
+  );
+  if (error) return { ok: false, error: "No se pudieron guardar las especialidades." };
+
+  revalidatePath(`/tecnicos/${tecnicoId}`);
   revalidatePath("/tecnicos");
   return { ok: true };
 }

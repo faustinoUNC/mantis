@@ -28,6 +28,7 @@ function CampoArchivo({
       <input
         type="file"
         name={name}
+        required={requerido}
         accept="image/*,.pdf"
         className="text-sm text-muted file:mr-3 file:min-h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface file:text-sm file:font-medium file:text-foreground hover:file:bg-surface-2 file:transition-colors file:cursor-pointer"
       />
@@ -71,7 +72,7 @@ export function TecnicoForm({
         <Input label="Correo electrónico" name="email" type="email" required placeholder="tu@correo.com" />
         <InputPassword label="Contraseña" name="password" required minLength={8} placeholder="Mínimo 8 caracteres" />
         <Input label="Teléfono" name="telefono" placeholder="Opcional" />
-        <Input label="DNI" name="dni" placeholder="Opcional" />
+        <Input label="DNI" name="dni" required inputMode="numeric" placeholder="Sin puntos, ej. 30123456" />
       </div>
 
       <fieldset>
@@ -106,7 +107,7 @@ export function TecnicoForm({
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <CampoArchivo label="DNI (foto/PDF)" name="doc_dni" />
+        <CampoArchivo label="DNI (foto/PDF)" name="doc_dni" requerido />
         <CampoArchivo label="Matrícula" name="doc_matricula" requerido={exigeMatricula} />
       </div>
 

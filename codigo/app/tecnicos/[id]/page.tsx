@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { EspecialidadesTecnico } from "@/components/tecnicos/especialidades-tecnico.client";
 import { Evaluacion } from "@/components/tecnicos/evaluacion.client";
+import { listarEspecialidadesActivas } from "@/features/especialidades/service";
 import { obtenerTecnico } from "@/features/tecnicos/service";
 
 export default async function TecnicoDetallePage({
@@ -11,7 +13,10 @@ export default async function TecnicoDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const tecnico = await obtenerTecnico(id);
+  const [tecnico, catalogo] = await Promise.all([
+    obtenerTecnico(id),
+    listarEspecialidadesActivas(),
+  ]);
   if (!tecnico) notFound();
 
   return (
@@ -56,13 +61,12 @@ export default async function TecnicoDetallePage({
         </Badge>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {tecnico.especialidades.map((e) => (
-          <Badge key={e} tono="neutro">
-            {e}
-          </Badge>
-        ))}
-      </div>
+      <EspecialidadesTecnico
+        tecnicoId={id}
+        actuales={tecnico.especialidad_ids}
+        nombresActuales={tecnico.especialidades}
+        catalogo={catalogo}
+      />
 
       <Card className="mt-6 p-5">
         <h2 className="text-[13px] font-medium text-muted mb-3">

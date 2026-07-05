@@ -35,6 +35,7 @@ claude-fable-5 (Claude Code, 2026-07-05)
 - Empleados: sin rol técnico en el form (UI + rechazo server-side en crear/editar) y el listado excluye técnicos.
 - Usuarios: gestormantenimientouno / gestormantenimientouno123; nuevo gestoradministrativouno / gestoradministrativouno123. Ruta /enrolamiento → /registro-tecnico.
 - Design contract: sidebar-nav, nav-tecnico, input-password e iconos agregados.
+- v1.2: (a) **DNI obligatorio** en el registro/alta de técnicos — número y foto/PDF, required en UI y rechazo server-side; (b) **edición de especialidades** de un técnico ya creado desde su detalle (staff mantenimiento; reemplazo del set con validación de matrícula si la nueva especialidad la exige); (c) verificado por REST que la asignación YA filtra técnicos por especialidad coincidente (Gas→tecnicouno, Albañilería→vacío).
 - Post-fix: panel de la campana pasado a posición fixed calculada desde el botón (getBoundingClientRect + clamp al viewport) — dentro del sidebar quedaba recortado por el ancho w-56.
 
 ### File List
