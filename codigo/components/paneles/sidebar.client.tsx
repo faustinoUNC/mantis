@@ -55,7 +55,7 @@ export function SidebarStaff({
   return (
     <>
       {/* Desktop: sidebar vertical fijo */}
-      <aside className="hidden md:flex flex-col w-56 shrink-0 bg-surface border-r border-border sticky top-0 h-svh px-3 py-5">
+      <aside className="hidden md:flex flex-col w-56 shrink-0 bg-surface border-r border-border sticky top-0 h-svh px-3 py-5 z-40">
         <div className="flex items-center justify-between px-3 mb-6">
           {marca}
           {campana}
