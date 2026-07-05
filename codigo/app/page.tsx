@@ -1,12 +1,25 @@
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form.client";
 import { obtenerUsuarioActual } from "@/features/auth/service";
+import { createClient } from "@/shared/lib/supabase/server";
 
 // Login editorial: tipografía como protagonista, asimétrico, con pulso.
 // Concepto en DESIGN.md — nada de card centrada ni banner lateral.
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ e?: string }>;
+}) {
   const usuario = await obtenerUsuarioActual();
   if (usuario) redirect("/panel");
+
+  // Sesión válida pero sin usuario activo = cuenta inhabilitada.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { e } = await searchParams;
+  const inhabilitado = e === "inhabilitado" || Boolean(user);
 
   return (
     <main className="fondo-tecnico flex-1 flex flex-col justify-center px-6 sm:px-[12vw] py-12 overflow-hidden">
@@ -42,6 +55,16 @@ export default async function LoginPage() {
         >
           Gestión de mantenimiento inmobiliario: del reporte a la liquidación.
         </p>
+
+        {inhabilitado && (
+          <p
+            role="alert"
+            className="animate-aparecer mt-8 text-sm font-medium text-error bg-error-soft border border-error-soft-border rounded-md px-4 py-3"
+            style={{ animationDelay: "180ms" }}
+          >
+            Tu cuenta está inhabilitada. Contactá al administrador.
+          </p>
+        )}
 
         <div
           className="animate-aparecer mt-10"

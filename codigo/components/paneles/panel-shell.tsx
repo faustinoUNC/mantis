@@ -1,7 +1,13 @@
+import Link from "next/link";
+import { BloqueoWatcher } from "@/components/paneles/bloqueo-watcher.client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cerrarSesion } from "@/features/auth/service";
-import { NOMBRE_ROL, type UsuarioActual } from "@/features/auth/types";
+import {
+  NAV_POR_ROL,
+  NOMBRE_ROL,
+  type UsuarioActual,
+} from "@/features/auth/types";
 import { redirect } from "next/navigation";
 
 // Cáscara común de los 4 paneles: header claro con borde (DESIGN.md).
@@ -20,16 +26,28 @@ export function PanelShell({
 
   return (
     <div className="flex-1 flex flex-col">
+      <BloqueoWatcher usuarioId={usuario.id} />
       <header className="bg-surface border-b border-border">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 px-4 sm:px-8 h-14">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-5">
             <span
               className="font-black uppercase tracking-tight text-base leading-none"
               style={{ fontStretch: "125%" }}
             >
               Man<span className="text-brand">—</span>tis
             </span>
-            <Badge tono="brand" className="hidden sm:inline-flex">
+            <nav className="flex items-center gap-1">
+              {NAV_POR_ROL[usuario.rol].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="px-2.5 py-1.5 rounded-md text-sm font-medium text-muted hover:text-foreground hover:bg-surface-2 transition-colors"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+            <Badge tono="brand" className="hidden md:inline-flex">
               {NOMBRE_ROL[usuario.rol]}
             </Badge>
           </div>

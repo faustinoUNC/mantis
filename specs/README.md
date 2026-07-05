@@ -39,3 +39,8 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 |---|---|---|
 | [STORY-101](STORY-101.md) | Setup del proyecto y design system base | ✅ done |
 | [STORY-102](STORY-102.md) | Login y acceso por rol | ✅ done |
+| [STORY-103](STORY-103.md) | ABM de empleados con asignación de rol | ✅ done |
+| [STORY-104](STORY-104.md) | Bloqueo y habilitación en tiempo real | ✅ done |
+| [STORY-105](STORY-105.md) | Mantenedor de especialidades | ✅ done |
+
+**ÉPICA 1 COMPLETA** ✅ (2026-07-05)

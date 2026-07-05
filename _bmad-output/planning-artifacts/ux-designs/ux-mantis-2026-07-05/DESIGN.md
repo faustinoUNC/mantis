@@ -97,6 +97,13 @@ components:
     uso: 'EXCLUSIVO del login (pantalla de marca)'
     estilo: 'sin caja — subrayado 1px {colors.border-strong}; focus: subrayado {colors.brand} 2px'
     minHeight: '{spacing.tap}'
+  select:
+    estilo: 'idéntico a input (nativo estilizado, sin librerías)'
+    minHeight: '{spacing.tap}'
+  table:
+    contenedor: 'card'
+    header: 'fila {typography.label} con borde inferior {colors.border}'
+    filas: 'borde inferior {colors.border}; hover {colors.surface-2}'
 ---
 
 ## Brand & Style
