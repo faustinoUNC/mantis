@@ -63,6 +63,8 @@ export interface Presupuesto {
   id: string;
   monto_materiales: number;
   monto_mano_obra: number;
+  descripcion_trabajo: string | null;
+  plazo_dias: number | null;
   notas: string | null;
   estado: "enviado" | "aprobado" | "rechazado";
   motivo_rechazo: string | null;

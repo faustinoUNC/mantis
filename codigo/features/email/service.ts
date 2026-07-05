@@ -8,6 +8,14 @@ import { createAdminClient } from "@/shared/lib/supabase/admin";
 
 const REMITENTE = "MANTIS <onboarding@resend.dev>";
 
+// HACK DE TESTING (hasta verificar dominio en Resend): el modo testing de
+// Resend solo entrega a la dirección EXACTA de la cuenta — los alias con
+// "+" rebotan. Se normaliza al enviar; el log guarda el destinatario real.
+function destinoEntregable(para: string): string {
+  const m = para.match(/^ausitesis\+[^@]+@gmail\.com$/i);
+  return m ? "ausitesis@gmail.com" : para;
+}
+
 // Todo valor dinámico se escapa antes de entrar al HTML del email
 // (la dirección de la propiedad es texto cargado por usuarios).
 function esc(s: string): string {
@@ -52,7 +60,7 @@ async function enviarEmail(datos: {
       },
       body: JSON.stringify({
         from: REMITENTE,
-        to: [datos.para],
+        to: [destinoEntregable(datos.para)],
         subject: datos.asunto,
         html: plantilla(datos.titulo, datos.cuerpo),
         ...(datos.adjunto && {

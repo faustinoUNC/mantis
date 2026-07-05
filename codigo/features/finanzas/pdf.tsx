@@ -27,7 +27,7 @@ const s = StyleSheet.create({
 });
 
 export interface DatosDocumento {
-  tipo: "nota" | "comprobante";
+  tipo: "nota" | "comprobante" | "presupuesto";
   numero: string;
   fecha: string;
   destinatarioNombre: string;
@@ -40,11 +40,18 @@ export interface DatosDocumento {
   presupuesto: { materiales: number; manoObra: number } | null;
   total: number;
   facturaRef?: string | null;
+  plazoDias?: number | null;
 }
 
 function monto(n: number) {
   return `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
 }
+
+const TITULO_DOC: Record<DatosDocumento["tipo"], string> = {
+  nota: "Nota de cobro",
+  comprobante: "Comprobante de liquidación",
+  presupuesto: "Presupuesto de obra",
+};
 
 function Documento({ datos }: { datos: DatosDocumento }) {
   const esNota = datos.tipo === "nota";
@@ -57,7 +64,7 @@ function Documento({ datos }: { datos: DatosDocumento }) {
               MAN<Text style={s.guion}>—</Text>TIS
             </Text>
             <Text style={s.tipoDoc}>
-              {esNota ? "Nota de cobro" : "Comprobante de liquidación"} · N° {datos.numero}
+              {TITULO_DOC[datos.tipo]} · N° {datos.numero}
             </Text>
           </View>
           <Text style={{ fontSize: 10, color: "#71717a" }}>{datos.fecha}</Text>
@@ -103,11 +110,22 @@ function Documento({ datos }: { datos: DatosDocumento }) {
           )}
           <View style={s.total}>
             <Text style={s.totalTexto}>
-              {esNota ? "Total a cobrar" : "Total liquidado al técnico"}
+              {datos.tipo === "presupuesto"
+                ? "Total presupuestado"
+                : esNota
+                  ? "Total a cobrar"
+                  : "Total liquidado al técnico"}
             </Text>
             <Text style={s.totalTexto}>{monto(datos.total)}</Text>
           </View>
         </View>
+
+        {datos.plazoDias != null && (
+          <View style={s.seccion}>
+            <Text style={s.label}>Plazo estimado de ejecución</Text>
+            <Text style={s.valor}>{datos.plazoDias} día{datos.plazoDias === 1 ? "" : "s"}</Text>
+          </View>
+        )}
 
         {datos.facturaRef && (
           <View style={s.seccion}>
@@ -117,8 +135,9 @@ function Documento({ datos }: { datos: DatosDocumento }) {
         )}
 
         <Text style={s.pie}>
-          Documento interno de la inmobiliaria emitido por MANTIS. No reemplaza
-          comprobantes fiscales. Ante consultas, contactá a la administración.
+          {datos.tipo === "presupuesto"
+            ? "Presupuesto informativo emitido por la administración vía MANTIS — sujeto a aprobación. No reemplaza comprobantes fiscales."
+            : "Documento interno de la inmobiliaria emitido por MANTIS. No reemplaza comprobantes fiscales. Ante consultas, contactá a la administración."}
         </Text>
       </Page>
     </Document>

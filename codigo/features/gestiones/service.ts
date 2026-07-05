@@ -137,7 +137,7 @@ export async function obtenerGestion(
         .order("creado_en", { ascending: false }),
       supabase
         .from("presupuestos")
-        .select("id, monto_materiales, monto_mano_obra, notas, estado, motivo_rechazo, creado_en")
+        .select("id, monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, motivo_rechazo, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
       supabase
@@ -302,16 +302,30 @@ export async function responderAsignacion(
 
 export async function enviarPresupuesto(
   gestionId: string,
-  datos: { monto_materiales: number; monto_mano_obra: number; notas: string }
+  datos: {
+    monto_materiales: number;
+    monto_mano_obra: number;
+    descripcion_trabajo: string;
+    plazo_dias: number;
+    notas: string;
+  }
 ): Promise<ActionResult> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
+  if (!datos.descripcion_trabajo.trim()) {
+    return { ok: false, error: "Describí el trabajo a realizar." };
+  }
+  if (!datos.plazo_dias || datos.plazo_dias < 1) {
+    return { ok: false, error: "Indicá el plazo estimado en días." };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.from("presupuestos").insert({
     gestion_id: gestionId,
     monto_materiales: datos.monto_materiales,
     monto_mano_obra: datos.monto_mano_obra,
+    descripcion_trabajo: datos.descripcion_trabajo.trim(),
+    plazo_dias: datos.plazo_dias,
     notas: datos.notas || null,
   });
   if (error) return { ok: false, error: "No se pudo enviar el presupuesto." };

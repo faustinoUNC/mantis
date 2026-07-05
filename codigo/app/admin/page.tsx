@@ -38,6 +38,27 @@ export default async function AdminInicio() {
           alerta: solicitudes > 0,
           href: "/tecnicos",
         },
+        // El admin ve todo: también el panorama financiero
+        {
+          label: "Pendientes de cobro",
+          valor: `${metricas?.pendientesCobro ?? 0} · $ ${(metricas?.montoPorCobrar ?? 0).toLocaleString("es-AR")}`,
+          alerta: (metricas?.pendientesCobro ?? 0) > 0,
+          href: "/tablero",
+        },
+        {
+          label: "Pendientes de liquidación",
+          valor: String(metricas?.pendientesLiquidacion ?? 0),
+          alerta: (metricas?.pendientesLiquidacion ?? 0) > 0,
+          href: "/tablero",
+        },
+        {
+          label: "Cobrado acumulado",
+          valor: `$ ${(metricas?.cobradoTotal ?? 0).toLocaleString("es-AR")}`,
+        },
+        {
+          label: "Liquidado a técnicos",
+          valor: `$ ${(metricas?.liquidadoTotal ?? 0).toLocaleString("es-AR")}`,
+        },
       ]}
       acciones={gestiones.filter((g) => g.etapa !== "finalizado").slice(0, 6)}
       tituloAcciones="Gestiones en curso"

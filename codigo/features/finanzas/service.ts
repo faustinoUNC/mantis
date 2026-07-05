@@ -19,11 +19,22 @@ async function exigirAdministrativo() {
   return actual;
 }
 
+async function exigirMantenimiento() {
+  const actual = await obtenerUsuarioActual();
+  if (
+    actual?.rol !== "administrador" &&
+    actual?.rol !== "gestor_mantenimiento"
+  ) {
+    return null;
+  }
+  return actual;
+}
+
 // Arma los datos del documento. Admin client tras verificar rol: cruza
 // legajo/inquilino/propietario que el rol administrativo no siempre lee.
 async function datosDocumento(
   gestionId: string,
-  tipo: "nota" | "comprobante"
+  tipo: "nota" | "comprobante" | "presupuesto"
 ): Promise<
   | { datos: DatosDocumento; emailDestinatario: string | null }
   | null
@@ -32,7 +43,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, costo_final, liq_monto, liq_factura_ref, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, notas, estado)"
+      "id, descripcion, pagador, pagador_sugerido, costo_final, liq_monto, liq_factura_ref, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -48,22 +59,34 @@ async function datosDocumento(
     presupuestos: {
       monto_materiales: number;
       monto_mano_obra: number;
+      descripcion_trabajo: string | null;
+      plazo_dias: number | null;
       notas: string | null;
       estado: string;
+      creado_en: string;
     }[];
   };
   const j = g as unknown as Joined;
   const aprobado = j.presupuestos.find((p) => p.estado === "aprobado");
+  // Para el PDF de presupuesto: el vigente (aprobado, o el último enviado)
+  const vigente =
+    aprobado ??
+    [...j.presupuestos]
+      .filter((p) => p.estado === "enviado")
+      .sort((a, b) => b.creado_en.localeCompare(a.creado_en))[0] ??
+    null;
 
   let destinatarioNombre = "—";
   let destinatarioRotulo = "Destinatario";
   let emailDestinatario: string | null = null;
 
+  // Nota y presupuesto van al PAGADOR (confirmado, o sugerido si aún no)
+  const pagador = g.pagador ?? g.pagador_sugerido;
   if (tipo === "comprobante") {
     destinatarioNombre = j.tecnico?.nombre ?? "—";
     destinatarioRotulo = "Técnico";
     emailDestinatario = j.tecnico?.email ?? null;
-  } else if (g.pagador === "propietario") {
+  } else if (pagador === "propietario") {
     destinatarioNombre = j.propiedades?.propietarios?.nombre ?? "—";
     destinatarioRotulo = "Propietario";
     emailDestinatario = j.propiedades?.propietarios?.email ?? null;
@@ -83,9 +106,11 @@ async function datosDocumento(
   }
 
   const total =
-    tipo === "comprobante"
-      ? Number(g.liq_monto ?? g.costo_final ?? 0)
-      : Number(g.costo_final ?? 0);
+    tipo === "presupuesto"
+      ? Number(vigente?.monto_materiales ?? 0) + Number(vigente?.monto_mano_obra ?? 0)
+      : tipo === "comprobante"
+        ? Number(g.liq_monto ?? g.costo_final ?? 0)
+        : Number(g.costo_final ?? 0);
 
   return {
     emailDestinatario,
@@ -98,16 +123,20 @@ async function datosDocumento(
       direccion: j.propiedades?.direccion ?? "—",
       especialidad: j.especialidades?.nombre ?? "—",
       descripcion: g.descripcion,
-      detalleTrabajo: aprobado?.notas ?? null,
+      detalleTrabajo:
+        tipo === "presupuesto"
+          ? [vigente?.descripcion_trabajo, vigente?.notas].filter(Boolean).join(" — ") || null
+          : aprobado?.descripcion_trabajo ?? aprobado?.notas ?? null,
       tecnicoNombre: j.tecnico?.nombre ?? null,
-      presupuesto: aprobado
+      presupuesto: (tipo === "presupuesto" ? vigente : aprobado)
         ? {
-            materiales: Number(aprobado.monto_materiales),
-            manoObra: Number(aprobado.monto_mano_obra),
+            materiales: Number((tipo === "presupuesto" ? vigente : aprobado)!.monto_materiales),
+            manoObra: Number((tipo === "presupuesto" ? vigente : aprobado)!.monto_mano_obra),
           }
         : null,
       total,
-      facturaRef: g.liq_factura_ref,
+      facturaRef: tipo === "presupuesto" ? null : g.liq_factura_ref,
+      plazoDias: tipo === "presupuesto" ? vigente?.plazo_dias ?? null : null,
     },
   };
 }
@@ -172,6 +201,61 @@ export async function descargarDocumento(
       filename: `${tipo === "nota" ? "nota-cobro" : "comprobante-liquidacion"}-${doc.datos.numero}.pdf`,
     },
   };
+}
+
+// PDF/email del presupuesto en su etapa (staff de mantenimiento).
+export async function descargarPresupuestoPDF(
+  gestionId: string
+): Promise<ActionResult<{ base64: string; filename: string }>> {
+  const actual = await exigirMantenimiento();
+  if (!actual) return { ok: false, error: "No tenés permiso." };
+
+  const doc = await datosDocumento(gestionId, "presupuesto");
+  if (!doc) return { ok: false, error: "Gestión no encontrada." };
+  if (!doc.datos.total) return { ok: false, error: "No hay presupuesto cargado." };
+
+  const base64 = await generarPDF(doc.datos);
+  return {
+    ok: true,
+    data: { base64, filename: `presupuesto-${doc.datos.numero}.pdf` },
+  };
+}
+
+export async function enviarPresupuestoEmail(
+  gestionId: string
+): Promise<ActionResult> {
+  const actual = await exigirMantenimiento();
+  if (!actual) return { ok: false, error: "No tenés permiso." };
+
+  const doc = await datosDocumento(gestionId, "presupuesto");
+  if (!doc) return { ok: false, error: "Gestión no encontrada." };
+  if (!doc.datos.total) return { ok: false, error: "No hay presupuesto cargado." };
+  if (!doc.emailDestinatario) {
+    return { ok: false, error: "El destinatario no tiene email cargado." };
+  }
+
+  const pdf = await generarPDF(doc.datos);
+  await enviarEmailDocumento({
+    para: doc.emailDestinatario,
+    asunto: `Presupuesto de obra — ${doc.datos.direccion}`,
+    titulo: "Presupuesto por trabajo de mantenimiento",
+    cuerpo: `Te enviamos el presupuesto por el trabajo a realizar en ${doc.datos.direccion}. El documento adjunto tiene el detalle completo.`,
+    tipo: "presupuesto",
+    gestion_id: gestionId,
+    adjunto: {
+      filename: `presupuesto-${doc.datos.numero}.pdf`,
+      contentBase64: pdf,
+    },
+  });
+
+  const supabase = await createClient();
+  await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: "presupuesto_enviado_pagador",
+    actor_id: actual.id,
+  });
+
+  return { ok: true };
 }
 
 export async function registrarCobro(
