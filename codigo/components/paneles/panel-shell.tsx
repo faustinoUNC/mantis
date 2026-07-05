@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { BloqueoWatcher } from "@/components/paneles/bloqueo-watcher.client";
+import { Campana } from "@/components/paneles/campana.client";
+import { misNotificaciones } from "@/features/notificaciones/service";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cerrarSesion } from "@/features/auth/service";
@@ -11,13 +13,14 @@ import {
 import { redirect } from "next/navigation";
 
 // Cáscara común de los 4 paneles: header claro con borde (DESIGN.md).
-export function PanelShell({
+export async function PanelShell({
   usuario,
   children,
 }: {
   usuario: UsuarioActual;
   children: React.ReactNode;
 }) {
+  const notificaciones = await misNotificaciones();
   async function salir() {
     "use server";
     await cerrarSesion();
@@ -51,7 +54,9 @@ export function PanelShell({
               {NOMBRE_ROL[usuario.rol]}
             </Badge>
           </div>
-          <form action={salir} className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Campana usuarioId={usuario.id} iniciales={notificaciones} />
+            <form action={salir} className="flex items-center gap-2">
             <span className="hidden sm:block text-sm text-muted">
               {usuario.nombre}
             </span>
@@ -62,7 +67,8 @@ export function PanelShell({
             >
               Salir
             </Button>
-          </form>
+            </form>
+          </div>
         </div>
       </header>
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6">

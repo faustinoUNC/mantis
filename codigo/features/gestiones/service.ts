@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { obtenerUsuarioActual } from "@/features/auth/service";
+import { emailEstadoGestion } from "@/features/email/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
@@ -100,6 +101,8 @@ export async function crearGestion(datos: {
     tipo: "creada",
     actor_id: actual.id,
   });
+
+  await emailEstadoGestion(gestion.id, "reporte_recibido");
 
   refrescarTablero();
   return { ok: true, data: undefined };
@@ -290,6 +293,7 @@ export async function responderAsignacion(
     p_motivo: motivo ?? null,
   });
   if (error) return { ok: false, error: "No se pudo responder la asignación." };
+  if (acepta) await emailEstadoGestion(gestionId, "tecnico_asignado");
   refrescarTablero(gestionId);
   return { ok: true };
 }
@@ -480,6 +484,7 @@ export async function resolverConformidad(
         .update({ costo_final: opciones.costo_final })
         .eq("id", gestionId);
     }
+    await emailEstadoGestion(gestionId, "resuelto");
     return avanzarEtapa(gestionId, "facturacion_cobro");
   }
 

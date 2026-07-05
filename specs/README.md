@@ -67,3 +67,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-408](STORY-408.md) | Reasignación de gestor (solo admin) | ✅ done |
 
 **ÉPICA 4 COMPLETA** ✅ (2026-07-05) — ciclo completo verificado E2E con 3 roles. Facturación/liquidación con acción mínima (el módulo completo llega en la Épica 7).
+
+| [STORY-501](STORY-501.md) | Notificaciones realtime + emails de estado (5.1–5.3) | ✅ done |
+
+**ÉPICA 5 COMPLETA** ✅ (2026-07-05) — realtime en vivo verificado; email real entregado; falta verificar dominio en Resend para destinatarios reales.

@@ -8,7 +8,17 @@ import { createClient } from "@/shared/lib/supabase/client";
 export function BloqueoWatcher({ usuarioId }: { usuarioId: string }) {
   useEffect(() => {
     const supabase = createClient();
-    const canal = supabase
+    let canal: ReturnType<typeof supabase.channel> | null = null;
+    let desmontado = false;
+
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) supabase.realtime.setAuth(session.access_token);
+      if (desmontado) return;
+
+      canal = supabase
       .channel(`bloqueo-${usuarioId}`)
       .on(
         "postgres_changes",
@@ -26,9 +36,11 @@ export function BloqueoWatcher({ usuarioId }: { usuarioId: string }) {
         }
       )
       .subscribe();
+    })();
 
     return () => {
-      supabase.removeChannel(canal);
+      desmontado = true;
+      if (canal) supabase.removeChannel(canal);
     };
   }, [usuarioId]);
 
