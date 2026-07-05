@@ -80,4 +80,14 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-802](STORY-802.md) | PDF Resumen de obras por legajo | ✅ done |
 | [STORY-803](STORY-803.md) | Dashboards de métricas por rol | ✅ done |
 
-**ÉPICA 8 COMPLETA** ✅ (2026-07-05) — **7 de 8 épicas terminadas.** Resta SOLO la Épica 6 (inbox Gmail + IA), esperando las credenciales OAuth de Google.
+**ÉPICA 8 COMPLETA** ✅ (2026-07-05)
+
+| [STORY-601](STORY-601.md) | Inbox Gmail + botón IA (6.1–6.3) | ✅ done |
+
+**ÉPICA 6 COMPLETA** ✅ (2026-07-05)
+
+---
+
+# 🎉 LAS 8 ÉPICAS ESTÁN COMPLETAS — MVP de MANTIS 2 terminado (2026-07-05)
+
+Pendientes de producción (Fausti): verificar dominio en Resend (enviar a destinatarios reales) · activar leaked password protection en Supabase Auth.

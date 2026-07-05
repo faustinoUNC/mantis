@@ -22,6 +22,7 @@ export const RUTA_POR_ROL: Record<Rol, string> = {
 export const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
   administrador: [
     { href: "/admin", label: "Inicio" },
+    { href: "/inbox", label: "Inbox" },
     { href: "/cartera/propiedades", label: "Cartera" },
     { href: "/tecnicos", label: "Técnicos" },
     { href: "/metricas", label: "Métricas" },
@@ -31,6 +32,7 @@ export const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
   ],
   gestor_mantenimiento: [
     { href: "/gestion", label: "Inicio" },
+    { href: "/inbox", label: "Inbox" },
     { href: "/cartera/propiedades", label: "Cartera" },
     { href: "/tecnicos", label: "Técnicos" },
     { href: "/metricas", label: "Métricas" },
