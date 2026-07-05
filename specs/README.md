@@ -49,6 +49,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-202](STORY-202.md) | ABM de inquilinos | ✅ done |
 | [STORY-203](STORY-203.md) | ABM de propiedades | ✅ done |
 | [STORY-204](STORY-204.md) | Legajos por período de ocupación | ✅ done |
+| [STORY-205](STORY-205.md) | Ubicación en Google Maps (mapa + botón) | ✅ done |
 
 **ÉPICA 2 COMPLETA** ✅ (2026-07-05)
 

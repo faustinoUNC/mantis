@@ -104,6 +104,9 @@ components:
     contenedor: 'card'
     header: 'fila {typography.label} con borde inferior {colors.border}'
     filas: 'borde inferior {colors.border}; hover {colors.surface-2}'
+  mapa:
+    estilo: 'iframe Google Maps embed con el tratamiento de card (borde {colors.border}, radio {rounded.lg}); botón "Abrir en Google Maps" = button-secondary con pin esmeralda'
+    uso: 'preview al cargar dirección (validación visual), detalle de propiedad, detalle de gestión'
 ---
 
 ## Brand & Style

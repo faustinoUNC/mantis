@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Legajos } from "@/components/cartera/legajos.client";
+import { BotonGoogleMaps, MapaDireccion } from "@/components/ui/mapa";
 import {
   legajosDePropiedad,
   listarPersonas,
@@ -50,6 +51,13 @@ export default async function PropiedadPage({
         </div>
         {!propiedad.activa && <Badge tono="error">Inactiva</Badge>}
       </div>
+
+      <section className="mt-6 flex flex-col gap-3">
+        <MapaDireccion direccion={propiedad.direccion} />
+        <div>
+          <BotonGoogleMaps direccion={propiedad.direccion} />
+        </div>
+      </section>
 
       <Legajos
         propiedadId={id}

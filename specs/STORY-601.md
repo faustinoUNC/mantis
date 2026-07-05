@@ -41,6 +41,7 @@ claude-fable-5 (Claude Code, 2026-07-05)
 - Modelo IA: claude-sonnet-5 con tool_choice forzado a crear_gestion (enums de especialidades y propiedades activas). Si no matchea propiedad → pide creación manual (nunca falla silencioso).
 - Sync-on-view en vez de cron (Vercel Hobby limita crons a 1/día) — documentado como desviación de ARQUITECTURA §5; migrable a cron/push sin tocar aguas abajo.
 - Los 19 mails históricos de prueba quedaron descartados con motivo — inbox con cero pendientes sin destino.
+- v1.0.1: el sync excluye `-from:onboarding@resend.dev` — con el esquema de emails de prueba `ausitesis+nombre@gmail.com` los correos del sistema caen en la misma casilla y no deben ingestarse como reportes.
 - OAuth: proyecto Google "mantis" publicado; refresh token en .env.local + Vercel (GMAIL_CLIENT_ID/SECRET/REFRESH_TOKEN/INBOX).
 
 ### File List

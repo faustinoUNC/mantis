@@ -80,8 +80,13 @@ export async function sincronizarInbox(): Promise<ActionResult<{ nuevos: number 
   if (!token) return { ok: false, error: "No se pudo conectar con Gmail." };
   const auth = { Authorization: `Bearer ${token}` };
 
+  // Se excluyen los emails del propio sistema (Resend): con el esquema de
+  // prueba ausitesis+nombre@gmail.com todo cae en esta misma casilla.
+  const consulta = encodeURIComponent(
+    "in:inbox is:unread -from:onboarding@resend.dev"
+  );
   const lista = await fetch(
-    "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=in:inbox is:unread",
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${consulta}`,
     { headers: auth }
   );
   if (!lista.ok) return { ok: false, error: "Gmail rechazó la consulta." };

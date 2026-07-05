@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { FinanzasAcciones } from "@/components/gestiones/finanzas.client";
+import { BotonGoogleMaps } from "@/components/ui/mapa";
 import type { UsuarioActual } from "@/features/auth/types";
 import {
   asignarTecnico,
@@ -531,6 +532,10 @@ export function DetalleGestion({
             )}
           </p>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <BotonGoogleMaps direccion={gestion.direccion} />
       </div>
 
       {/* Acción según etapa + rol */}

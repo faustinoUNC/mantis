@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { MapaDireccion } from "@/components/ui/mapa";
 import { guardarPropiedad } from "@/features/cartera/service";
 import type { Persona, Propiedad } from "@/features/cartera/types";
 
@@ -19,6 +20,7 @@ function Formulario({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [direccionPreview, setDireccionPreview] = useState("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,7 +40,7 @@ function Formulario({
   return (
     <Card className="animate-aparecer p-5 mb-4">
       <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-        <Input label="Dirección" name="direccion" required placeholder="Calle 123, Piso 2 B" />
+        <Input label="Dirección" name="direccion" required placeholder="Av. Colón 1234, Córdoba" onBlur={(e) => setDireccionPreview(e.target.value)} />
         <Input label="Tipo" name="tipo" placeholder="Depto, Casa, Local… (opcional)" />
         <Select label="Propietario" name="propietario_id" required>
           {propietarios.map((p) => (
@@ -55,6 +57,14 @@ function Formulario({
         <Button type="submit" disabled={enviando}>
           {enviando ? "Guardando…" : "Crear propiedad"}
         </Button>
+        {direccionPreview && (
+          <div className="sm:col-span-2 lg:col-span-4 animate-aparecer">
+            <p className="text-[13px] font-medium text-muted mb-1.5">
+              Verificá que el pin apunte al inmueble antes de guardar:
+            </p>
+            <MapaDireccion direccion={direccionPreview} alto={200} />
+          </div>
+        )}
       </form>
     </Card>
   );
