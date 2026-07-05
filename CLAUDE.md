@@ -43,4 +43,8 @@ Evolución del MANTIS original (`/Users/fausti/Downloads/projects/tesis/sist_ges
 - Cada gestor de mantenimiento ve SOLO sus gestiones (ownership `gestor_id`, PRD §2.1); tarjetas fuera de competencia opacadas/solo lectura.
 
 ### 5. MCP
-- Perfil MCP propio del proyecto pendiente de crear (`~/.claude/mcp-profiles/mantis.json`) cuando exista el proyecto Supabase. Nunca editar `.mcp.json` a mano.
+- Perfil MCP del proyecto: `~/.claude/mcp-profiles/mantis.json` (Supabase HTTP oficial, proyecto `ejwokycbyjtlxwusbhtt`). Nunca editar `.mcp.json` a mano.
+
+### 6. Reset de datos de prueba
+- **`./scripts/reset-datos.sh`** — borra los datos operativos (gestiones + historial, inbox, notificaciones, emails, fotos del bucket) y conserva usuarios, técnicos, cartera, legajos y especialidades. Usarlo cuando Fausti pida "limpiar la base" para probar de cero. Lee la service key de `codigo/.env.local`; no requiere psql.
+- Usuarios de prueba (patrón `ausitesis+nombre@gmail.com` / `nombre123`): admin, gestormantenimientouno, gestoradministrativouno, tecnicouno. Todos los emails entregan en ausitesis@gmail.com.
