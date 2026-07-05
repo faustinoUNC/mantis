@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { FinanzasAcciones } from "@/components/gestiones/finanzas.client";
 import type { UsuarioActual } from "@/features/auth/types";
 import {
   asignarTecnico,
@@ -434,31 +435,6 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
-function AccionFinanzas({ gestion }: { gestion: GestionDetalle }) {
-  const { error, cargando, correr } = useAccion();
-  const esFacturacion = gestion.etapa === "facturacion_cobro";
-  return (
-    <div>
-      <p className="text-sm text-muted mb-3">
-        {esFacturacion
-          ? `Emitir la nota de cobro al ${gestion.pagador ?? "pagador"} y registrar el cobro (módulo completo en la Épica 7).`
-          : "Registrar la liquidación al técnico (módulo completo en la Épica 7)."}
-      </p>
-      <Button
-        disabled={cargando}
-        onClick={() =>
-          correr(() =>
-            avanzarEtapa(gestion.id, esFacturacion ? "liquidacion_tecnico" : "finalizado")
-          )
-        }
-      >
-        {esFacturacion ? "Cobrado → Liquidación" : "Liquidado → Finalizar"}
-      </Button>
-      {error && <p className="mt-2 text-sm font-medium text-error">{error}</p>}
-    </div>
-  );
-}
-
 function ReasignarGestor({
   gestion,
   gestores,
@@ -592,9 +568,12 @@ export function DetalleGestion({
           <AccionConformidadTecnico gestion={gestion} />
         )}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
-          esAdministrativo && <AccionFinanzas gestion={gestion} />}
+          esAdministrativo && <FinanzasAcciones gestion={gestion} />}
         {gestion.etapa === "finalizado" && (
-          <p className="text-sm text-muted">Gestión finalizada — quedó en el legajo.</p>
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-muted">Gestión finalizada — quedó en el legajo.</p>
+            {esAdministrativo && <FinanzasAcciones gestion={gestion} />}
+          </div>
         )}
         {/* Sin acción para este rol */}
         {!esGestorOwner && !esTecnicoAsignado && !esAdministrativo && (

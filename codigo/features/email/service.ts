@@ -37,6 +37,7 @@ async function enviarEmail(datos: {
   cuerpo: string;
   tipo: string;
   gestion_id?: string;
+  adjunto?: { filename: string; contentBase64: string };
 }): Promise<void> {
   const admin = createAdminClient();
   let estado = "enviado";
@@ -54,6 +55,14 @@ async function enviarEmail(datos: {
         to: [datos.para],
         subject: datos.asunto,
         html: plantilla(datos.titulo, datos.cuerpo),
+        ...(datos.adjunto && {
+          attachments: [
+            {
+              filename: datos.adjunto.filename,
+              content: datos.adjunto.contentBase64,
+            },
+          ],
+        }),
       }),
     });
     if (!res.ok) {
@@ -98,6 +107,19 @@ const EMAILS_ESTADO: Record<
       `El mantenimiento en ${d} quedó terminado y verificado por la inmobiliaria. ¡Gracias por avisarnos!`,
   },
 };
+
+// Documentos de finanzas (nota de cobro / comprobante) con PDF adjunto.
+export async function enviarEmailDocumento(datos: {
+  para: string;
+  asunto: string;
+  titulo: string;
+  cuerpo: string;
+  tipo: string;
+  gestion_id: string;
+  adjunto: { filename: string; contentBase64: string };
+}): Promise<void> {
+  await enviarEmail(datos);
+}
 
 // Email de estado al INQUILINO del legajo de la gestión (PRD §8 — el
 // inquilino recibe, nunca accede). Lookups con admin client: el flujo que
