@@ -107,10 +107,15 @@ export async function editarEmpleado(
   id: string,
   cambios: { nombre: string; rol: Rol }
 ): Promise<ActionResult> {
+  // RLS ya restringe el UPDATE a admin; el chequeo explícito evita la falla
+  // silenciosa (0 filas) y la whitelist evita campos extra en el payload.
+  const permiso = await exigirAdmin();
+  if (!permiso.ok) return permiso;
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("usuarios")
-    .update(cambios)
+    .update({ nombre: cambios.nombre, rol: cambios.rol })
     .eq("id", id);
   if (error) return { ok: false, error: "No se pudo actualizar." };
 
