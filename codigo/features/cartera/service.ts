@@ -206,8 +206,18 @@ async function datosResumen(legajoId: string) {
     return null;
   }
 
-  // Admin client: el resumen debe incluir gestiones de TODOS los gestores
-  // (la RLS de gestiones limita al gestor a las propias).
+  // Defensa en profundidad: el caller debe poder VER este legajo según RLS
+  // (hoy toda la cartera es staff-only; si mañana se acota, esto lo respeta).
+  const sesion = await createClient();
+  const { data: visible } = await sesion
+    .from("legajos")
+    .select("id")
+    .eq("id", legajoId)
+    .maybeSingle();
+  if (!visible) return null;
+
+  // Admin client SOLO para las gestiones: el resumen debe incluir las de
+  // TODOS los gestores (la RLS de gestiones limita al gestor a las propias).
   const { createAdminClient } = await import("@/shared/lib/supabase/admin");
   const admin = createAdminClient();
 
