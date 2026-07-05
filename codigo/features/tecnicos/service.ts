@@ -26,18 +26,28 @@ async function exigirStaffMantenimiento(): Promise<ActionResult> {
   return { ok: true };
 }
 
+const MIME_PERMITIDOS: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+const MAX_DOC_BYTES = 8 * 1024 * 1024;
+
 async function subirDoc(
   tecnicoId: string,
   tipo: string,
   archivo: File | null
 ): Promise<string | null> {
   if (!archivo || archivo.size === 0) return null;
-  const ext = archivo.name.split(".").pop() ?? "bin";
+  if (archivo.size > MAX_DOC_BYTES) return null;
+  const ext = MIME_PERMITIDOS[archivo.type];
+  if (!ext) return null;
   const path = `${tecnicoId}/${tipo}.${ext}`;
   const admin = createAdminClient();
   const { error } = await admin.storage
     .from(BUCKET)
-    .upload(path, archivo, { upsert: true });
+    .upload(path, archivo, { upsert: true, contentType: archivo.type });
   return error ? null : path;
 }
 
@@ -158,6 +168,8 @@ export async function enrolarTecnico(form: FormData): Promise<ActionResult> {
 }
 
 export async function listarTecnicos(): Promise<TecnicoResumen[]> {
+  const permiso = await exigirStaffMantenimiento();
+  if (!permiso.ok) return [];
   const supabase = await createClient();
   const [{ data: tecnicos }, { data: usuarios }] = await Promise.all([
     supabase
@@ -195,6 +207,8 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
 export async function obtenerTecnico(
   id: string
 ): Promise<TecnicoDetalle | null> {
+  const permiso = await exigirStaffMantenimiento();
+  if (!permiso.ok) return null;
   const supabase = await createClient();
   const { data: t } = await supabase
     .from("tecnicos")
@@ -373,11 +387,14 @@ export async function agregarFranja(datos: {
 }
 
 export async function borrarFranja(id: string): Promise<ActionResult> {
+  const actual = await obtenerUsuarioActual();
+  if (!actual) return { ok: false, error: "Sin sesión." };
   const supabase = await createClient();
   const { error } = await supabase
     .from("franjas_disponibilidad")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("tecnico_id", actual.id);
   if (error) return { ok: false, error: "No se pudo borrar." };
   revalidatePath("/tecnico/agenda");
   return { ok: true };
