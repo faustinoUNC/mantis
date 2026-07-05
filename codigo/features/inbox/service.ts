@@ -80,10 +80,11 @@ export async function sincronizarInbox(): Promise<ActionResult<{ nuevos: number 
   if (!token) return { ok: false, error: "No se pudo conectar con Gmail." };
   const auth = { Authorization: `Bearer ${token}` };
 
-  // Se excluyen los emails del propio sistema (Resend): con el esquema de
-  // prueba ausitesis+nombre@gmail.com todo cae en esta misma casilla.
+  // Solo se ingestan mails con "mantenimiento" en el asunto (la casilla es
+  // compartida): es la convención del canal de reportes. Se excluyen además
+  // los emails del propio sistema (Resend).
   const consulta = encodeURIComponent(
-    "in:inbox is:unread -from:onboarding@resend.dev"
+    "in:inbox is:unread subject:mantenimiento -from:onboarding@resend.dev"
   );
   const lista = await fetch(
     `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${consulta}`,

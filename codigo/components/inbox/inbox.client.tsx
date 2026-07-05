@@ -224,7 +224,9 @@ export function Inbox({
     <div className="animate-aparecer max-w-2xl">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <p className="text-[13px] font-medium text-muted">Casilla de reportes</p>
+          <p className="text-[13px] font-medium text-muted">
+            Casilla de reportes — se traen los mails con “mantenimiento” en el asunto
+          </p>
           <h1 className="text-2xl font-semibold tracking-tight mt-0.5">
             Inbox
             {pendientes.length > 0 && (
