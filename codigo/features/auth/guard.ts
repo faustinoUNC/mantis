@@ -10,3 +10,11 @@ export async function exigirRol(rol: Rol): Promise<UsuarioActual> {
   if (usuario.rol !== rol) redirect("/panel");
   return usuario;
 }
+
+// Guard para secciones compartidas entre varios roles (ej.: /cartera).
+export async function exigirAlguno(roles: Rol[]): Promise<UsuarioActual> {
+  const usuario = await obtenerUsuarioActual();
+  if (!usuario) redirect("/");
+  if (!roles.includes(usuario.rol)) redirect("/panel");
+  return usuario;
+}

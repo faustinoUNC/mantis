@@ -44,3 +44,10 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-105](STORY-105.md) | Mantenedor de especialidades | ✅ done |
 
 **ÉPICA 1 COMPLETA** ✅ (2026-07-05)
+
+| [STORY-201](STORY-201.md) | ABM de propietarios | ✅ done |
+| [STORY-202](STORY-202.md) | ABM de inquilinos | ✅ done |
+| [STORY-203](STORY-203.md) | ABM de propiedades | ✅ done |
+| [STORY-204](STORY-204.md) | Legajos por período de ocupación | ✅ done |
+
+**ÉPICA 2 COMPLETA** ✅ (2026-07-05)
