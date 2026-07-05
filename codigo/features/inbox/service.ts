@@ -70,8 +70,8 @@ function extraerTexto(parte: ParteGmail): string | null {
   return null;
 }
 
-// Trae los no-leídos de la casilla al inbox del panel. Idempotente:
-// unique(gmail_message_id) + se marcan leídos en Gmail.
+// Trae los reportes de la casilla al inbox del panel. Idempotente por
+// unique(gmail_message_id) contra la DB (no depende de leído/no-leído).
 export async function sincronizarInbox(): Promise<ActionResult<{ nuevos: number }>> {
   const actual = await exigirStaffMantenimiento();
   if (!actual) return { ok: false, error: "No tenés permiso." };
@@ -81,10 +81,12 @@ export async function sincronizarInbox(): Promise<ActionResult<{ nuevos: number 
   const auth = { Authorization: `Bearer ${token}` };
 
   // Solo se ingestan mails con "mantenimiento" en el asunto (la casilla es
-  // compartida): es la convención del canal de reportes. Se excluyen además
-  // los emails del propio sistema (Resend).
+  // compartida): es la convención del canal de reportes. Se excluyen los
+  // emails del propio sistema (Resend). SIN is:unread: los mails que uno se
+  // manda a sí mismo (o ya abrió en Gmail) nacen leídos — la idempotencia
+  // real es el unique(gmail_message_id) chequeado contra la DB.
   const consulta = encodeURIComponent(
-    "in:inbox is:unread subject:mantenimiento -from:onboarding@resend.dev"
+    "in:inbox subject:mantenimiento -from:onboarding@resend.dev"
   );
   const lista = await fetch(
     `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${consulta}`,
@@ -98,9 +100,17 @@ export async function sincronizarInbox(): Promise<ActionResult<{ nuevos: number 
   }
 
   const admin = createAdminClient();
+
+  // Saltear los ya ingestados (evita re-pedir el detalle a Gmail)
+  const { data: existentes } = await admin
+    .from("inbox_reportes")
+    .select("gmail_message_id")
+    .in("gmail_message_id", messages.map((m) => m.id));
+  const yaIngestados = new Set((existentes ?? []).map((e) => e.gmail_message_id));
+
   let nuevos = 0;
 
-  for (const m of messages) {
+  for (const m of messages.filter((m) => !yaIngestados.has(m.id))) {
     const res = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=full`,
       { headers: auth }
@@ -130,16 +140,6 @@ export async function sincronizarInbox(): Promise<ActionResult<{ nuevos: number 
         : null,
     });
     if (!error) nuevos++;
-
-    // Marcar leído (aunque ya existiera — segunda capa de idempotencia)
-    await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}/modify`,
-      {
-        method: "POST",
-        headers: { ...auth, "Content-Type": "application/json" },
-        body: JSON.stringify({ removeLabelIds: ["UNREAD"] }),
-      }
-    ).catch(() => {});
   }
 
   revalidatePath("/inbox");
