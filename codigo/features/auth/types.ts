@@ -24,6 +24,8 @@ export const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
     { href: "/admin", label: "Inicio" },
     { href: "/cartera/propiedades", label: "Cartera" },
     { href: "/tecnicos", label: "Técnicos" },
+    { href: "/metricas", label: "Métricas" },
+    { href: "/admin/auditoria", label: "Auditoría" },
     { href: "/admin/empleados", label: "Empleados" },
     { href: "/admin/especialidades", label: "Especialidades" },
   ],
@@ -31,10 +33,12 @@ export const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
     { href: "/gestion", label: "Inicio" },
     { href: "/cartera/propiedades", label: "Cartera" },
     { href: "/tecnicos", label: "Técnicos" },
+    { href: "/metricas", label: "Métricas" },
   ],
   gestor_administrativo: [
     { href: "/administracion", label: "Inicio" },
     { href: "/cartera/propiedades", label: "Cartera" },
+    { href: "/metricas", label: "Métricas" },
   ],
   tecnico: [
     { href: "/tecnico", label: "Mis trabajos" },

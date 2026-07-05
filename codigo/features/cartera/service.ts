@@ -193,3 +193,119 @@ export async function cerrarLegajo(
   revalidatePath(`/cartera/propiedades/${propiedadId}`);
   return { ok: true };
 }
+
+// ── Resumen de obras por legajo (STORY-802) ──
+
+async function datosResumen(legajoId: string) {
+  const { obtenerUsuarioActual } = await import("@/features/auth/service");
+  const actual = await obtenerUsuarioActual();
+  if (
+    !actual ||
+    !["administrador", "gestor_mantenimiento", "gestor_administrativo"].includes(actual.rol)
+  ) {
+    return null;
+  }
+
+  // Admin client: el resumen debe incluir gestiones de TODOS los gestores
+  // (la RLS de gestiones limita al gestor a las propias).
+  const { createAdminClient } = await import("@/shared/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  const { data: legajo } = await admin
+    .from("legajos")
+    .select(
+      "fecha_inicio, fecha_fin, inquilinos(nombre), propiedades(direccion, propietarios(nombre, email))"
+    )
+    .eq("id", legajoId)
+    .single();
+  if (!legajo) return null;
+
+  const { data: gestiones } = await admin
+    .from("gestiones")
+    .select(
+      "descripcion, etapa, costo_final, pagador, creado_en, especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre)"
+    )
+    .eq("legajo_id", legajoId)
+    .order("creado_en");
+
+  type L = {
+    fecha_inicio: string;
+    fecha_fin: string | null;
+    inquilinos: { nombre: string } | null;
+    propiedades: {
+      direccion: string;
+      propietarios: { nombre: string; email: string } | null;
+    } | null;
+  };
+  type G = {
+    descripcion: string;
+    etapa: string;
+    costo_final: number | null;
+    pagador: string | null;
+    creado_en: string;
+    especialidades: { nombre: string } | null;
+    tecnico: { nombre: string } | null;
+  };
+  const l = legajo as unknown as L;
+  const fechaCorta = (f: string) =>
+    new Date(`${f.slice(0, 10)}T00:00:00`).toLocaleDateString("es-AR");
+
+  return {
+    emailPropietario: l.propiedades?.propietarios?.email ?? null,
+    datos: {
+      direccion: l.propiedades?.direccion ?? "—",
+      propietario: l.propiedades?.propietarios?.nombre ?? "—",
+      inquilino: l.inquilinos?.nombre ?? "—",
+      periodo: `${fechaCorta(l.fecha_inicio)} — ${l.fecha_fin ? fechaCorta(l.fecha_fin) : "vigente"}`,
+      fecha: new Date().toLocaleDateString("es-AR"),
+      obras: ((gestiones ?? []) as unknown as G[]).map((g) => ({
+        fecha: fechaCorta(g.creado_en),
+        especialidad: g.especialidades?.nombre ?? "—",
+        descripcion: g.descripcion,
+        tecnico: g.tecnico?.nombre ?? null,
+        costo: g.costo_final != null ? Number(g.costo_final) : null,
+        pagador: g.pagador,
+        finalizada: g.etapa === "finalizado",
+      })),
+    },
+  };
+}
+
+export async function descargarResumenObras(
+  legajoId: string
+): Promise<ActionResult<{ base64: string; filename: string }>> {
+  const r = await datosResumen(legajoId);
+  if (!r) return { ok: false, error: "No tenés permiso o el legajo no existe." };
+
+  const { generarResumenPDF } = await import("./resumen-pdf");
+  const base64 = await generarResumenPDF(r.datos);
+  return {
+    ok: true,
+    data: { base64, filename: `resumen-obras-${legajoId.slice(0, 8)}.pdf` },
+  };
+}
+
+export async function enviarResumenObras(legajoId: string): Promise<ActionResult> {
+  const r = await datosResumen(legajoId);
+  if (!r) return { ok: false, error: "No tenés permiso o el legajo no existe." };
+  if (!r.emailPropietario) {
+    return { ok: false, error: "El propietario no tiene email cargado." };
+  }
+
+  const { generarResumenPDF } = await import("./resumen-pdf");
+  const { enviarEmailDocumento } = await import("@/features/email/service");
+  const base64 = await generarResumenPDF(r.datos);
+  await enviarEmailDocumento({
+    para: r.emailPropietario,
+    asunto: `Resumen de obras — ${r.datos.direccion}`,
+    titulo: "Resumen de obras de tu propiedad",
+    cuerpo: `Te enviamos el detalle de los trabajos de mantenimiento realizados en ${r.datos.direccion} durante el período ${r.datos.periodo}.`,
+    tipo: "resumen_obras",
+    gestion_id: undefined as unknown as string,
+    adjunto: {
+      filename: `resumen-obras-${legajoId.slice(0, 8)}.pdf`,
+      contentBase64: base64,
+    },
+  });
+  return { ok: true };
+}
