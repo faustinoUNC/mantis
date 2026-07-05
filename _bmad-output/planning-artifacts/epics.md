@@ -30,7 +30,7 @@ FR5: ABM de inquilinos (datos + contacto email).
 FR6: ABM de propiedades.
 FR7: Vinculación propiedad ↔ propietario ↔ inquilino mediante legajos (un legajo por período de ocupación de un inquilino; el inquilino puede cambiar).
 FR8: Exportación de PDF "Resumen de obras" por legajo/propiedad (gestiones realizadas durante el período, con conformidades).
-FR9: ABM de técnicos con especialidades; enrolamiento por auto-registro con carga de documentación (DNI, seguro, matrícula si la especialidad lo exige) y evaluación de alta por admin o gestor de mantenimiento; alta manual directa también posible.
+FR9: ABM de técnicos con especialidades; enrolamiento por auto-registro con carga de documentación (DNI, y matrícula si la especialidad lo exige) y evaluación de alta por admin o gestor de mantenimiento; alta manual directa también posible.
 FR10: Agenda/disponibilidad del técnico (franjas); el gestor la visualiza antes de enviar la solicitud de asignación.
 FR11: Inbox de reportes: el sistema escucha la casilla Gmail exclusiva y muestra cada mail entrante con notificación al gestor de mantenimiento; campo canal extensible (email | manual).
 FR12: Acción "descartar con motivo" en el inbox (no corresponde / resuelto por teléfono / duplicado), auditable. Todo mail termina en gestión o descarte.
@@ -44,7 +44,7 @@ FR19: Asignación: gestor elige técnico viendo su disponibilidad; el técnico a
 FR20: Técnico registra inspección y presupuesto; gestor de mantenimiento aprueba/rechaza y define quién paga (con sugerencia por causa según regla CCyC).
 FR21: Técnico registra avances (fotos + notas) desde el celular durante En ejecución.
 FR22: Técnico sube conformidad firmada; gestor la valida o rechaza (rechazo → resubir).
-FR23: Facturación: gestor administrativo emite nota de cobro con detalle de obra, la envía por email a inquilino o propietario, y registra el cobro (mecanismos: descuento en liquidación mensual | cobro directo). Muestra comparación presupuesto vs costo final.
+FR23: Facturación: gestor administrativo emite nota de cobro con detalle de obra, la envía por email a inquilino o propietario, y registra el cobro (simple: fecha + medio — SIN compensación contra la liquidación del alquiler, fuera de alcance). Muestra comparación presupuesto vs costo final.
 FR24: Liquidación al técnico: registro de pago + comprobante con detalle enviado por email; referencia a la factura C del técnico.
 FR25: Notificaciones in-app realtime por evento del funnel al rol que debe accionar (badge + toast + centro de notificaciones + no-leídas al reconectar).
 FR26: Emails de estado automáticos al inquilino: reporte recibido / técnico asignado / resuelto.
@@ -111,7 +111,7 @@ Los reportes que llegan a la casilla exclusiva aparecen en el inbox; el gestor l
 **FRs covered:** FR11, FR12, FR13 — NFR6, NFR10
 
 ### Epic 7: Finanzas — facturación, cobro y liquidación al técnico
-El gestor administrativo emite la nota de cobro (comparación presupuesto vs costo final), la envía por email al pagador, registra el cobro (liquidación mensual o directo) y liquida al técnico con comprobante.
+El gestor administrativo emite la nota de cobro (comparación presupuesto vs costo final), la envía por email al pagador, registra el cobro y liquida al técnico con comprobante.
 **FRs covered:** FR23, FR24 — NFR8, NFR9
 
 ### Epic 8: Trazabilidad, resumen de obras y métricas
@@ -272,7 +272,7 @@ para incorporarlo directamente a la red de la inmobiliaria.
 **Acceptance Criteria:**
 
 **Given** el módulo de técnicos
-**When** se crea un técnico con datos, especialidades y documentación (DNI, seguro; matrícula obligatoria si alguna especialidad tiene `requiere_matricula`)
+**When** se crea un técnico con datos, especialidades y documentación (DNI; matrícula obligatoria si alguna especialidad tiene `requiere_matricula`)
 **Then** el técnico queda habilitado, puede loguearse y aparece como asignable en sus especialidades
 **And** sin matrícula cargada no se le puede asignar una especialidad que la exige
 
@@ -560,9 +560,8 @@ para cerrar el circuito financiero con el pagador.
 
 **Given** una nota de cobro emitida
 **When** el pagador es el propietario
-**Then** el gestor registra el cobro como "descuento en liquidación mensual" (mes/período) o "cobro directo" (fecha + medio)
-**When** el pagador es el inquilino
-**Then** registra cobro directo o "junto con el alquiler" (período)
+**Then** el gestor registra el cobro (fecha + medio de pago)
+**And** aplica igual para inquilino o propietario — un solo mecanismo simple
 **And** al registrar el cobro la gestión pasa a "Liquidación técnico"
 
 ### Story 7.3: Liquidación al técnico con comprobante

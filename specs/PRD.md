@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión** | 1.2.0 |
+| **Versión** | 1.3.0 |
 | **Fecha** | 2026-07-05 |
 | **Estado** | Borrador — pendiente aprobación de Fausti |
 | **Basado en** | MANTIS original (`projects/tesis/sist_gestion_incidentes`) — sistema de gestión de incidentes ISBA |
@@ -58,7 +58,7 @@ Sistema web para que una **inmobiliaria** gestione el **mantenimiento** de las p
 - **Inquilinos** (ABM)
 - **Propiedades** (ABM)
 - **Vinculación** propiedad ↔ propietario ↔ inquilino
-- **Técnicos** (ABM + enrolamiento con documentación: DNI, seguro, etc. — igual al flujo de MANTIS original: solicitud → evaluación → alta/rechazo; o alta manual directa)
+- **Técnicos** (ABM + enrolamiento con documentación: DNI y matrícula si aplica (v1.3.0: sin seguro — decisión de Fausti) — igual al flujo de MANTIS original: solicitud → evaluación → alta/rechazo; o alta manual directa)
 - **Empleados** (usuarios internos con rol)
 
 ### Legajos por propiedad (punto 8 — clave)
@@ -101,9 +101,9 @@ Propuesta de columnas — simplifica el flujo del original eliminando todo lo qu
 | 6 | **Facturación y cobro** | Gestor administrativo: emite la nota de cobro con detalle, la **envía por email** a inquilino o propietario, registra el cobro | ✖ |
 | 7 | **Liquidación técnico** | Gestor administrativo: registra pago al técnico + genera y envía **comprobante con detalle** | ✖ |
 
-🔎 Precisiones de la etapa 6 (domain research):
-- **Cobro al propietario, dos mecanismos**: descuento en la **liquidación mensual del alquiler** (el caso común en la práctica argentina) o cobro directo (obras grandes). Ambos se modelan en `cobros`.
-- El documento emitido es una **nota de cobro/detalle de obra de la inmobiliaria** que referencia la **factura C** del técnico monotributista — el sistema documenta el circuito fiscal, no lo reemplaza (validar con el contador).
+Precisiones de la etapa 6:
+- **Cobro simple (v1.3.0 — decisión de alcance de Fausti)**: el sistema SOLO emite la nota de cobro y la envía a quien corresponda (inquilino o propietario), y registra si se cobró. **NO contempla compensación contra la liquidación mensual del alquiler** — eso queda fuera del alcance del proyecto.
+- El documento emitido es una **nota de cobro/detalle de obra de la inmobiliaria** que referencia la **factura C** del técnico monotributista — el sistema documenta el circuito fiscal, no lo reemplaza.
 - 🔎 La etapa muestra la **comparación presupuesto aprobado vs costo final** (práctica del líder Property Meld).
 | 8 | **Finalizado** | — (cierre; queda en legajo e historial) | ✖ |
 

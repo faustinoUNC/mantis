@@ -23,18 +23,23 @@ export const NAV_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
   administrador: [
     { href: "/admin", label: "Inicio" },
     { href: "/cartera/propiedades", label: "Cartera" },
+    { href: "/tecnicos", label: "Técnicos" },
     { href: "/admin/empleados", label: "Empleados" },
     { href: "/admin/especialidades", label: "Especialidades" },
   ],
   gestor_mantenimiento: [
     { href: "/gestion", label: "Inicio" },
     { href: "/cartera/propiedades", label: "Cartera" },
+    { href: "/tecnicos", label: "Técnicos" },
   ],
   gestor_administrativo: [
     { href: "/administracion", label: "Inicio" },
     { href: "/cartera/propiedades", label: "Cartera" },
   ],
-  tecnico: [{ href: "/tecnico", label: "Mis trabajos" }],
+  tecnico: [
+    { href: "/tecnico", label: "Mis trabajos" },
+    { href: "/tecnico/agenda", label: "Mi agenda" },
+  ],
 };
 
 export const NOMBRE_ROL: Record<Rol, string> = {

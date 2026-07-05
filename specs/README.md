@@ -51,3 +51,10 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-204](STORY-204.md) | Legajos por período de ocupación | ✅ done |
 
 **ÉPICA 2 COMPLETA** ✅ (2026-07-05)
+
+| [STORY-301](STORY-301.md) | Alta manual de técnico | ✅ done |
+| [STORY-302](STORY-302.md) | Auto-enrolamiento con documentación | ✅ done |
+| [STORY-303](STORY-303.md) | Evaluación de solicitudes | ✅ done |
+| [STORY-304](STORY-304.md) | Agenda de disponibilidad (mobile) | ✅ done |
+
+**ÉPICA 3 COMPLETA** ✅ (2026-07-05) — Recortes de alcance v1.3.0: sin seguro del técnico; cobro simple sin compensación contra liquidación de alquiler.

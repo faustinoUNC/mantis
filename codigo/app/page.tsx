@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form.client";
 import { obtenerUsuarioActual } from "@/features/auth/service";
+import { estadoSolicitudActual } from "@/features/tecnicos/service";
 import { createClient } from "@/shared/lib/supabase/server";
 
 // Login editorial: tipografía como protagonista, asimétrico, con pulso.
@@ -13,13 +15,22 @@ export default async function LoginPage({
   const usuario = await obtenerUsuarioActual();
   if (usuario) redirect("/panel");
 
-  // Sesión válida pero sin usuario activo = cuenta inhabilitada.
+  // Sesión válida sin usuario activo: técnico pendiente/rechazado o
+  // cuenta inhabilitada — distinguimos el mensaje.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   const { e } = await searchParams;
-  const inhabilitado = e === "inhabilitado" || Boolean(user);
+  const solicitud = user ? await estadoSolicitudActual() : null;
+  let aviso: string | null = null;
+  if (solicitud?.estado === "pendiente") {
+    aviso = "Tu solicitud está en evaluación. Te avisamos cuando esté lista.";
+  } else if (solicitud?.estado === "rechazado") {
+    aviso = `Tu solicitud fue rechazada${solicitud.motivo ? `: ${solicitud.motivo}` : "."}`;
+  } else if (e === "inhabilitado" || user) {
+    aviso = "Tu cuenta está inhabilitada. Contactá al administrador.";
+  }
 
   return (
     <main className="fondo-tecnico flex-1 flex flex-col justify-center px-6 sm:px-[12vw] py-12 overflow-hidden">
@@ -56,13 +67,17 @@ export default async function LoginPage({
           Gestión de mantenimiento inmobiliario: del reporte a la liquidación.
         </p>
 
-        {inhabilitado && (
+        {aviso && (
           <p
             role="alert"
-            className="animate-aparecer mt-8 text-sm font-medium text-error bg-error-soft border border-error-soft-border rounded-md px-4 py-3"
+            className={`animate-aparecer mt-8 text-sm font-medium rounded-md px-4 py-3 border ${
+              solicitud?.estado === "pendiente"
+                ? "text-urgente-fuerte bg-urgente-soft border-urgente-soft-border"
+                : "text-error bg-error-soft border-error-soft-border"
+            }`}
             style={{ animationDelay: "180ms" }}
           >
-            Tu cuenta está inhabilitada. Contactá al administrador.
+            {aviso}
           </p>
         )}
 
@@ -78,7 +93,12 @@ export default async function LoginPage({
           style={{ animationDelay: "300ms" }}
         >
           ¿Sos técnico y todavía no tenés cuenta?{" "}
-          <span className="font-medium text-brand">Enrolate acá</span>
+          <Link
+            href="/enrolamiento"
+            className="font-medium text-brand hover:text-brand-hover"
+          >
+            Enrolate acá
+          </Link>
         </p>
       </div>
     </main>
