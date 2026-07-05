@@ -1,50 +1,51 @@
 @import "tailwindcss";
 
 /*
-  MANTIS 2 — Design system "utilitario de obra"
-  Fuente única de verdad de tokens (Tailwind 4 CSS-first).
-  Tinta verde profunda sobre papel cálido + ámbar señal.
+  MANTIS 2 — Design contract "Esmeralda técnica"
+  Fuente de verdad: _bmad-output/planning-artifacts/ux-designs/ux-mantis-2026-07-05/DESIGN.md
+  Mapeo de nombres: text → foreground · text-muted → muted (ergonomía de utilities).
+  Criterios: un acento un significado · el borde es la elevación · consistencia sobre creatividad.
 */
 @theme {
   /* Paleta */
-  --color-papel: #f6f4ee;
-  --color-papel-2: #efece3;
-  --color-tinta: #15211b;
-  --color-tinta-2: #2c3a33;
+  --color-background: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f5;
+  --color-foreground: #18181b;
+  --color-muted: #71717a;
+  --color-border: #e4e4e7;
+  --color-border-strong: #d4d4d8;
 
-  --color-mantis-50: #eef5f0;
-  --color-mantis-100: #dcebe1;
-  --color-mantis-300: #8fbfa3;
-  --color-mantis-500: #2e7d5b;
-  --color-mantis-600: #1d5c43;
-  --color-mantis-700: #164936;
-  --color-mantis-900: #0e2f23;
+  --color-brand: #059669;
+  --color-brand-hover: #047857;
+  --color-brand-active: #065f46;
+  --color-brand-soft: #ecfdf5;
+  --color-brand-soft-border: #a7f3d0;
 
-  --color-senal-100: #fdeed3;
-  --color-senal-400: #f2a422;
-  --color-senal-600: #b45309;
+  --color-urgente: #d97706;
+  --color-urgente-fuerte: #b45309;
+  --color-urgente-soft: #fffbeb;
+  --color-urgente-soft-border: #fde68a;
 
-  --color-alerta-100: #fbe4e1;
-  --color-alerta-600: #c0392b;
-
-  --color-neutral-100: #e8e5dc;
-  --color-neutral-400: #a8a496;
-  --color-neutral-600: #6f6c60;
+  --color-error: #dc2626;
+  --color-error-soft: #fef2f2;
+  --color-error-soft-border: #fecaca;
 
   /* Tipografía */
   --font-sans: var(--font-archivo), "Archivo", sans-serif;
-  --font-mono: var(--font-fragment), "Fragment Mono", monospace;
+  --font-mono: var(--font-fragment), "Fragment Mono", monospace; /* SOLO datos: montos, IDs, fechas técnicas */
 
-  /* Forma — utilitaria: radios chicos, sombras de papel */
-  --radius-caja: 0.5rem;
-  --radius-pill: 999px;
-  --shadow-papel: 0 1px 2px rgb(21 33 27 / 0.06), 0 4px 16px rgb(21 33 27 / 0.05);
-  --shadow-hundido: inset 0 1px 2px rgb(21 33 27 / 0.08);
+  /* Forma — el borde es la elevación; sombra solo overlays */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-overlay: 0 4px 24px rgb(0 0 0 / 0.08);
 
-  /* Táctil (vista técnico): target mínimo 44px */
+  /* Táctil: target mínimo 44px en todo el sistema */
   --spacing-tap: 2.75rem;
 
-  --animate-aparecer: aparecer 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-aparecer: aparecer 0.2s ease-out both;
+  --animate-latido: latido 2.6s ease-in-out infinite;
 
   @keyframes aparecer {
     from {
@@ -56,55 +57,65 @@
       transform: translateY(0);
     }
   }
+
+  /* El pulso del sistema: usado por el guión del wordmark en el login */
+  @keyframes latido {
+    0%,
+    100% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scaleX(1.45);
+      opacity: 0.75;
+    }
+  }
 }
 
 body {
-  background: var(--color-papel);
-  color: var(--color-tinta);
+  background: var(--color-background);
+  color: var(--color-foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: var(--color-senal-400);
-  color: var(--color-tinta);
+  background: var(--color-brand-soft-border);
+  color: var(--color-foreground);
 }
 
-/* Micro-etiqueta: rótulo técnico en mono, tracking amplio */
-.etiqueta {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-/* Franja de obra: acento diagonal ámbar/tinta */
-.franja-obra {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--color-senal-400) 0 10px,
-    var(--color-tinta) 10px 20px
+/* Fondo técnico: grilla de puntos apenas perceptible (login y vacíos de marca) */
+.fondo-tecnico {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-foreground) 7%, transparent) 1px,
+    transparent 1px
   );
+  background-size: 24px 24px;
 }
 
-/* Regla de plano: hairline con extremos marcados */
-.regla-plano {
-  position: relative;
-  height: 1px;
-  background: color-mix(in srgb, var(--color-tinta) 18%, transparent);
+/* Input editorial (exclusivo del login, definido en DESIGN.md §Components):
+   sin caja — subrayado hairline que se enciende esmeralda al focus */
+.input-editorial {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-strong);
+  border-radius: 0;
+  padding: 0.625rem 0;
+  min-height: var(--spacing-tap);
+  width: 100%;
+  color: var(--color-foreground);
+  transition: border-color 0.2s ease;
 }
-.regla-plano::before,
-.regla-plano::after {
-  content: "";
-  position: absolute;
-  top: -2.5px;
-  width: 1px;
-  height: 6px;
-  background: color-mix(in srgb, var(--color-tinta) 40%, transparent);
+.input-editorial::placeholder {
+  color: color-mix(in srgb, var(--color-muted) 55%, transparent);
 }
-.regla-plano::before {
-  left: 0;
+.input-editorial:focus {
+  outline: none;
+  border-bottom-color: var(--color-brand);
+  box-shadow: 0 1px 0 0 var(--color-brand);
 }
-.regla-plano::after {
-  right: 0;
+.input-editorial:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-background) inset;
+  -webkit-text-fill-color: var(--color-foreground);
 }

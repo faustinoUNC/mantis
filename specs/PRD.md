@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Versión** | 1.1.0 |
+| **Versión** | 1.2.0 |
 | **Fecha** | 2026-07-05 |
 | **Estado** | Borrador — pendiente aprobación de Fausti |
 | **Basado en** | MANTIS original (`projects/tesis/sist_gestion_incidentes`) — sistema de gestión de incidentes ISBA |
@@ -39,10 +39,12 @@ Sistema web para que una **inmobiliaria** gestione el **mantenimiento** de las p
 | **Inquilino** | Reporta por email/teléfono a la inmobiliaria. Recibe factura por email cuando el costo le corresponde. |
 | **Propietario** | Recibe factura por email cuando le corresponde, y el PDF "Resumen de obras" de su propiedad. |
 
-### 2.1 Permisos en el funnel (punto 16 del brief)
+### 2.1 Permisos en el funnel (punto 16 del brief + ownership v1.2.0)
 
-- Cada gestor **ve todo el tablero** pero **solo puede accionar en las columnas de su área**. Las tarjetas fuera de su competencia se ven **opacadas / solo lectura** (puede abrir el detalle informativo, no tomar acciones).
-- El **administrador** puede accionar en cualquier columna.
+- **Ownership por gestión (v1.2.0)**: toda gestión de mantenimiento tiene un **gestor de mantenimiento responsable** (`gestor_id`), fijado al crearla (quien la crea/toma queda como responsable). **Solo el administrador puede cambiarlo.**
+- **Cada gestor de mantenimiento ve ÚNICAMENTE sus gestiones** en el tablero. Cuando el admin reasigna una gestión a otro gestor, **el anterior deja de verla**.
+- El **gestor administrativo** ve las gestiones en sus columnas (Facturación y cobro, Liquidación) y **solo puede accionar ahí**; el resto del funnel lo ve opacado / solo lectura.
+- El **administrador** ve todo y puede accionar en cualquier columna.
 - Las tarjetas son **editables solo hasta cierta etapa** del funnel (definido por etapa en la matriz de la sección 5).
 
 ### 2.2 Bloqueo de acceso en tiempo real
@@ -66,6 +68,7 @@ Sistema web para que una **inmobiliaria** gestione el **mantenimiento** de las p
 
 ### Otras entidades
 - **Gestión de mantenimiento** (la tarjeta del Kanban) con clasificación por especialidad (plomería, electricidad, gas, carpintería…).
+  - **`gestor_id` (v1.2.0)**: gestor de mantenimiento responsable. Se fija al crear; solo el admin lo reasigna (evento auditado). Gobierna la visibilidad del tablero para los gestores de mantenimiento.
   - 🔎 **Urgencia** (normal | urgente) como campo de primera clase, con semántica legal argentina: lo urgente el propietario debe atenderlo en **24 hs** y lo normal en **10 días** (CCyC, régimen supletorio post-DNU 70/2023) — el sistema alerta cuando una gestión urgente se acerca al plazo sin asignación.
   - 🔎 **Causa del deterioro** (desgaste/antigüedad | daño por uso | mejora): input con el que el sistema **sugiere** quién paga (regla CCyC: desgaste → propietario; daño culpable → inquilino), sujeto a lo pactado en el contrato. El gestor siempre confirma.
 - **Presupuestos, avances, conformidades** (heredan la mecánica probada del original).
@@ -159,6 +162,8 @@ Apartado del panel visible **únicamente para el administrador**:
 
 - **Vista técnico 100% pensada para celular**: dedos, gestos, animaciones pulidas. CRÍTICO.
 - Diseño **100% personalizado**: nada de plantillas genéricas de IA ni cards típicas. Se usará un proceso de diseño real (skills `frontend-design` / `ui-ux-pro-max`, design system propio, referencias pro).
+- **Dirección estética (v1.2.0): minimalista y moderna.** Paleta moderna, interfaces limpias, sin ornamentación innecesaria.
+- **Criterios de diseño obligatorios (v1.2.0)**: se define un **design contract** (workflow BMAD UX) con paleta, tipografía, espaciado, componentes y reglas de interacción que TODO el sistema debe seguir. **Es crítico no desviarse y ser consistentes** — ninguna pantalla se diseña "a ojo"; todo sale del contract.
 - El funnel debe ser **simple y sumamente claro** para seguir cada gestión de un vistazo.
 
 ## 13. Fuera de alcance

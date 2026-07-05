@@ -3,8 +3,24 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { createClient } from "@/shared/lib/supabase/client";
+
+function CampoEditorial({
+  label,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label
+        htmlFor={props.name}
+        className="text-[13px] font-medium text-muted"
+      >
+        {label}
+      </label>
+      <input id={props.name} className="input-editorial" {...props} />
+    </div>
+  );
+}
 
 export function LoginForm() {
   const router = useRouter();
@@ -32,8 +48,8 @@ export function LoginForm() {
   }
 
   return (
-    <form className="flex flex-col gap-5" onSubmit={onSubmit}>
-      <Input
+    <form className="flex flex-col gap-7" onSubmit={onSubmit}>
+      <CampoEditorial
         label="Correo electrónico"
         type="email"
         name="email"
@@ -41,7 +57,7 @@ export function LoginForm() {
         autoComplete="email"
         required
       />
-      <Input
+      <CampoEditorial
         label="Contraseña"
         type="password"
         name="password"
@@ -50,14 +66,11 @@ export function LoginForm() {
         required
       />
       {error && (
-        <p
-          role="alert"
-          className="text-sm font-medium text-alerta-600 bg-alerta-100 border border-alerta-600/30 rounded-caja px-3.5 py-2.5"
-        >
+        <p role="alert" className="text-sm font-medium text-error -my-2">
           {error}
         </p>
       )}
-      <Button type="submit" className="mt-1 w-full" disabled={enviando}>
+      <Button type="submit" className="w-full sm:w-auto sm:self-start sm:px-10" disabled={enviando}>
         {enviando ? "Entrando…" : "Entrar al sistema"}
       </Button>
     </form>

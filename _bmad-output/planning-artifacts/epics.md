@@ -331,6 +331,7 @@ para iniciar el seguimiento de un mantenimiento reportado.
 **Given** el formulario de nueva gestión
 **When** se completa descripción, propiedad (→ legajo vigente auto-vinculado), especialidad, urgencia y causa del deterioro
 **Then** la gestión nace en etapa "Ingresado" con pagador SUGERIDO por la causa (desgaste→propietario, daño→inquilino) sin confirmar
+**And** la gestión queda con `gestor_id` = el gestor que la creó (ownership — solo el admin podrá cambiarlo)
 **And** si la urgencia es "urgente" la tarjeta lo muestra de forma inequívoca (plazo legal 24h)
 
 ### Story 4.2: Tablero Kanban con permisos por columna
@@ -343,8 +344,8 @@ para seguir cada gestión de un vistazo sin pisar áreas ajenas.
 
 **Given** gestiones en distintas etapas
 **When** un gestor de mantenimiento mira el tablero
-**Then** ve las 8 columnas; las tarjetas de columnas ajenas (Facturación, Liquidación) se ven opacadas y de solo lectura
-**And** el gestor administrativo ve lo inverso; el admin acciona en todas
+**Then** ve ÚNICAMENTE las gestiones donde él es `gestor_id` (ownership — enforced por RLS, no solo UI); las tarjetas de columnas ajenas (Facturación, Liquidación) se ven opacadas y de solo lectura
+**And** el gestor administrativo ve las gestiones en sus columnas y el resto opacado; el admin ve todas y acciona en todas
 **And** las tarjetas son editables solo hasta la etapa Presupuesto (FR18)
 **And** el tablero se actualiza en tiempo real cuando otra persona mueve una tarjeta
 
@@ -422,6 +423,21 @@ para que el gestor la valide y el trabajo quede formalmente cerrado.
 **Then** pasa a "Facturación y cobro" con el costo final registrado
 **When** la rechaza (ilegible/incompleta, con motivo)
 **Then** el técnico puede resubir sin cambiar de etapa
+
+### Story 4.8: Reasignación de gestor responsable (solo admin)
+
+Como administrador,
+quiero reasignar el gestor responsable de una gestión,
+para redistribuir la carga o cubrir ausencias sin que nadie más pueda tocarlo.
+
+**Acceptance Criteria:**
+
+**Given** una gestión con `gestor_id` asignado
+**When** el admin la reasigna a otro gestor de mantenimiento
+**Then** el cambio queda como evento auditado en `eventos_gestion` (quién, cuándo, de quién→a quién)
+**And** el gestor anterior DEJA de ver la gestión en su tablero y el nuevo la ve al instante
+**When** un gestor de mantenimiento intenta cambiar `gestor_id` (incluso por API)
+**Then** es rechazado server-side (RLS/función — solo rol administrador)
 
 ---
 

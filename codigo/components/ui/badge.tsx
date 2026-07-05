@@ -1,15 +1,14 @@
 import { cn } from "@/shared/utils/cn";
 
-type Tono = "mantis" | "senal" | "alerta" | "neutro";
+type Tono = "brand" | "urgente" | "error" | "neutro";
 
 const tonos: Record<Tono, string> = {
-  mantis: "bg-mantis-100 text-mantis-700 border-mantis-300",
-  senal: "bg-senal-100 text-senal-600 border-senal-400/60",
-  alerta: "bg-alerta-100 text-alerta-600 border-alerta-600/40",
-  neutro: "bg-papel-2 text-neutral-600 border-neutral-400/50",
+  brand: "bg-brand-soft text-brand-active border-brand-soft-border",
+  urgente: "bg-urgente-soft text-urgente-fuerte border-urgente-soft-border",
+  error: "bg-error-soft text-error border-error-soft-border",
+  neutro: "bg-surface-2 text-muted border-border",
 };
 
-// Estilo "etiqueta estampada": mono, uppercase, borde visible.
 export function Badge({
   tono = "neutro",
   className,
@@ -18,7 +17,8 @@ export function Badge({
   return (
     <span
       className={cn(
-        "etiqueta inline-flex items-center gap-1.5 px-2 py-1 rounded-[4px] border",
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm border",
+        "text-[13px] font-medium leading-5",
         tonos[tono],
         className
       )}

@@ -35,10 +35,12 @@ Evolución del MANTIS original (`/Users/fausti/Downloads/projects/tesis/sist_ges
 - Email: **Resend** + React Email, siempre vía `features/email/service.ts`, con log en `emails_enviados`.
 - Notificaciones: outbox transaccional (trigger sobre `eventos_gestion` → `notificaciones`) + Supabase Realtime + fetch de no-leídas al reconectar.
 
-### 4. UX/UI
-- Vista técnico **100% mobile-first** (dedos, gestos, animaciones) — CRÍTICO.
-- Diseño 100% personalizado: usar skills `frontend-design` / `ui-ux-pro-max`; nada de cards genéricas de IA ni plantillas típicas.
-- Cada rol ve SOLO su área (dashboard, métricas, acciones); tarjetas fuera de competencia se ven opacadas/solo lectura.
+### 4. UX/UI — DESIGN CONTRACT OBLIGATORIO
+- **Fuente de verdad de diseño**: `_bmad-output/planning-artifacts/ux-designs/ux-mantis-2026-07-05/DESIGN.md` (visual, dirección "Esmeralda técnica" minimalista) + `EXPERIENCE.md` (comportamiento). **TODA pantalla nueva se compone con esos tokens y criterios — desviarse está PROHIBIDO.** Si falta un token/componente, se agrega al contract primero.
+- Los tokens del contract viven en `codigo/app/globals.css` (@theme). Un acento un significado: esmeralda = acción/marca; ámbar = urgente; rojo = error. El borde es la elevación (sin sombras en cards).
+- Vista técnico **100% mobile-first** (dedos, gestos, targets ≥44px) — CRÍTICO.
+- Nada genérico de IA: ni login card-centrada/banner-lateral, ni gradientes, ni sombras decorativas (ver Do's and Don'ts del contract).
+- Cada gestor de mantenimiento ve SOLO sus gestiones (ownership `gestor_id`, PRD §2.1); tarjetas fuera de competencia opacadas/solo lectura.
 
 ### 5. MCP
 - Perfil MCP propio del proyecto pendiente de crear (`~/.claude/mcp-profiles/mantis.json`) cuando exista el proyecto Supabase. Nunca editar `.mcp.json` a mano.

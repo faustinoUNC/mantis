@@ -4,7 +4,7 @@ import { cerrarSesion } from "@/features/auth/service";
 import { NOMBRE_ROL, type UsuarioActual } from "@/features/auth/types";
 import { redirect } from "next/navigation";
 
-// Cáscara común de los 4 paneles: header con marca, rol y salida.
+// Cáscara común de los 4 paneles: header claro con borde (DESIGN.md).
 export function PanelShell({
   usuario,
   children,
@@ -20,35 +20,36 @@ export function PanelShell({
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className="bg-tinta text-papel">
-        <div className="franja-obra h-1" />
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-8 py-3">
+      <header className="bg-surface border-b border-border">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 px-4 sm:px-8 h-14">
           <div className="flex items-center gap-3">
             <span
-              className="font-black uppercase tracking-tight text-lg leading-none"
+              className="font-black uppercase tracking-tight text-base leading-none"
               style={{ fontStretch: "125%" }}
             >
-              Man<span className="text-senal-400">—</span>tis
+              Man<span className="text-brand">—</span>tis
             </span>
-            <Badge tono="senal" className="hidden sm:inline-flex">
+            <Badge tono="brand" className="hidden sm:inline-flex">
               {NOMBRE_ROL[usuario.rol]}
             </Badge>
           </div>
-          <form action={salir} className="flex items-center gap-3">
-            <span className="hidden sm:block text-sm text-papel/70">
+          <form action={salir} className="flex items-center gap-2">
+            <span className="hidden sm:block text-sm text-muted">
               {usuario.nombre}
             </span>
             <Button
-              variante="secundario"
+              variante="fantasma"
               type="submit"
-              className="min-h-0 h-9 px-3 text-sm border-papel/30 text-papel hover:bg-tinta-2 hover:border-papel/60"
+              className="min-h-0 h-9 px-3 text-sm"
             >
               Salir
             </Button>
           </form>
         </div>
       </header>
-      <main className="flex-1 px-4 sm:px-8 py-6">{children}</main>
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6">
+        {children}
+      </main>
     </div>
   );
 }
