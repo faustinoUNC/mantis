@@ -26,7 +26,9 @@ export function Campana({
 }) {
   const [items, setItems] = useState(iniciales);
   const [abierta, setAbierta] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const ref = useRef<HTMLDivElement>(null);
+  const botonRef = useRef<HTMLButtonElement>(null);
   const noLeidas = items.filter((n) => !n.leida_en).length;
 
   // Entrega realtime (RLS limita la suscripción a las propias filas);
@@ -76,8 +78,16 @@ export function Campana({
     return () => document.removeEventListener("mousedown", cerrar);
   }, []);
 
+  const ANCHO_PANEL = 320;
+
   async function alternar() {
     const abriendo = !abierta;
+    if (abriendo && botonRef.current) {
+      const r = botonRef.current.getBoundingClientRect();
+      // Alineado al botón, sin salirse del viewport por ninguno de los lados
+      const left = Math.max(8, Math.min(r.right - ANCHO_PANEL, window.innerWidth - ANCHO_PANEL - 8));
+      setPos({ top: r.bottom + 8, left });
+    }
     setAbierta(abriendo);
     if (abriendo && noLeidas > 0) {
       await marcarLeidas();
@@ -89,6 +99,7 @@ export function Campana({
   return (
     <div className="relative" ref={ref}>
       <button
+        ref={botonRef}
         type="button"
         onClick={alternar}
         aria-label={`Notificaciones${noLeidas ? ` (${noLeidas} sin leer)` : ""}`}
@@ -107,7 +118,10 @@ export function Campana({
       </button>
 
       {abierta && (
-        <div className="animate-aparecer absolute right-0 top-11 w-80 max-h-96 overflow-y-auto bg-surface border border-border rounded-lg shadow-overlay z-50">
+        <div
+          className="animate-aparecer fixed w-80 max-h-96 overflow-y-auto bg-surface border border-border rounded-lg shadow-overlay z-50"
+          style={{ top: pos.top, left: pos.left }}
+        >
           <p className="text-[13px] font-medium text-muted px-4 py-2.5 border-b border-border">
             Notificaciones
           </p>

@@ -13,7 +13,6 @@ import type { Causa, Urgencia } from "@/features/gestiones/types";
 import { LABEL_CAUSA } from "@/features/gestiones/types";
 import {
   crearDesdeReporte,
-  crearGestionConIA,
   descartarReporte,
   sincronizarInbox,
   type Reporte,
@@ -44,15 +43,6 @@ function ReporteCard({
   const [modo, setModo] = useState<"ninguno" | "manual" | "descartar">("ninguno");
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
-
-  async function conIA() {
-    setError(null);
-    setCargando("ia");
-    const r = await crearGestionConIA(reporte.id);
-    setCargando(null);
-    if (!r.ok) return setError(r.error);
-    if (r.data?.gestionId) router.push(`/gestiones/${r.data.gestionId}`);
-  }
 
   async function manual(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -100,11 +90,8 @@ function ReporteCard({
 
       {modo === "ninguno" && (
         <div className="flex flex-wrap gap-2 mt-4">
-          <Button disabled={cargando !== null} onClick={conIA}>
-            {cargando === "ia" ? "La IA está leyendo…" : "✦ Crear con IA"}
-          </Button>
-          <Button variante="secundario" onClick={() => setModo("manual")}>
-            Crear manual
+          <Button onClick={() => setModo("manual")}>
+            Crear gestión
           </Button>
           <Button
             variante="fantasma"

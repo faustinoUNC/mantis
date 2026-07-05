@@ -1,7 +1,7 @@
 # Story 6.1 (+6.2/6.3): Inbox Gmail + botón IA
 
 Status: done
-Versión: 1.3.0
+Versión: 2.0.0
 
 > Cubre las stories 6.1 (ingesta), 6.2 (mail→gestión/descarte) y 6.3 (botón IA) de epics.md.
 
@@ -41,6 +41,7 @@ claude-fable-5 (Claude Code, 2026-07-05)
 - Modelo IA: claude-sonnet-5 con tool_choice forzado a crear_gestion (enums de especialidades y propiedades activas). Si no matchea propiedad → pide creación manual (nunca falla silencioso).
 - Sync-on-view en vez de cron (Vercel Hobby limita crons a 1/día) — documentado como desviación de ARQUITECTURA §5; migrable a cron/push sin tocar aguas abajo.
 - Los 19 mails históricos de prueba quedaron descartados con motivo — inbox con cero pendientes sin destino.
+- v2.0.0 (decisión de Fausti): **se ELIMINA el botón "Crear con IA"** del inbox — la clasificación dependía demasiado de lo que escribe el cliente y no era precisa. Quedan "Crear gestión" (form prefilled) y "Descartar". El service crearGestionConIA fue removido (queda en git history si se retoma la IA en otro punto del flujo).
 - v1.3.0 (pedido Fausti): **sondeo automático cada 1 minuto** — pg_cron + pg_net (Supabase) → POST /api/cron/inbox con CRON_SECRET; núcleo de sync extraído a features/inbox/sync.ts (sin sesión) y compartido con el server action. Verificado: job 'sondeo-inbox' activo, primera corrida succeeded, endpoint 401 sin secreto. La ingesta ahora es automática: las notificaciones a gestores llegan sin abrir el inbox.
 - v1.2.0 (bug real de Fausti): el sync usaba `is:unread`, pero los mails que uno se manda a sí mismo (o abre en Gmail antes de sincronizar) nacen LEÍDOS → no entraban. Ahora la query no filtra por leído; la idempotencia es puramente por `unique(gmail_message_id)` con pre-chequeo en DB (se dejó de marcar leído en Gmail — innecesario).
 - v1.1.0 (pedido Fausti): el sync filtra `subject:mantenimiento` — la casilla es compartida (Gmail personal + esquema plus-addressing), así solo se ingesta lo que sigue la convención del canal. Aviso visible en el header del inbox.
