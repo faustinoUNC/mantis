@@ -147,11 +147,16 @@ async function datosDocumento(
   };
 }
 
-async function registrarEvento(gestionId: string, tipo: string, actorId: string) {
+async function registrarEvento(
+  gestionId: string,
+  tipo: string,
+  actorId: string,
+  detalle?: Record<string, unknown>
+) {
   const supabase = await createClient();
   await supabase
     .from("eventos_gestion")
-    .insert({ gestion_id: gestionId, tipo, actor_id: actorId });
+    .insert({ gestion_id: gestionId, tipo, actor_id: actorId, detalle: detalle ?? null });
 }
 
 async function guardarCargoAdmin(gestionId: string, cargoAdmin?: number) {
@@ -194,7 +199,10 @@ export async function emitirNotaCobro(
     .from("gestiones")
     .update({ nota_emitida_en: new Date().toISOString() })
     .eq("id", gestionId);
-  await registrarEvento(gestionId, "nota_cobro_enviada", actual.id);
+  await registrarEvento(gestionId, "nota_cobro_enviada", actual.id, {
+    total: doc.datos.total,
+    para: doc.datos.destinatarioRotulo.toLowerCase(),
+  });
 
   return { ok: true };
 }
@@ -294,6 +302,10 @@ export async function enviarPresupuestoEmail(
     gestion_id: gestionId,
     tipo: "presupuesto_enviado_pagador",
     actor_id: actual.id,
+    detalle: {
+      total: doc.datos.total,
+      para: doc.datos.destinatarioRotulo.toLowerCase(),
+    },
   });
 
   return { ok: true };
@@ -313,7 +325,7 @@ export async function registrarCobro(
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo registrar el cobro." };
 
-  await registrarEvento(gestionId, "cobro_registrado", actual.id);
+  await registrarEvento(gestionId, "cobro_registrado", actual.id, { medio });
   return avanzarEtapa(gestionId, "liquidacion_tecnico");
 }
 
@@ -355,6 +367,9 @@ export async function registrarLiquidacion(
     });
   }
 
-  await registrarEvento(gestionId, "liquidacion_registrada", actual.id);
+  await registrarEvento(gestionId, "liquidacion_registrada", actual.id, {
+    monto: datos.monto,
+    ...(datos.factura_ref && { factura_ref: datos.factura_ref }),
+  });
   return avanzarEtapa(gestionId, "finalizado");
 }

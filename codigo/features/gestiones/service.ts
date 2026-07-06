@@ -132,7 +132,7 @@ export async function obtenerGestion(
     await Promise.all([
       supabase
         .from("eventos_gestion")
-        .select("id, tipo, de_etapa, a_etapa, actor_id, detalle, creado_en")
+        .select("id, tipo, de_etapa, a_etapa, actor_id, detalle, creado_en, actor:usuarios(nombre)")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
       supabase
@@ -178,7 +178,10 @@ export async function obtenerGestion(
     tecnico_id: fila.tecnico_id,
     propiedad_id: fila.propiedad_id,
     especialidad_id: fila.especialidad_id,
-    eventos: (eventos ?? []) as GestionDetalle["eventos"],
+    eventos: (eventos ?? []).map((e) => ({
+      ...e,
+      actor: Array.isArray(e.actor) ? (e.actor[0] ?? null) : e.actor,
+    })) as GestionDetalle["eventos"],
     presupuestos: (presupuestos ?? []) as GestionDetalle["presupuestos"],
     avances: await Promise.all(
       (avances ?? []).map(async (a) => ({
@@ -274,11 +277,16 @@ export async function asignarTecnico(
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo asignar." };
 
+  const { data: tecnicoAsignado } = await supabase
+    .from("tecnicos")
+    .select("nombre")
+    .eq("id", tecnicoId)
+    .single();
   await supabase.from("eventos_gestion").insert({
     gestion_id: gestionId,
     tipo: "asignacion_solicitada",
     actor_id: actual.id,
-    detalle: { tecnico_id: tecnicoId },
+    detalle: { tecnico: tecnicoAsignado?.nombre ?? null },
   });
 
   refrescarTablero(gestionId);
@@ -338,6 +346,10 @@ export async function enviarPresupuesto(
     gestion_id: gestionId,
     tipo: "presupuesto_enviado",
     actor_id: actual.id,
+    detalle: {
+      total: datos.monto_materiales + datos.monto_mano_obra,
+      plazo_dias: datos.plazo_dias,
+    },
   });
 
   refrescarTablero(gestionId);
@@ -368,7 +380,7 @@ export async function resolverPresupuesto(
     gestion_id: gestionId,
     tipo: aprobar ? "presupuesto_aprobado" : "presupuesto_rechazado",
     actor_id: actual.id,
-    detalle: aprobar ? null : { motivo: opciones.motivo },
+    detalle: aprobar ? { pagador: opciones.pagador } : { motivo: opciones.motivo },
   });
 
   if (aprobar) {
@@ -492,7 +504,9 @@ export async function resolverConformidad(
     gestion_id: gestionId,
     tipo: aprobar ? "conformidad_aprobada" : "conformidad_rechazada",
     actor_id: actual.id,
-    detalle: aprobar ? null : { motivo: opciones.motivo },
+    detalle: aprobar
+      ? { costo_final: opciones.costo_final }
+      : { motivo: opciones.motivo },
   });
 
   if (aprobar) {
@@ -535,11 +549,16 @@ export async function reasignarGestor(
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo reasignar." };
 
+  const { data: nuevoGestor } = await supabase
+    .from("usuarios")
+    .select("nombre")
+    .eq("id", nuevoGestorId)
+    .single();
   await supabase.from("eventos_gestion").insert({
     gestion_id: gestionId,
     tipo: "gestor_reasignado",
     actor_id: actual.id,
-    detalle: { de: gestion.gestor_id, a: nuevoGestorId },
+    detalle: { nuevo_gestor: nuevoGestor?.nombre ?? null },
   });
 
   refrescarTablero(gestionId);

@@ -682,9 +682,28 @@ const SELLO_NOTA: Record<string, string> = {
   avance: "Avance de obra",
 };
 
+// Datos pertinentes del evento, legibles ("Técnico: X · Total: $ Y")
+function detalleLegible(detalle: Record<string, unknown> | null): string | null {
+  if (!detalle) return null;
+  const plataD = (v: unknown) => `$ ${Number(v).toLocaleString("es-AR")}`;
+  const partes: string[] = [];
+  if (detalle.tecnico) partes.push(`Técnico: ${detalle.tecnico}`);
+  if (detalle.nuevo_gestor) partes.push(`Nuevo gestor: ${detalle.nuevo_gestor}`);
+  if (detalle.total != null) partes.push(`Total: ${plataD(detalle.total)}`);
+  if (detalle.costo_final != null) partes.push(`Costo final: ${plataD(detalle.costo_final)}`);
+  if (detalle.monto != null) partes.push(`Monto: ${plataD(detalle.monto)}`);
+  if (detalle.plazo_dias != null) partes.push(`Plazo: ${detalle.plazo_dias} día${Number(detalle.plazo_dias) === 1 ? "" : "s"}`);
+  if (detalle.pagador) partes.push(`Paga: ${detalle.pagador}`);
+  if (detalle.medio) partes.push(`Medio: ${detalle.medio}`);
+  if (detalle.factura_ref) partes.push(`Factura: ${detalle.factura_ref}`);
+  if (detalle.para) partes.push(`Para: ${detalle.para}`);
+  if (detalle.motivo && detalle.motivo !== "reasignar") partes.push(String(detalle.motivo));
+  return partes.length ? partes.join(" · ") : null;
+}
+
 type ItemActividad =
   | { clase: "etapa"; etapa: string; fecha: string }
-  | { clase: "evento"; texto: string; detalle: string | null; fecha: string }
+  | { clase: "evento"; texto: string; detalle: string | null; actor: string | null; fecha: string }
   | { clase: "nota"; sello: string; nota: string; foto: string | null; fecha: string }
   | { clase: "conformidad"; estado: string; motivo: string | null; foto: string | null; fecha: string };
 
@@ -704,7 +723,8 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
         : {
             clase: "evento",
             texto: LABEL_EVENTO[e.tipo] ?? e.tipo,
-            detalle: e.detalle?.motivo != null ? String(e.detalle.motivo) : null,
+            detalle: detalleLegible(e.detalle),
+            actor: e.actor?.nombre ?? null,
             fecha: e.creado_en,
           }
     ),
@@ -801,10 +821,17 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
             <li key={i} className="relative">
               <span className="absolute -left-[17.5px] top-1.5 size-1.5 rounded-pill bg-border-strong" aria-hidden />
               <div className="flex items-baseline justify-between gap-3">
-                <p className="text-sm">
-                  {item.texto}
-                  {item.detalle && <span className="text-muted"> · {item.detalle}</span>}
-                </p>
+                <div className="min-w-0">
+                  <p className="text-sm">
+                    {item.texto}
+                    {item.actor && (
+                      <span className="text-muted text-[13px]"> — {item.actor}</span>
+                    )}
+                  </p>
+                  {item.detalle && (
+                    <p className="text-[13px] text-muted mt-0.5">{item.detalle}</p>
+                  )}
+                </div>
                 <FechaItem fecha={item.fecha} />
               </div>
             </li>

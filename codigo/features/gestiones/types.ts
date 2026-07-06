@@ -57,6 +57,7 @@ export interface Evento {
   actor_id: string;
   detalle: Record<string, unknown> | null;
   creado_en: string;
+  actor: { nombre: string } | null;
 }
 
 export interface Presupuesto {
