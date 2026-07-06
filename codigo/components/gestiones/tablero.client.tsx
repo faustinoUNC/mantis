@@ -48,30 +48,30 @@ function TarjetaGestion({
   activa: boolean;
 }) {
   return (
-    <Link href={`/gestiones/${gestion.id}`} className="block">
+    <Link href={`/gestiones/${gestion.id}`} className="block group">
       <Card
         className={cn(
-          "p-3 hover:border-border-strong transition-colors",
+          "p-3.5 transition-all duration-150 group-hover:border-brand/40 group-hover:-translate-y-px",
           gestion.urgencia === "urgente" && "border-l-2 border-l-urgente",
           !activa && "opacity-50"
         )}
       >
-        <p className="text-sm font-medium leading-snug line-clamp-2">
+        <p className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-brand-active transition-colors">
           {gestion.descripcion}
         </p>
-        <p className="text-[13px] text-muted mt-1.5 truncate">
+        <p className="text-[12px] text-muted mt-1.5 truncate">
           {gestion.direccion}
         </p>
-        <div className="flex items-center justify-between gap-2 mt-2.5">
-          <div className="flex gap-1.5 min-w-0">
-            <Badge tono="neutro" className="truncate">
+        <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border/70">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[12px] font-medium text-muted truncate">
               {gestion.especialidad}
-            </Badge>
+            </span>
             {gestion.urgencia === "urgente" && (
               <Badge tono="urgente">Urgente</Badge>
             )}
           </div>
-          <span className="font-mono text-[11px] text-muted shrink-0">
+          <span className="font-mono text-[11px] text-muted/80 shrink-0">
             {diasEn(gestion.creado_en)}
           </span>
         </div>
@@ -201,31 +201,48 @@ export function Tablero({
           return (
             <section
               key={etapa.id}
-              className="w-64 shrink-0 snap-start"
+              className={cn(
+                "w-64 shrink-0 snap-start rounded-lg border bg-surface-2/50 flex flex-col",
+                activa ? "border-border" : "border-transparent opacity-80"
+              )}
               aria-label={etapa.label}
             >
-              <header className="flex items-center justify-between px-1 mb-2">
+              <header className="flex items-center gap-2 px-3 pt-3 pb-2">
+                <span
+                  className={cn(
+                    "size-1.5 rounded-pill shrink-0",
+                    activa ? "bg-brand" : "bg-border-strong"
+                  )}
+                  aria-hidden
+                />
                 <h2
                   className={cn(
-                    "text-[13px] font-medium",
+                    "text-[13px] font-semibold tracking-tight truncate",
                     activa ? "text-foreground" : "text-muted"
                   )}
                 >
                   {etapa.label}
                 </h2>
-                <span className="font-mono text-[11px] text-muted">
+                <span
+                  className={cn(
+                    "ml-auto font-mono text-[11px] rounded-pill px-1.5 py-0.5",
+                    columna.length > 0
+                      ? "bg-surface text-foreground border border-border"
+                      : "text-muted/60"
+                  )}
+                >
                   {columna.length}
                 </span>
               </header>
-              <div className="flex flex-col gap-2 min-h-24 rounded-lg bg-surface-2/60 p-2">
+              <div className="flex flex-col gap-2 flex-1 min-h-28 px-2 pb-2">
+                {columna.length === 0 && (
+                  <div className="flex-1 grid place-items-center rounded-md border border-dashed border-border/80 py-6">
+                    <span className="text-[12px] text-muted/60">Sin gestiones</span>
+                  </div>
+                )}
                 {columna.map((g) => (
                   <TarjetaGestion key={g.id} gestion={g} activa={activa} />
                 ))}
-                {columna.length === 0 && (
-                  <p className="text-[13px] text-muted/70 text-center py-6 select-none">
-                    —
-                  </p>
-                )}
               </div>
             </section>
           );

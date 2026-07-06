@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { EnvioDocumento } from "@/components/gestiones/envio-documento.client";
+import { EtapaStepper } from "@/components/gestiones/etapa-stepper.client";
+import { PresenciaGestion } from "@/components/gestiones/presencia.client";
 import { FinanzasAcciones } from "@/components/gestiones/finanzas.client";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
@@ -708,8 +710,15 @@ export function DetalleGestion({
         {gestion.descripcion}
       </h1>
 
+      <EtapaStepper etapa={gestion.etapa} />
+
       <DatosGestion gestion={gestion} />
 
+      <PresenciaGestion
+        gestionId={gestion.id}
+        usuarioId={usuario.id}
+        nombre={usuario.nombre}
+      >
       <Card className="p-5 mt-4 border-brand-soft-border">
         <div className="flex items-center gap-2 mb-4">
           <span className="size-2 rounded-pill bg-brand" aria-hidden />
@@ -762,6 +771,7 @@ export function DetalleGestion({
           <p className="text-sm text-muted">Solo lectura para tu rol.</p>
         )}
       </Card>
+      </PresenciaGestion>
 
       {esAdmin && <ReasignarGestor gestion={gestion} gestores={gestores} />}
 

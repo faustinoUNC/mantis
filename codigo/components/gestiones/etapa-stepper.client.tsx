@@ -1,0 +1,89 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ETAPAS } from "@/features/gestiones/types";
+import { cn } from "@/shared/utils/cn";
+
+// Stepper del funnel (STORY-904): dónde está la gestión, de un vistazo.
+// Cuando la etapa cambia (acción propia o realtime), el paso nuevo hace
+// un flash esmeralda y un toast confirma el avance — feedback inequívoco.
+
+export function EtapaStepper({ etapa }: { etapa: string }) {
+  const indice = ETAPAS.findIndex((e) => e.id === etapa);
+  const previa = useRef(etapa);
+  const [avanzo, setAvanzo] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (previa.current !== etapa) {
+      const label = ETAPAS.find((e) => e.id === etapa)?.label ?? etapa;
+      setAvanzo(true);
+      setToast(`La gestión avanzó a ${label}`);
+      const t1 = setTimeout(() => setAvanzo(false), 1200);
+      const t2 = setTimeout(() => setToast(null), 4500);
+      previa.current = etapa;
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [etapa]);
+
+  return (
+    <>
+      <div className="mt-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <ol className="flex items-center gap-0 min-w-max">
+          {ETAPAS.map((e, i) => {
+            const pasada = i < indice;
+            const actual = i === indice;
+            return (
+              <li key={e.id} className="flex items-center">
+                {i > 0 && (
+                  <span
+                    className={cn(
+                      "block h-px w-4 sm:w-6",
+                      i <= indice ? "bg-brand" : "bg-border"
+                    )}
+                    aria-hidden
+                  />
+                )}
+                <span
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-pill border px-2.5 py-1 text-[12px] font-medium whitespace-nowrap transition-colors",
+                    actual &&
+                      "border-brand bg-brand-soft text-brand-active font-semibold",
+                    actual && avanzo && "animate-flash-brand",
+                    pasada && "border-transparent text-brand-active/70",
+                    !actual && !pasada && "border-transparent text-muted/60"
+                  )}
+                  aria-current={actual ? "step" : undefined}
+                >
+                  {pasada && (
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  )}
+                  {e.label}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+
+      {toast &&
+        createPortal(
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-toast">
+            <div className="flex items-center gap-2.5 rounded-lg bg-brand text-white px-4 py-3 shadow-overlay text-sm font-semibold">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              {toast}
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}
