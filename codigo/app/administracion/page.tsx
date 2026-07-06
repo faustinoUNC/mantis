@@ -15,24 +15,24 @@ export default async function AdministracionInicio() {
       nombre={usuario!.nombre}
       tiles={[
         {
-          label: "Pendientes de cobro",
-          valor: String(metricas?.pendientesCobro ?? 0),
+          label: "Por cobrar",
+          valor: `${metricas?.pendientesCobro ?? 0} · $ ${(metricas?.montoPorCobrar ?? 0).toLocaleString("es-AR")}`,
           alerta: (metricas?.pendientesCobro ?? 0) > 0,
           href: "/tablero",
         },
         {
-          label: "Por cobrar ($)",
-          valor: `$ ${(metricas?.montoPorCobrar ?? 0).toLocaleString("es-AR")}`,
-        },
-        {
-          label: "Pendientes de liquidación",
-          valor: String(metricas?.pendientesLiquidacion ?? 0),
+          label: "Por liquidar a técnicos",
+          valor: `${metricas?.pendientesLiquidacion ?? 0} · $ ${(metricas?.montoPorLiquidar ?? 0).toLocaleString("es-AR")}`,
           alerta: (metricas?.pendientesLiquidacion ?? 0) > 0,
           href: "/tablero",
         },
         {
-          label: "Cobrado acumulado",
-          valor: `$ ${(metricas?.cobradoTotal ?? 0).toLocaleString("es-AR")}`,
+          label: "Cobrado este mes",
+          valor: `$ ${(metricas?.cobradoMes ?? 0).toLocaleString("es-AR")}`,
+        },
+        {
+          label: "Fee inmobiliaria este mes",
+          valor: `$ ${(metricas?.feeMes ?? 0).toLocaleString("es-AR")}`,
         },
       ]}
       acciones={gestiones

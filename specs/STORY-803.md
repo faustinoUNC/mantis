@@ -29,6 +29,14 @@ para tomar decisiones con datos.
 
 - [Source: epics.md#story-83] · [Source: PRD §9 KPIs] · [Source: skill dataviz — form/marks/interaction]
 
+## v1.1 (2026-07-06, revisión de Fausti)
+
+Los acumulados históricos pelados ("Cobrado acumulado", "Liquidado a técnicos") no aportan decisión. Criterio nuevo: **el Inicio muestra solo lo accionable; Métricas agrega el desempeño del mes**.
+
+- Inicio admin: 6 tiles accionables (activas, urgentes, inbox, solicitudes, Por cobrar N·$, Por liquidar N·$).
+- Inicio administrativo: Por cobrar N·$, Por liquidar N·$, Cobrado este mes, **Fee inmobiliaria este mes** (suma de cargo_admin cobrado — la ganancia propia del negocio).
+- /metricas: fila financiera = Por cobrar, Por liquidar, Resueltas este mes, Cobrado este mes, Fee este mes. Service: montoPorLiquidar, resueltasMes, cobradoMes (costo+fee), feeMes; se eliminan cobradoTotal/liquidadoTotal.
+
 ## Dev Agent Record
 
 ### Agent Model Used

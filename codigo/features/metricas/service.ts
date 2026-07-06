@@ -16,8 +16,11 @@ export interface Metricas {
   pendientesCobro: number;
   montoPorCobrar: number;
   pendientesLiquidacion: number;
-  cobradoTotal: number;
-  liquidadoTotal: number;
+  montoPorLiquidar: number;
+  // Desempeño del mes en curso (contexto temporal — no acumulados pelados)
+  resueltasMes: number;
+  cobradoMes: number;
+  feeMes: number; // lo que la inmobiliaria GANÓ por gestión administrativa
 }
 
 const ETAPA_LABEL: Record<string, string> = {
@@ -51,7 +54,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     supabase
       .from("gestiones")
       .select(
-        "id, etapa, urgencia, tecnico_id, costo_final, liq_monto, cobrado_en, liq_pagada_en, creado_en, especialidades(nombre)"
+        "id, etapa, urgencia, tecnico_id, costo_final, cargo_admin, liq_monto, cobrado_en, liq_pagada_en, creado_en, especialidades(nombre)"
       ),
     supabase
       .from("eventos_gestion")
@@ -65,6 +68,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     urgencia: string;
     tecnico_id: string | null;
     costo_final: number | null;
+    cargo_admin: number | null;
     liq_monto: number | null;
     cobrado_en: string | null;
     liq_pagada_en: string | null;
@@ -101,6 +105,10 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     }
   }
 
+  const ahora = new Date();
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
+  const cobradasMes = gs.filter((g) => g.cobrado_en && g.cobrado_en >= inicioMes);
+
   const orden = Object.keys(ETAPA_LABEL);
   return {
     rol: actual.rol,
@@ -130,11 +138,14 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       .reduce((s, g) => s + Number(g.costo_final ?? 0), 0),
     pendientesLiquidacion: gs.filter((g) => g.etapa === "liquidacion_tecnico")
       .length,
-    cobradoTotal: gs
-      .filter((g) => g.cobrado_en)
+    montoPorLiquidar: gs
+      .filter((g) => g.etapa === "liquidacion_tecnico")
       .reduce((s, g) => s + Number(g.costo_final ?? 0), 0),
-    liquidadoTotal: gs
-      .filter((g) => g.liq_pagada_en)
-      .reduce((s, g) => s + Number(g.liq_monto ?? 0), 0),
+    resueltasMes: [...finalizacion.values()].filter((f) => f >= inicioMes).length,
+    cobradoMes: cobradasMes.reduce(
+      (s, g) => s + Number(g.costo_final ?? 0) + Number(g.cargo_admin ?? 0),
+      0
+    ),
+    feeMes: cobradasMes.reduce((s, g) => s + Number(g.cargo_admin ?? 0), 0),
   };
 }

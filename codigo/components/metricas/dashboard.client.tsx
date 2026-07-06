@@ -113,16 +113,18 @@ export function Dashboard({ metricas }: { metricas: Metricas }) {
         {finanzas && (
           <>
             <Tile
-              label="Pendientes de cobro"
+              label="Por cobrar"
               valor={`${metricas.pendientesCobro} · ${plata(metricas.montoPorCobrar)}`}
               alerta={metricas.pendientesCobro > 0}
             />
             <Tile
-              label="Pendientes de liquidación"
-              valor={String(metricas.pendientesLiquidacion)}
+              label="Por liquidar a técnicos"
+              valor={`${metricas.pendientesLiquidacion} · ${plata(metricas.montoPorLiquidar)}`}
+              alerta={metricas.pendientesLiquidacion > 0}
             />
-            <Tile label="Cobrado acumulado" valor={plata(metricas.cobradoTotal)} />
-            <Tile label="Liquidado a técnicos" valor={plata(metricas.liquidadoTotal)} />
+            <Tile label="Resueltas este mes" valor={String(metricas.resueltasMes)} />
+            <Tile label="Cobrado este mes" valor={plata(metricas.cobradoMes)} />
+            <Tile label="Fee inmobiliaria este mes" valor={plata(metricas.feeMes)} />
           </>
         )}
       </div>

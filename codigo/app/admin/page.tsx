@@ -38,26 +38,18 @@ export default async function AdminInicio() {
           alerta: solicitudes > 0,
           href: "/tecnicos",
         },
-        // El admin ve todo: también el panorama financiero
+        // Panorama financiero ACCIONABLE (los acumulados viven en Métricas)
         {
-          label: "Pendientes de cobro",
+          label: "Por cobrar",
           valor: `${metricas?.pendientesCobro ?? 0} · $ ${(metricas?.montoPorCobrar ?? 0).toLocaleString("es-AR")}`,
           alerta: (metricas?.pendientesCobro ?? 0) > 0,
           href: "/tablero",
         },
         {
-          label: "Pendientes de liquidación",
-          valor: String(metricas?.pendientesLiquidacion ?? 0),
+          label: "Por liquidar a técnicos",
+          valor: `${metricas?.pendientesLiquidacion ?? 0} · $ ${(metricas?.montoPorLiquidar ?? 0).toLocaleString("es-AR")}`,
           alerta: (metricas?.pendientesLiquidacion ?? 0) > 0,
           href: "/tablero",
-        },
-        {
-          label: "Cobrado acumulado",
-          valor: `$ ${(metricas?.cobradoTotal ?? 0).toLocaleString("es-AR")}`,
-        },
-        {
-          label: "Liquidado a técnicos",
-          valor: `$ ${(metricas?.liquidadoTotal ?? 0).toLocaleString("es-AR")}`,
         },
       ]}
       acciones={gestiones.filter((g) => g.etapa !== "finalizado").slice(0, 6)}
