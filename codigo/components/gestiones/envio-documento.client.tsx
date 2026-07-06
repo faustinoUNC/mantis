@@ -7,18 +7,20 @@ import { Icono } from "@/components/ui/iconos";
 import type { ActionResult } from "@/features/empleados/types";
 import type { DocumentoGenerado } from "@/features/finanzas/service";
 
-// Flujo unificado de envío de documentos (STORY-903): "Ver y enviar" abre la
-// vista previa del PDF REAL en un modal — lo que ves es exactamente lo que se
-// envía — con Descargar y Enviar por email al pie. Design contract: overlay
-// con sombra (único uso permitido), card lg, un acento.
+// Flujo unificado de documentos (STORY-903 v1.1): "Vista previa" abre el PDF
+// REAL en un modal SOLO para mirar/descargar — enviar es un botón aparte
+// (pedido Fausti: ver no puede empujar a enviar). Overlay con sombra (único
+// uso permitido), card lg, un acento.
 
 export function EnvioDocumento({
   etiqueta,
+  destinatarioEtiqueta,
   generar,
   enviar,
   yaEnviado,
 }: {
   etiqueta: string; // "presupuesto" | "nota de cobro" | ...
+  destinatarioEtiqueta?: string; // "propietario" | "inquilino" — para el botón de envío
   generar: () => Promise<ActionResult<DocumentoGenerado>>;
   enviar?: () => Promise<ActionResult>; // sin enviar → solo ver/descargar
   yaEnviado?: boolean;
@@ -65,20 +67,30 @@ export function EnvioDocumento({
     setCargando(null);
     if (!r.ok) return setError(r.error);
     setEnviado(true);
-    setAbierto(false);
   }
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
         <Button
-          variante={enviado ? "secundario" : "primario"}
+          variante="secundario"
           disabled={cargando !== null}
           onClick={abrir}
         >
           <Icono id="ojo" size={16} />
-          {cargando === "generar" ? "Generando…" : `Ver y enviar ${etiqueta}`}
+          {cargando === "generar" ? "Generando…" : "Vista previa"}
         </Button>
+        {enviar && (
+          <Button
+            variante={enviado ? "secundario" : "primario"}
+            disabled={cargando !== null}
+            onClick={mandar}
+          >
+            {cargando === "enviar"
+              ? "Enviando…"
+              : `${enviado ? "Reenviar" : `Enviar ${etiqueta}`} al ${destinatarioEtiqueta ?? "pagador"} por email`}
+          </Button>
+        )}
         {enviado && (
           <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-active">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -106,9 +118,10 @@ export function EnvioDocumento({
               <div className="min-w-0">
                 <p className="font-medium capitalize">{etiqueta}</p>
                 <p className="text-[13px] text-muted truncate">
+                  Vista previa
                   {enviar
-                    ? `Se enviará a ${doc.destinatario.nombre} (${doc.destinatario.rotulo.toLowerCase()})${doc.destinatario.email ? ` — ${doc.destinatario.email}` : ""}`
-                    : doc.filename}
+                    ? ` — al enviarlo irá a ${doc.destinatario.nombre} (${doc.destinatario.rotulo.toLowerCase()})`
+                    : ` — ${doc.filename}`}
                 </p>
               </div>
               <button
@@ -132,24 +145,12 @@ export function EnvioDocumento({
             )}
 
             <div className="flex flex-wrap items-center justify-end gap-2 px-5 py-3.5 border-t border-border">
-              {error && (
-                <p className="text-sm font-medium text-error mr-auto">{error}</p>
-              )}
               <Button variante="fantasma" onClick={descargar}>
                 Descargar
               </Button>
-              {enviar &&
-                (doc.destinatario.email ? (
-                  <Button disabled={cargando !== null} onClick={mandar}>
-                    {cargando === "enviar"
-                      ? "Enviando…"
-                      : `${enviado ? "Reenviar" : "Enviar"} al ${doc.destinatario.rotulo.toLowerCase()}`}
-                  </Button>
-                ) : (
-                  <p className="text-sm text-muted">
-                    El {doc.destinatario.rotulo.toLowerCase()} no tiene email cargado.
-                  </p>
-                ))}
+              <Button variante="secundario" onClick={() => setAbierto(false)}>
+                Cerrar
+              </Button>
             </div>
           </div>
         </div>,

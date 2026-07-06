@@ -78,6 +78,7 @@ export function FinanzasAcciones({
 
         <EnvioDocumento
           etiqueta="nota de cobro"
+          destinatarioEtiqueta={gestion.pagador ?? "pagador"}
           yaEnviado={Boolean(gestion.nota_emitida_en)}
           generar={() => descargarDocumento(gestion.id, "nota", { cargoAdmin })}
           enviar={() => emitirNotaCobro(gestion.id, cargoAdmin)}

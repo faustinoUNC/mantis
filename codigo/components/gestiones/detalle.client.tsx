@@ -390,6 +390,7 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
 
       <EnvioDocumento
         etiqueta="presupuesto"
+        destinatarioEtiqueta={gestion.pagador ?? gestion.pagador_sugerido}
         generar={() => descargarPresupuestoPDF(gestion.id)}
         enviar={() => enviarPresupuestoEmail(gestion.id)}
       />

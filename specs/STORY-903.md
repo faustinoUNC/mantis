@@ -1,14 +1,14 @@
 # Story 9.3: Cargo por gestión administrativa + vista previa y envío unificado de documentos
 
 Status: done
-Versión: 1.0.0
+Versión: 1.1.0
 
 > Pedidos de Fausti (2026-07-06): fee administrativo en la facturación, preview del PDF antes de enviar, y un flujo de envíos más estético y consistente.
 
 ## Alcance implementado
 
 1. **Cargo por gestión administrativa**: columna `gestiones.cargo_admin` (≥0, default 0). En Facturación el administrativo lo ingresa y ve el resumen en vivo (Trabajo + Gestión administrativa = Total a facturar). Entra al PDF de la nota como línea propia y suma al total. Solo en la nota (no en presupuesto ni comprobante).
-2. **Vista previa del PDF**: componente `EnvioDocumento` — "Ver y enviar {documento}" abre un modal (portal al body) con el **PDF real embebido** (blob URL en iframe): lo que se ve es exactamente lo que se envía. Header con "Se enviará a {nombre} ({rol}) — {email}"; footer con Descargar y Enviar/Reenviar. Estado "Enviado por email ✓" junto al botón.
+2. **Vista previa del PDF**: componente `EnvioDocumento` — v1.1 (pedido Fausti): **preview y envío SEPARADOS** — "Vista previa" abre el modal (portal al body) con el PDF real embebido SOLO para mirar/descargar (footer: Descargar/Cerrar, sin envío); "Enviar {doc} al {pagador} por email" es un botón independiente. Ver nunca empuja a enviar. Estado "Enviado por email ✓" junto a los botones.
 3. **Envíos unificados**: el mismo componente en presupuesto (evaluación del gestor), nota de cobro (facturación) y re-descarga en Finalizado (nota + comprobante, modo solo-lectura sin enviar). Services devuelven `DocumentoGenerado` con destinatario {nombre, rotulo, email}.
 
 ## Dev Notes
