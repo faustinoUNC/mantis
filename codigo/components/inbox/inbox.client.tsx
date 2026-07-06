@@ -188,13 +188,16 @@ export function Inbox({
 }) {
   const router = useRouter();
   const [sincronizando, setSincronizando] = useState(false);
+  const [errorSync, setErrorSync] = useState<string | null>(null);
   const sincronizado = useRef(false);
   const pendientes = reportes; // el service ya trae solo pendientes
 
   async function sincronizar() {
     setSincronizando(true);
-    await sincronizarInbox();
+    const r = await sincronizarInbox();
     setSincronizando(false);
+    // Si Gmail falla, que se VEA — no un "inbox al día" mentiroso
+    setErrorSync(r.ok ? null : (r.error ?? "No se pudo sincronizar con Gmail."));
     router.refresh();
   }
 
@@ -226,7 +229,16 @@ export function Inbox({
         </Button>
       </div>
 
-      {pendientes.length === 0 && !sincronizando && (
+      {errorSync && (
+        <p
+          role="alert"
+          className="mb-4 text-sm font-medium text-error bg-error-soft border border-error-soft-border rounded-md px-3 py-2"
+        >
+          {errorSync} Los reportes nuevos pueden estar quedando en Gmail sin entrar.
+        </p>
+      )}
+
+      {pendientes.length === 0 && !sincronizando && !errorSync && (
         <Card className="p-8 text-center">
           <p className="text-sm text-muted">
             Inbox al día — ningún reporte sin destino. ✦

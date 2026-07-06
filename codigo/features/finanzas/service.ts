@@ -4,6 +4,7 @@ import { obtenerUsuarioActual } from "@/features/auth/service";
 import { enviarEmailDocumento } from "@/features/email/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { avanzarEtapa } from "@/features/gestiones/service";
+import type { Pagador } from "@/features/gestiones/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 import { generarPDF, type DatosDocumento } from "./pdf";
@@ -19,7 +20,9 @@ async function exigirAdministrativo() {
   return actual;
 }
 
-async function exigirMantenimiento() {
+// Rol + ownership: el gestor de mantenimiento solo opera SUS gestiones
+// (PRD §2.1) — el resto del service usa admin client y no pasa por RLS.
+async function exigirMantenimiento(gestionId: string) {
   const actual = await obtenerUsuarioActual();
   if (
     actual?.rol !== "administrador" &&
@@ -27,14 +30,25 @@ async function exigirMantenimiento() {
   ) {
     return null;
   }
+  if (actual.rol === "gestor_mantenimiento") {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("gestiones")
+      .select("gestor_id")
+      .eq("id", gestionId)
+      .single();
+    if (data?.gestor_id !== actual.id) return null;
+  }
   return actual;
 }
 
 // Arma los datos del documento. Admin client tras verificar rol: cruza
 // legajo/inquilino/propietario que el rol administrativo no siempre lee.
+// Los overrides permiten previsualizar con lo tipeado SIN escribir en la DB.
 async function datosDocumento(
   gestionId: string,
-  tipo: "nota" | "comprobante" | "presupuesto"
+  tipo: "nota" | "comprobante" | "presupuesto",
+  overrides?: { cargoAdmin?: number; pagador?: Pagador }
 ): Promise<
   | { datos: DatosDocumento; emailDestinatario: string | null }
   | null
@@ -80,8 +94,9 @@ async function datosDocumento(
   let destinatarioRotulo = "Destinatario";
   let emailDestinatario: string | null = null;
 
-  // Nota y presupuesto van al PAGADOR (confirmado, o sugerido si aún no)
-  const pagador = g.pagador ?? g.pagador_sugerido;
+  // Nota y presupuesto van al PAGADOR (elegido en pantalla, confirmado,
+  // o sugerido si aún no)
+  const pagador = overrides?.pagador ?? g.pagador ?? g.pagador_sugerido;
   if (tipo === "comprobante") {
     destinatarioNombre = j.tecnico?.nombre ?? "—";
     destinatarioRotulo = "Técnico";
@@ -105,7 +120,7 @@ async function datosDocumento(
     emailDestinatario = inq?.email ?? null;
   }
 
-  const cargoAdmin = Number(g.cargo_admin ?? 0);
+  const cargoAdmin = Number(overrides?.cargoAdmin ?? g.cargo_admin ?? 0);
   // El fee de la inmobiliaria viaja al PAGADOR: entra al presupuesto (lo
   // aprueba sabiendo el total real) y a la nota. Nunca al comprobante.
   const total =
@@ -159,8 +174,14 @@ async function registrarEvento(
     .insert({ gestion_id: gestionId, tipo, actor_id: actorId, detalle: detalle ?? null });
 }
 
+function cargoInvalido(cargoAdmin?: number) {
+  return cargoAdmin != null && (!Number.isFinite(cargoAdmin) || cargoAdmin < 0);
+}
+
+// Solo las acciones REALES (enviar/emitir) persisten el fee — la vista
+// previa nunca escribe en la base.
 async function guardarCargoAdmin(gestionId: string, cargoAdmin?: number) {
-  if (cargoAdmin == null || cargoAdmin < 0) return;
+  if (cargoAdmin == null) return;
   const admin = createAdminClient();
   await admin.from("gestiones").update({ cargo_admin: cargoAdmin }).eq("id", gestionId);
 }
@@ -171,6 +192,9 @@ export async function emitirNotaCobro(
 ): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
+  if (cargoInvalido(cargoAdmin)) {
+    return { ok: false, error: "El cargo administrativo no puede ser negativo." };
+  }
 
   await guardarCargoAdmin(gestionId, cargoAdmin);
   const doc = await datosDocumento(gestionId, "nota");
@@ -195,10 +219,14 @@ export async function emitirNotaCobro(
   });
 
   const supabase = await createClient();
-  await supabase
+  const { error: errorMarca } = await supabase
     .from("gestiones")
     .update({ nota_emitida_en: new Date().toISOString() })
     .eq("id", gestionId);
+  if (errorMarca) {
+    // El email ya salió: no fallar, pero dejar rastro (evita reenvíos a ciegas)
+    console.error("emitirNotaCobro: no se pudo marcar nota_emitida_en", errorMarca);
+  }
   await registrarEvento(gestionId, "nota_cobro_enviada", actual.id, {
     total: doc.datos.total,
     para: doc.datos.destinatarioRotulo.toLowerCase(),
@@ -220,9 +248,14 @@ export async function descargarDocumento(
 ): Promise<ActionResult<DocumentoGenerado>> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
+  if (cargoInvalido(opciones?.cargoAdmin)) {
+    return { ok: false, error: "El cargo administrativo no puede ser negativo." };
+  }
 
-  if (tipo === "nota") await guardarCargoAdmin(gestionId, opciones?.cargoAdmin);
-  const doc = await datosDocumento(gestionId, tipo);
+  // Vista previa: el fee tipeado entra al PDF como override, sin persistir
+  const doc = await datosDocumento(gestionId, tipo, {
+    cargoAdmin: tipo === "nota" ? opciones?.cargoAdmin : undefined,
+  });
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
 
   const base64 = await generarPDF(doc.datos);
@@ -243,13 +276,16 @@ export async function descargarDocumento(
 // PDF/email del presupuesto en su etapa (staff de mantenimiento).
 export async function descargarPresupuestoPDF(
   gestionId: string,
-  opciones?: { cargoAdmin?: number }
+  opciones?: { cargoAdmin?: number; pagador?: Pagador }
 ): Promise<ActionResult<DocumentoGenerado>> {
-  const actual = await exigirMantenimiento();
+  const actual = await exigirMantenimiento(gestionId);
   if (!actual) return { ok: false, error: "No tenés permiso." };
+  if (cargoInvalido(opciones?.cargoAdmin)) {
+    return { ok: false, error: "El cargo administrativo no puede ser negativo." };
+  }
 
-  await guardarCargoAdmin(gestionId, opciones?.cargoAdmin);
-  const doc = await datosDocumento(gestionId, "presupuesto");
+  // Vista previa pura: fee y pagador tipeados viajan como override
+  const doc = await datosDocumento(gestionId, "presupuesto", opciones);
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
   if (!doc.datos.total) return { ok: false, error: "No hay presupuesto cargado." };
 
@@ -270,13 +306,23 @@ export async function descargarPresupuestoPDF(
 
 export async function enviarPresupuestoEmail(
   gestionId: string,
-  cargoAdmin?: number
+  cargoAdmin?: number,
+  pagador?: Pagador
 ): Promise<ActionResult> {
-  const actual = await exigirMantenimiento();
+  const actual = await exigirMantenimiento(gestionId);
   if (!actual) return { ok: false, error: "No tenés permiso." };
+  if (cargoInvalido(cargoAdmin)) {
+    return { ok: false, error: "El cargo administrativo no puede ser negativo." };
+  }
 
+  // Enviar SÍ persiste: el pagador elegido y el fee quedan anclados a lo
+  // que realmente se mandó (el email debe ir a quien se ve en pantalla)
   await guardarCargoAdmin(gestionId, cargoAdmin);
-  const doc = await datosDocumento(gestionId, "presupuesto");
+  if (pagador) {
+    const admin = createAdminClient();
+    await admin.from("gestiones").update({ pagador }).eq("id", gestionId);
+  }
+  const doc = await datosDocumento(gestionId, "presupuesto", { cargoAdmin, pagador });
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
   if (!doc.datos.total) return { ok: false, error: "No hay presupuesto cargado." };
   if (!doc.emailDestinatario) {

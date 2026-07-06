@@ -36,6 +36,12 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
   const especialidad = g.especialidades as { nombre: string } | null;
   const gestor = g.gestor as { nombre: string } | null;
   const tecnico = g.tecnico as { nombre: string } | null;
+  const presupuestos = (g.presupuestos as { estado: string }[] | null) ?? [];
+  const conformidades =
+    (g.conformidades as { estado: string; creado_en: string }[] | null) ?? [];
+  const ultimaConformidad = [...conformidades].sort((a, b) =>
+    b.creado_en.localeCompare(a.creado_en)
+  )[0];
   return {
     id: g.id as string,
     descripcion: g.descripcion as string,
@@ -46,12 +52,14 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     gestor_nombre: gestor?.nombre ?? "—",
     tecnico_nombre: tecnico?.nombre ?? null,
     asignacion_aceptada: (g.asignacion_aceptada as boolean | null) ?? null,
+    presupuesto_pendiente: presupuestos.some((p) => p.estado === "enviado"),
+    conformidad_rechazada: ultimaConformidad?.estado === "rechazada",
     creado_en: g.creado_en as string,
   };
 }
 
 const SELECT_RESUMEN =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // El tablero: RLS decide qué ve cada rol (ownership del gestor incluida).
 export async function tableroGestiones(): Promise<GestionResumen[]> {
@@ -70,7 +78,7 @@ export async function crearGestion(datos: {
   especialidad_id: string;
   urgencia: Urgencia;
   causa: Causa;
-}): Promise<ActionResult> {
+}): Promise<ActionResult<{ gestionId: string }>> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
 
@@ -105,7 +113,7 @@ export async function crearGestion(datos: {
   await emailEstadoGestion(gestion.id, "reporte_recibido");
 
   refrescarTablero();
-  return { ok: true, data: undefined };
+  return { ok: true, data: { gestionId: gestion.id } };
 }
 
 async function fotoConUrl(path: string | null): Promise<string | null> {
@@ -293,6 +301,38 @@ export async function asignarTecnico(
   return { ok: true };
 }
 
+// FUN-1: el gestor puede retirar una solicitud que el técnico no respondió
+// (técnico desactivado o que no contesta) y volver a elegir. El guard
+// .is("asignacion_aceptada", null) evita pisar una aceptación concurrente.
+export async function cancelarSolicitudAsignacion(
+  gestionId: string
+): Promise<ActionResult> {
+  const actual = await obtenerUsuarioActual();
+  if (!actual) return { ok: false, error: "Sin sesión." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("gestiones")
+    .update({ tecnico_id: null, asignacion_aceptada: null })
+    .eq("id", gestionId)
+    .eq("etapa", "asignacion")
+    .is("asignacion_aceptada", null)
+    .not("tecnico_id", "is", null)
+    .select("id");
+  if (error || !data?.length) {
+    return { ok: false, error: "No se pudo cancelar (¿el técnico ya respondió?)." };
+  }
+
+  await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: "asignacion_cancelada",
+    actor_id: actual.id,
+  });
+
+  refrescarTablero(gestionId);
+  return { ok: true };
+}
+
 export async function responderAsignacion(
   gestionId: string,
   acepta: boolean,
@@ -330,6 +370,12 @@ export async function enviarPresupuesto(
   if (!datos.plazo_dias || datos.plazo_dias < 1) {
     return { ok: false, error: "Indicá el plazo estimado en días." };
   }
+  if (
+    !Number.isFinite(datos.monto_materiales) || datos.monto_materiales < 0 ||
+    !Number.isFinite(datos.monto_mano_obra) || datos.monto_mano_obra < 0
+  ) {
+    return { ok: false, error: "Los montos no pueden ser negativos." };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.from("presupuestos").insert({
@@ -340,7 +386,14 @@ export async function enviarPresupuesto(
     plazo_dias: datos.plazo_dias,
     notas: datos.notas || null,
   });
-  if (error) return { ok: false, error: "No se pudo enviar el presupuesto." };
+  if (error) {
+    return {
+      ok: false,
+      error: error.code === "23505"
+        ? "Ya hay un presupuesto enviado esperando evaluación."
+        : "No se pudo enviar el presupuesto.",
+    };
+  }
 
   await supabase.from("eventos_gestion").insert({
     gestion_id: gestionId,
@@ -360,39 +413,56 @@ export async function resolverPresupuesto(
   presupuestoId: string,
   gestionId: string,
   aprobar: boolean,
-  opciones: { pagador?: Pagador; motivo?: string }
+  opciones: { pagador?: Pagador; motivo?: string; cargo_admin?: number }
 ): Promise<ActionResult> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
 
+  // Validar TODO antes de escribir (evita estados a medias)
+  if (aprobar && !opciones.pagador) {
+    return { ok: false, error: "Confirmá quién paga la obra." };
+  }
+  const cargoAdmin = opciones.cargo_admin ?? 0;
+  if (aprobar && (!Number.isFinite(cargoAdmin) || cargoAdmin < 0)) {
+    return { ok: false, error: "El cargo administrativo no puede ser negativo." };
+  }
+
+  // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos veces
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: filas, error } = await supabase
     .from("presupuestos")
     .update(
       aprobar
         ? { estado: "aprobado" }
         : { estado: "rechazado", motivo_rechazo: opciones.motivo ?? null }
     )
-    .eq("id", presupuestoId);
-  if (error) return { ok: false, error: "No se pudo resolver el presupuesto." };
+    .eq("id", presupuestoId)
+    .eq("gestion_id", gestionId)
+    .eq("estado", "enviado")
+    .select("id");
+  if (error || !filas?.length) {
+    return { ok: false, error: "No se pudo resolver el presupuesto (¿ya fue resuelto?)." };
+  }
+
+  if (aprobar) {
+    // El fee queda ANCLADO en la aprobación: lo que se aprueba es lo que
+    // después factura el administrativo (FIN-1)
+    await supabase
+      .from("gestiones")
+      .update({ pagador: opciones.pagador, cargo_admin: cargoAdmin })
+      .eq("id", gestionId);
+  }
 
   await supabase.from("eventos_gestion").insert({
     gestion_id: gestionId,
     tipo: aprobar ? "presupuesto_aprobado" : "presupuesto_rechazado",
     actor_id: actual.id,
-    detalle: aprobar ? { pagador: opciones.pagador } : { motivo: opciones.motivo },
+    detalle: aprobar
+      ? { pagador: opciones.pagador, cargo_admin: cargoAdmin }
+      : { motivo: opciones.motivo },
   });
 
-  if (aprobar) {
-    if (!opciones.pagador) {
-      return { ok: false, error: "Confirmá quién paga la obra." };
-    }
-    await supabase
-      .from("gestiones")
-      .update({ pagador: opciones.pagador })
-      .eq("id", gestionId);
-    return avanzarEtapa(gestionId, "en_ejecucion");
-  }
+  if (aprobar) return avanzarEtapa(gestionId, "en_ejecucion");
 
   refrescarTablero(gestionId);
   return { ok: true };
@@ -488,17 +558,30 @@ export async function resolverConformidad(
 ): Promise<ActionResult> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
+  if (
+    aprobar &&
+    opciones.costo_final != null &&
+    (!Number.isFinite(opciones.costo_final) || opciones.costo_final < 0)
+  ) {
+    return { ok: false, error: "El costo final no puede ser negativo." };
+  }
 
+  // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos veces
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: filas, error } = await supabase
     .from("conformidades")
     .update(
       aprobar
         ? { estado: "aprobada" }
         : { estado: "rechazada", motivo_rechazo: opciones.motivo ?? null }
     )
-    .eq("id", conformidadId);
-  if (error) return { ok: false, error: "No se pudo resolver la conformidad." };
+    .eq("id", conformidadId)
+    .eq("gestion_id", gestionId)
+    .eq("estado", "subida")
+    .select("id");
+  if (error || !filas?.length) {
+    return { ok: false, error: "No se pudo resolver la conformidad (¿ya fue resuelta?)." };
+  }
 
   await supabase.from("eventos_gestion").insert({
     gestion_id: gestionId,

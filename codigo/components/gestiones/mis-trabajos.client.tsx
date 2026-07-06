@@ -7,12 +7,17 @@ import { Card } from "@/components/ui/card";
 import type { GestionResumen } from "@/features/gestiones/types";
 import { ETAPAS } from "@/features/gestiones/types";
 
-// CTA del técnico según etapa (una acción clara por tarjeta — EXPERIENCE.md)
+// CTA del técnico según etapa (una acción clara por tarjeta — EXPERIENCE.md).
+// Mismo criterio que el detalle: si ya envió el presupuesto no hay acción,
+// y una conformidad rechazada SÍ pide resubir.
 function ctaTecnico(g: GestionResumen): string | null {
   if (g.etapa === "asignacion" && g.asignacion_aceptada === null)
     return "Responder solicitud";
-  if (g.etapa === "presupuesto") return "Cargar presupuesto";
+  if (g.etapa === "presupuesto" && !g.presupuesto_pendiente)
+    return "Cargar presupuesto";
   if (g.etapa === "en_ejecucion") return "Registrar avance";
+  if (g.etapa === "conformidad" && g.conformidad_rechazada)
+    return "Resubir conformidad";
   return null;
 }
 

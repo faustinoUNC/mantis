@@ -48,7 +48,11 @@ export async function ejecutarSincronizacion(): Promise<
   { ok: true; nuevos: number } | { ok: false; error: string }
 > {
   const token = await accessTokenGmail();
-  if (!token) return { ok: false, error: "No se pudo conectar con Gmail." };
+  if (!token) {
+    // Visible en los logs de Vercel: si el refresh token muere, que se sepa
+    console.error("inbox/sync: no se pudo obtener el access token de Gmail (¿refresh token revocado?)");
+    return { ok: false, error: "No se pudo conectar con Gmail." };
+  }
   const auth = { Authorization: `Bearer ${token}` };
 
   // Solo mails con "mantenimiento" en el asunto (casilla compartida) y sin
@@ -57,22 +61,38 @@ export async function ejecutarSincronizacion(): Promise<
   const consulta = encodeURIComponent(
     "in:inbox subject:mantenimiento -from:onboarding@resend.dev"
   );
-  const lista = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${consulta}`,
-    { headers: auth }
-  );
-  if (!lista.ok) return { ok: false, error: "Gmail rechazó la consulta." };
-  const { messages } = (await lista.json()) as { messages?: { id: string }[] };
-  if (!messages?.length) return { ok: true, nuevos: 0 };
+  // Paginado completo: sin esto, los mails más viejos que la primera página
+  // nunca vuelven a entrar a la ventana y se pierden.
+  const messages: { id: string }[] = [];
+  let pageToken: string | undefined;
+  do {
+    const url =
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=100&q=${consulta}` +
+      (pageToken ? `&pageToken=${pageToken}` : "");
+    const lista = await fetch(url, { headers: auth });
+    if (!lista.ok) {
+      console.error(`inbox/sync: Gmail rechazó la consulta (HTTP ${lista.status})`);
+      return { ok: false, error: "Gmail rechazó la consulta." };
+    }
+    const json = (await lista.json()) as {
+      messages?: { id: string }[];
+      nextPageToken?: string;
+    };
+    messages.push(...(json.messages ?? []));
+    pageToken = json.nextPageToken;
+  } while (pageToken && messages.length < 1000);
+  if (!messages.length) return { ok: true, nuevos: 0 };
 
   const admin = createAdminClient();
-  const { data: existentes } = await admin
-    .from("inbox_reportes")
-    .select("gmail_message_id")
-    .in("gmail_message_id", messages.map((m) => m.id));
-  const yaIngestados = new Set(
-    (existentes ?? []).map((e) => e.gmail_message_id)
-  );
+  // En tandas: el .in() viaja por URL y con cientos de ids se pasa de largo
+  const yaIngestados = new Set<string>();
+  for (let i = 0; i < messages.length; i += 200) {
+    const { data: existentes } = await admin
+      .from("inbox_reportes")
+      .select("gmail_message_id")
+      .in("gmail_message_id", messages.slice(i, i + 200).map((m) => m.id));
+    for (const e of existentes ?? []) yaIngestados.add(e.gmail_message_id);
+  }
 
   let nuevos = 0;
   for (const m of messages.filter((m) => !yaIngestados.has(m.id))) {

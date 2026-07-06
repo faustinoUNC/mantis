@@ -22,6 +22,7 @@ import {
 import {
   asignarTecnico,
   avanzarEtapa,
+  cancelarSolicitudAsignacion,
   enviarPresupuesto,
   reasignarGestor,
   registrarAvance,
@@ -45,6 +46,7 @@ const LABEL_EVENTO: Record<string, string> = {
   asignacion_solicitada: "Asignación enviada al técnico",
   asignacion_aceptada: "El técnico aceptó el trabajo",
   asignacion_rechazada: "El técnico rechazó la asignación",
+  asignacion_cancelada: "Solicitud de asignación cancelada por el gestor",
   presupuesto_enviado: "Presupuesto enviado",
   presupuesto_aprobado: "Presupuesto aprobado",
   presupuesto_rechazado: "Presupuesto rechazado",
@@ -67,7 +69,7 @@ function fechaHora(f: string) {
 }
 
 function plata(n: number) {
-  return `$ ${Number(n).toLocaleString("es-AR")}`;
+  return `$ ${Number(n).toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
 }
 
 function etiquetaEtapa(id: string | null) {
@@ -169,11 +171,22 @@ function AccionAsignar({
   const tecnico = tecnicos.find((t) => t.id === elegido);
 
   if (gestion.tecnico_id && gestion.asignacion_aceptada === null) {
+    // Salida si el técnico no responde: cancelar la solicitud y reelegir
     return (
-      <p className="text-sm text-muted">
-        Esperando respuesta de{" "}
-        <strong className="text-foreground">{gestion.tecnico_nombre}</strong>…
-      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted">
+          Esperando respuesta de{" "}
+          <strong className="text-foreground">{gestion.tecnico_nombre}</strong>…
+        </p>
+        <Button
+          variante="secundario"
+          disabled={cargando}
+          onClick={() => correr(() => cancelarSolicitudAsignacion(gestion.id))}
+        >
+          Cancelar y elegir otro técnico
+        </Button>
+        {error && <p className="w-full text-sm font-medium text-error">{error}</p>}
+      </div>
     );
   }
 
@@ -265,6 +278,9 @@ function AccionResponderAsignacion({ gestion }: { gestion: GestionDetalle }) {
 function FormPresupuestoTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const pendiente = gestion.presupuestos.some((p) => p.estado === "enviado");
+  // El último presupuesto (vienen ordenados desc): si fue rechazado, el
+  // técnico tiene que ver el motivo antes de armar el nuevo
+  const ultimo = gestion.presupuestos[0];
   if (pendiente) {
     return <p className="text-sm text-muted">Presupuesto enviado — esperando al gestor.</p>;
   }
@@ -285,6 +301,12 @@ function FormPresupuestoTecnico({ gestion }: { gestion: GestionDetalle }) {
         );
       }}
     >
+      {ultimo?.estado === "rechazado" && (
+        <p className="text-sm text-error bg-error-soft border border-error-soft-border rounded-md px-3 py-2">
+          Presupuesto rechazado
+          {ultimo.motivo_rechazo ? `: ${ultimo.motivo_rechazo}` : ""} — enviá uno nuevo.
+        </p>
+      )}
       <Textarea
         label="Trabajo a realizar"
         name="descripcion_trabajo"
@@ -356,11 +378,26 @@ function FichaPresupuesto({ presupuesto }: { presupuesto: Presupuesto }) {
 
 function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
-  const [pagador, setPagador] = useState<Pagador>(gestion.pagador_sugerido);
+  const [pagador, setPagador] = useState<Pagador>(
+    gestion.pagador ?? gestion.pagador_sugerido
+  );
   const [rechazando, setRechazando] = useState(false);
   const [cargoAdmin, setCargoAdmin] = useState<number>(
     Number(gestion.cargo_admin ?? 0)
   );
+  // Resincronizar con lo que otro usuario dejó en la base (el refresh vivo
+  // trae props nuevas pero React conserva el estado local). Ajuste durante
+  // el render — patrón oficial, sin useEffect.
+  const [cargoPrevio, setCargoPrevio] = useState(gestion.cargo_admin);
+  if (cargoPrevio !== gestion.cargo_admin) {
+    setCargoPrevio(gestion.cargo_admin);
+    setCargoAdmin(Number(gestion.cargo_admin ?? 0));
+  }
+  const [pagadorPrevio, setPagadorPrevio] = useState(gestion.pagador);
+  if (pagadorPrevio !== gestion.pagador) {
+    setPagadorPrevio(gestion.pagador);
+    if (gestion.pagador) setPagador(gestion.pagador);
+  }
   const enviado = gestion.presupuestos.find((p) => p.estado === "enviado");
   const inspecciones = gestion.avances.filter((a) => a.tipo === "inspeccion");
 
@@ -419,7 +456,8 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
             </div>
           )}
           <div className="flex justify-between pt-1 border-t border-border font-semibold">
-            <span>Total al {gestion.pagador ?? gestion.pagador_sugerido}</span>
+            {/* Mismo pagador que el Select de abajo: una sola verdad en pantalla */}
+            <span>Total al {pagador}</span>
             <span className="font-mono">
               {plata(Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra) + cargoAdmin)}
             </span>
@@ -429,9 +467,9 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
 
       <EnvioDocumento
         etiqueta="presupuesto"
-        destinatarioEtiqueta={gestion.pagador ?? gestion.pagador_sugerido}
-        generar={() => descargarPresupuestoPDF(gestion.id, { cargoAdmin })}
-        enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdmin)}
+        destinatarioEtiqueta={pagador}
+        generar={() => descargarPresupuestoPDF(gestion.id, { cargoAdmin, pagador })}
+        enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdmin, pagador)}
       />
 
       {rechazando ? (
@@ -465,7 +503,14 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
           </Select>
           <Button
             disabled={cargando}
-            onClick={() => correr(() => resolverPresupuesto(enviado.id, gestion.id, true, { pagador }))}
+            onClick={() =>
+              correr(() =>
+                resolverPresupuesto(enviado.id, gestion.id, true, {
+                  pagador,
+                  cargo_admin: cargoAdmin,
+                })
+              )
+            }
           >
             Aprobar y ejecutar →
           </Button>
@@ -874,11 +919,12 @@ export function DetalleGestion({
   return (
     <div className="animate-aparecer max-w-3xl">
       {/* Detalle 100% vivo: los avances/presupuestos/conformidades del
-          técnico refrescan la pantalla del gestor apenas se registran */}
-      <RefrescoVivo tabla="gestiones" />
-      <RefrescoVivo tabla="avances" />
-      <RefrescoVivo tabla="presupuestos" />
-      <RefrescoVivo tabla="conformidades" />
+          técnico refrescan la pantalla del gestor apenas se registran.
+          Filtrado a ESTA gestión: actividad ajena no refresca nada. */}
+      <RefrescoVivo tabla="gestiones" filtro={`id=eq.${gestion.id}`} />
+      <RefrescoVivo tabla="avances" filtro={`gestion_id=eq.${gestion.id}`} />
+      <RefrescoVivo tabla="presupuestos" filtro={`gestion_id=eq.${gestion.id}`} />
+      <RefrescoVivo tabla="conformidades" filtro={`gestion_id=eq.${gestion.id}`} />
 
       <div className="flex items-center justify-between gap-3">
         <Link href={volver} className="text-sm font-medium text-muted hover:text-foreground">
@@ -961,12 +1007,25 @@ export function DetalleGestion({
         )}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
           esAdministrativo && <FinanzasAcciones gestion={gestion} />}
+        {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
+          !esAdministrativo && (esGestorOwner || esTecnicoAsignado) && (
+            <p className="text-sm text-muted">
+              En manos de la administración — cobro y liquidación se registran ahí.
+            </p>
+          )}
         {gestion.etapa === "finalizado" && (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted">Gestión finalizada — quedó en el legajo.</p>
             {esAdministrativo && <FinanzasAcciones gestion={gestion} />}
           </div>
         )}
+        {/* Gestor administrativo antes de Facturación: sin acciones todavía */}
+        {esAdministrativo && !esGestorOwner && !esTecnicoAsignado &&
+          !["facturacion_cobro", "liquidacion_tecnico", "finalizado"].includes(gestion.etapa) && (
+            <p className="text-sm text-muted">
+              Sin acciones para tu rol en esta etapa — interviene en Facturación, cuando se apruebe la conformidad.
+            </p>
+          )}
         {!esGestorOwner && !esTecnicoAsignado && !esAdministrativo && (
           <p className="text-sm text-muted">Solo lectura para tu rol.</p>
         )}

@@ -14,7 +14,7 @@ import {
 import type { GestionDetalle } from "@/features/gestiones/types";
 
 function plata(n: number) {
-  return `$ ${n.toLocaleString("es-AR")}`;
+  return `$ ${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
 }
 
 export function FinanzasAcciones({
@@ -30,6 +30,14 @@ export function FinanzasAcciones({
   const [cargoAdmin, setCargoAdmin] = useState<number>(
     Number(gestion.cargo_admin ?? 0)
   );
+  // Si otro usuario cambió el fee en la base (refresh vivo), reflejarlo:
+  // sin esto se emite la nota con un valor stale y se pisa el de la DB.
+  // Ajuste durante el render — patrón oficial, sin useEffect.
+  const [cargoPrevio, setCargoPrevio] = useState(gestion.cargo_admin);
+  if (cargoPrevio !== gestion.cargo_admin) {
+    setCargoPrevio(gestion.cargo_admin);
+    setCargoAdmin(Number(gestion.cargo_admin ?? 0));
+  }
 
   async function correr(
     clave: string,

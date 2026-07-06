@@ -105,8 +105,12 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     }
   }
 
-  const ahora = new Date();
-  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
+  // "Mes en curso" en hora argentina, no en la del server (Vercel corre en
+  // UTC: sin esto, un cobro del 31 a la noche contaba para el mes siguiente)
+  const hoyAR = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+  }); // YYYY-MM-DD
+  const inicioMes = new Date(`${hoyAR.slice(0, 7)}-01T00:00:00-03:00`).toISOString();
   const cobradasMes = gs.filter((g) => g.cobrado_en && g.cobrado_en >= inicioMes);
 
   const orden = Object.keys(ETAPA_LABEL);
@@ -133,9 +137,10 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       }))
       .sort((a, b) => b.dias - a.dias),
     pendientesCobro: gs.filter((g) => g.etapa === "facturacion_cobro").length,
+    // Lo que se factura es trabajo + fee (igual que cobradoMes)
     montoPorCobrar: gs
       .filter((g) => g.etapa === "facturacion_cobro")
-      .reduce((s, g) => s + Number(g.costo_final ?? 0), 0),
+      .reduce((s, g) => s + Number(g.costo_final ?? 0) + Number(g.cargo_admin ?? 0), 0),
     pendientesLiquidacion: gs.filter((g) => g.etapa === "liquidacion_tecnico")
       .length,
     montoPorLiquidar: gs

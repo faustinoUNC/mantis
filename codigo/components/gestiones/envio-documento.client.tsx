@@ -32,14 +32,21 @@ export function EnvioDocumento({
   const [enviado, setEnviado] = useState(Boolean(yaEnviado));
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
-  // El blob URL vive mientras el modal está abierto
+  // El refresh vivo puede traer yaEnviado=true (otro usuario envió):
+  // nunca degradar a false — "enviado" local gana hasta el próximo mount.
+  // Ajuste durante el render — patrón oficial, sin useEffect.
+  const [yaEnviadoPrevio, setYaEnviadoPrevio] = useState(yaEnviado);
+  if (yaEnviadoPrevio !== yaEnviado) {
+    setYaEnviadoPrevio(yaEnviado);
+    if (yaEnviado) setEnviado(true);
+  }
+
+  // El efecto SOLO limpia: al cambiar el blob (o desmontar) se revoca el viejo
   useEffect(() => {
-    if (!doc) return;
-    const bytes = Uint8Array.from(atob(doc.base64), (c) => c.charCodeAt(0));
-    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-    setBlobUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [doc]);
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [blobUrl]);
 
   async function abrir() {
     setError(null);
@@ -47,6 +54,8 @@ export function EnvioDocumento({
     const r = await generar();
     setCargando(null);
     if (!r.ok || !r.data) return setError(r.ok ? "Error" : r.error);
+    const bytes = Uint8Array.from(atob(r.data.base64), (c) => c.charCodeAt(0));
+    setBlobUrl(URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })));
     setDoc(r.data);
     setAbierto(true);
   }

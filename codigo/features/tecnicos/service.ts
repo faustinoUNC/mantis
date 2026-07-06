@@ -181,8 +181,26 @@ export async function especialidadesParaRegistro() {
   return data ?? [];
 }
 
+// Freno simple en memoria para el registro público: crea usuarios y sube
+// archivos con service role, así que sin esto es abusable en masa. Por
+// instancia serverless (suficiente para frenar scripts, sin infra extra).
+const enrolamientos: number[] = [];
+const ENROL_MAX = 10;
+const ENROL_VENTANA_MS = 60 * 60 * 1000;
+
 // PÚBLICO (sin sesión): registro del técnico → solicitud pendiente.
 export async function enrolarTecnico(form: FormData): Promise<ActionResult> {
+  const ahora = Date.now();
+  while (enrolamientos.length && ahora - enrolamientos[0] > ENROL_VENTANA_MS) {
+    enrolamientos.shift();
+  }
+  if (enrolamientos.length >= ENROL_MAX) {
+    return {
+      ok: false,
+      error: "Recibimos muchas solicitudes seguidas. Probá de nuevo en un rato.",
+    };
+  }
+  enrolamientos.push(ahora);
   return altaTecnico(form, "pendiente");
 }
 

@@ -94,28 +94,36 @@ export async function crearDesdeReporte(
   const actual = await exigirStaffMantenimiento();
   if (!actual) return { ok: false, error: "No tenés permiso." };
 
-  const r = await crearGestion(datos);
-  if (!r.ok) return r;
-
-  // Vincular el reporte con la gestión recién creada (la más nueva del gestor)
+  // Reclamar el reporte PRIMERO (condicionado a 'pendiente'): si dos personas
+  // aprietan "Crear gestión" a la vez, solo una gana — nada de gestiones dobles.
   const supabase = await createClient();
-  const { data: gestion } = await supabase
-    .from("gestiones")
-    .select("id")
-    .eq("gestor_id", actual.id)
-    .order("creado_en", { ascending: false })
-    .limit(1)
-    .single();
+  const { data: reclamado } = await supabase
+    .from("inbox_reportes")
+    .update({ estado: "gestionado", procesado_por: actual.id })
+    .eq("id", reporteId)
+    .eq("estado", "pendiente")
+    .select("id");
+  if (!reclamado?.length) {
+    revalidatePath("/inbox");
+    return { ok: false, error: "El reporte ya fue procesado por otra persona." };
+  }
 
+  const r = await crearGestion(datos);
+  if (!r.ok || !r.data) {
+    // Devolver el reporte al inbox para que no quede colgado
+    await supabase
+      .from("inbox_reportes")
+      .update({ estado: "pendiente", procesado_por: null })
+      .eq("id", reporteId);
+    return r.ok ? { ok: false, error: "No se pudo crear la gestión." } : r;
+  }
+
+  // Vincular con el id REAL de la gestión creada (sin adivinar por fecha)
   await supabase
     .from("inbox_reportes")
-    .update({
-      estado: "gestionado",
-      gestion_id: gestion?.id ?? null,
-      procesado_por: actual.id,
-    })
+    .update({ gestion_id: r.data.gestionId })
     .eq("id", reporteId);
 
   revalidatePath("/inbox");
-  return { ok: true, data: { gestionId: gestion?.id ?? "" } };
+  return { ok: true, data: { gestionId: r.data.gestionId } };
 }

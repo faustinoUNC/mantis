@@ -45,7 +45,10 @@ export interface DatosDocumento {
 }
 
 function monto(n: number) {
-  return `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
+  return `$ ${n.toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 const TITULO_DOC: Record<DatosDocumento["tipo"], string> = {

@@ -46,6 +46,9 @@ export interface GestionResumen {
   gestor_nombre: string;
   tecnico_nombre: string | null;
   asignacion_aceptada: boolean | null;
+  // Para que la lista muestre el MISMO estado que el detalle (CTA del técnico)
+  presupuesto_pendiente: boolean;
+  conformidad_rechazada: boolean;
   creado_en: string;
 }
 

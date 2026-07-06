@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   marcarLeidas,
+  misNotificaciones,
   type Notificacion,
 } from "@/features/notificaciones/service";
 import { createClient } from "@/shared/lib/supabase/client";
@@ -31,8 +32,9 @@ export function Campana({
   const botonRef = useRef<HTMLButtonElement>(null);
   const noLeidas = items.filter((n) => !n.leida_en).length;
 
-  // Entrega realtime (RLS limita la suscripción a las propias filas);
-  // las iniciales vienen del server → cero pérdidas al reconectar.
+  // Entrega realtime (RLS limita la suscripción a las propias filas).
+  // En cada SUBSCRIBED (primera vez y reconexiones) se refetchean las
+  // últimas: lo que pasó con el websocket caído no se pierde.
   useEffect(() => {
     const supabase = createClient();
     let canal: ReturnType<typeof supabase.channel> | null = null;
@@ -61,7 +63,11 @@ export function Campana({
             setItems((prev) => [payload.new as Notificacion, ...prev].slice(0, 30));
           }
         )
-        .subscribe();
+        .subscribe(async (status) => {
+          if (status !== "SUBSCRIBED") return;
+          const frescas = await misNotificaciones();
+          if (!desmontado) setItems(frescas);
+        });
     })();
 
     return () => {
