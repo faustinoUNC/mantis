@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputArchivo } from "@/components/ui/input-archivo.client";
 import { urlGoogleMaps } from "@/components/ui/mapa";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,13 +60,13 @@ const LABEL_EVENTO: Record<string, string> = {
   liquidacion_registrada: "Liquidación registrada",
 };
 
+// Formato manual determinístico: toLocaleString mete un espacio invisible
+// (U+202F) distinto entre Node y el navegador → error de hidratación.
 function fechaHora(f: string) {
-  return new Date(f).toLocaleString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const d = new Date(f);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${d.getDate()}/${d.getMonth() + 1}, ${hh}:${mi}`;
 }
 
 function plata(n: number) {
@@ -95,7 +96,7 @@ function useAccion() {
 function Dato({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="text-[12px] font-medium text-muted uppercase tracking-wide">
+      <p className="text-[13px] font-medium text-muted">
         {label}
       </p>
       <div className="mt-0.5 text-[15px] font-medium truncate">{children}</div>
@@ -334,7 +335,7 @@ function FichaPresupuesto({ presupuesto }: { presupuesto: Presupuesto }) {
     <div className="rounded-md border border-border bg-surface-2/50 p-4 flex flex-col gap-3">
       {presupuesto.descripcion_trabajo && (
         <div>
-          <p className="text-[12px] font-medium text-muted uppercase tracking-wide">
+          <p className="text-[13px] font-medium text-muted">
             Trabajo a realizar
           </p>
           <p className="text-sm mt-1 leading-relaxed whitespace-pre-line">
@@ -344,15 +345,15 @@ function FichaPresupuesto({ presupuesto }: { presupuesto: Presupuesto }) {
       )}
       <div className="grid grid-cols-3 gap-3 text-sm">
         <div>
-          <p className="text-[12px] font-medium text-muted uppercase tracking-wide">Materiales</p>
+          <p className="text-[13px] font-medium text-muted">Materiales</p>
           <p className="font-mono mt-0.5">{plata(presupuesto.monto_materiales)}</p>
         </div>
         <div>
-          <p className="text-[12px] font-medium text-muted uppercase tracking-wide">Mano de obra</p>
+          <p className="text-[13px] font-medium text-muted">Mano de obra</p>
           <p className="font-mono mt-0.5">{plata(presupuesto.monto_mano_obra)}</p>
         </div>
         <div>
-          <p className="text-[12px] font-medium text-muted uppercase tracking-wide">Total</p>
+          <p className="text-[13px] font-medium text-muted">Total</p>
           <p className="font-mono mt-0.5 font-semibold">{plata(total)}</p>
         </div>
       </div>
@@ -360,13 +361,13 @@ function FichaPresupuesto({ presupuesto }: { presupuesto: Presupuesto }) {
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
           {presupuesto.plazo_dias != null && (
             <div>
-              <p className="text-[12px] font-medium text-muted uppercase tracking-wide">Plazo estimado</p>
+              <p className="text-[13px] font-medium text-muted">Plazo estimado</p>
               <p className="mt-0.5">{presupuesto.plazo_dias} día{presupuesto.plazo_dias === 1 ? "" : "s"}</p>
             </div>
           )}
           {presupuesto.notas && (
             <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-medium text-muted uppercase tracking-wide">Observaciones</p>
+              <p className="text-[13px] font-medium text-muted">Observaciones</p>
               <p className="mt-0.5 text-muted">{presupuesto.notas}</p>
             </div>
           )}
@@ -420,7 +421,7 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
     <div className="flex flex-col gap-4">
       {inspecciones.length > 0 && (
         <div>
-          <p className="text-[12px] font-medium text-muted uppercase tracking-wide mb-1">
+          <p className="text-[13px] font-medium text-muted mb-1">
             Inspección del técnico
           </p>
           {inspecciones.map((i) => (
@@ -542,16 +543,7 @@ function FormAvance({ gestion }: { gestion: GestionDetalle }) {
         required
         placeholder="Qué hiciste / qué encontraste"
       />
-      <div className="flex flex-col gap-1.5">
-        <label className="text-[13px] font-medium text-muted">Foto (opcional)</label>
-        <input
-          type="file"
-          name="foto"
-          accept="image/*"
-          capture="environment"
-          className="text-sm text-muted file:mr-3 file:min-h-tap file:px-4 file:rounded-md file:border file:border-border-strong file:bg-surface file:text-sm file:font-medium file:text-foreground"
-        />
-      </div>
+      <InputArchivo label="Foto (opcional)" name="foto" capture="environment" />
       <Button type="submit" disabled={cargando} className="self-start">
         Registrar
       </Button>
@@ -582,19 +574,12 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
           Rechazada{ultima.motivo_rechazo ? `: ${ultima.motivo_rechazo}` : ""} — subí una nueva.
         </p>
       )}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-[13px] font-medium text-muted">
-          Foto de la conformidad firmada
-        </label>
-        <input
-          type="file"
-          name="foto"
-          accept="image/*"
-          capture="environment"
-          required
-          className="text-sm text-muted file:mr-3 file:min-h-tap file:px-4 file:rounded-md file:border file:border-border-strong file:bg-surface file:text-sm file:font-medium file:text-foreground"
-        />
-      </div>
+      <InputArchivo
+        label="Foto de la conformidad firmada"
+        name="foto"
+        capture="environment"
+        required
+      />
       <Button type="submit" disabled={cargando} className="self-start">
         {gestion.etapa === "en_ejecucion" ? "Terminar y subir conformidad →" : "Resubir conformidad"}
       </Button>
@@ -791,7 +776,7 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
 
   return (
     <section className="mt-7">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted mb-3">
+      <h2 className="text-[15px] font-semibold tracking-tight mb-3">
         Actividad
       </h2>
       <ol className="relative flex flex-col gap-4 pl-5 before:absolute before:left-[5px] before:top-1 before:bottom-1 before:w-px before:bg-border">
@@ -815,7 +800,7 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
                 <span className="absolute -left-[17.5px] top-1.5 size-1.5 rounded-pill bg-border-strong" aria-hidden />
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="text-sm leading-relaxed">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-active mr-2">
+                    <span className="text-[12px] font-semibold text-brand-active mr-2">
                       {item.sello}
                     </span>
                     {item.nota}
@@ -839,7 +824,7 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
                 <span className="absolute -left-[17.5px] top-1.5 size-1.5 rounded-pill bg-border-strong" aria-hidden />
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="text-sm">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-active mr-2">
+                    <span className="text-[12px] font-semibold text-brand-active mr-2">
                       Conformidad
                     </span>
                     {item.estado === "subida"
@@ -956,8 +941,8 @@ export function DetalleGestion({
       <Card className="p-5 mt-4 border-brand-soft-border">
         <div className="flex items-center gap-2 mb-4">
           <span className="size-2 rounded-pill bg-brand" aria-hidden />
-          <p className="text-[13px] font-semibold uppercase tracking-wide text-brand-active">
-            {etiquetaEtapa(gestion.etapa)} — acción
+          <p className="text-[13px] font-semibold text-brand-active">
+            Acción · {etiquetaEtapa(gestion.etapa)}
           </p>
         </div>
         {gestion.etapa === "ingresado" && esGestorOwner && <AccionIngresado gestion={gestion} />}

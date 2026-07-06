@@ -1,17 +1,30 @@
+import { redirect } from "next/navigation";
+import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Icono } from "@/components/ui/iconos";
+import { cerrarSesion } from "@/features/auth/service";
 import { miPerfilTecnico } from "@/features/tecnicos/service";
 
 export default async function PerfilTecnicoPage() {
   const perfil = await miPerfilTecnico();
   if (!perfil) return null;
 
+  async function salir() {
+    "use server";
+    await cerrarSesion();
+    redirect("/");
+  }
+
   return (
     <div className="animate-aparecer max-w-lg">
       <p className="text-[13px] font-medium text-muted">Mi cuenta</p>
-      <h1 className="text-2xl font-semibold tracking-tight mt-0.5 mb-5">
-        {perfil.nombre}
-      </h1>
+      <div className="flex items-center gap-3 mt-2 mb-5">
+        <Avatar nombre={perfil.nombre} size="lg" />
+        <h1 className="text-2xl font-semibold tracking-tight truncate">
+          {perfil.nombre}
+        </h1>
+      </div>
 
       <Card className="divide-y divide-border">
         <div className="px-4 py-3">
@@ -57,6 +70,16 @@ export default async function PerfilTecnicoPage() {
       <p className="text-[13px] text-muted mt-4">
         Para actualizar tus datos, contactá a la inmobiliaria.
       </p>
+
+      <form action={salir} className="mt-6">
+        <button
+          type="submit"
+          className="flex items-center justify-center gap-2 w-full min-h-tap px-4 rounded-md border border-border-strong bg-surface text-sm font-medium hover:bg-surface-2 active:translate-y-px transition-colors"
+        >
+          <Icono id="salir" size={16} />
+          Cerrar sesión
+        </button>
+      </form>
     </div>
   );
 }

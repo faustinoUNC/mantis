@@ -80,6 +80,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-904](STORY-904.md) | Stepper + feedback de avance, restyle del tablero, bloqueo por presencia | ✅ done |
 | [STORY-905](STORY-905.md) | Actividad: línea de tiempo única del detalle | ✅ done |
 | [STORY-906](STORY-906.md) | Correcciones de la auditoría multi-agente (seguridad DB, finanzas, inbox, realtime, UI) | ✅ done |
+| [STORY-907](STORY-907.md) | Refinamiento UX/UI: identidad y vida (saludo+avatar, cards del técnico, stagger, fixes) | ✅ done |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.
 

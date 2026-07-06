@@ -30,6 +30,10 @@ export function Campana({
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const ref = useRef<HTMLDivElement>(null);
   const botonRef = useRef<HTMLButtonElement>(null);
+  // La campana se monta 2 veces (sidebar desktop + barra mobile): cada
+  // instancia necesita su propio canal o la segunda revienta con
+  // "cannot add postgres_changes callbacks after subscribe()".
+  const instancia = useRef(Math.random().toString(36).slice(2, 8));
   const noLeidas = items.filter((n) => !n.leida_en).length;
 
   // Entrega realtime (RLS limita la suscripción a las propias filas).
@@ -50,7 +54,7 @@ export function Campana({
       if (desmontado) return;
 
       canal = supabase
-        .channel(`notif-${usuarioId}`)
+        .channel(`notif-${usuarioId}-${instancia.current}`)
         .on(
           "postgres_changes",
           {

@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { BloqueoWatcher } from "@/components/paneles/bloqueo-watcher.client";
 import { Campana } from "@/components/paneles/campana.client";
 import { NavTecnico } from "@/components/paneles/nav-tecnico.client";
 import { SidebarStaff } from "@/components/paneles/sidebar.client";
-import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 import { Icono } from "@/components/ui/iconos";
 import { cerrarSesion } from "@/features/auth/service";
 import {
@@ -63,17 +64,16 @@ export async function PanelShell({
         <header className="sticky top-0 z-40 bg-surface border-b border-border">
           <div className="flex items-center justify-between px-4 h-13 py-2.5">
             <Marca />
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Campana usuarioId={usuario.id} iniciales={notificaciones} />
-              <form action={salir}>
-                <button
-                  type="submit"
-                  aria-label="Salir"
-                  className="flex items-center justify-center size-9 rounded-md text-muted hover:text-foreground hover:bg-surface-2 transition-colors"
-                >
-                  <Icono id="salir" size={18} />
-                </button>
-              </form>
+              {/* Cerrar sesión vive en Perfil — el header queda limpio */}
+              <Link
+                href="/tecnico/perfil"
+                aria-label="Mi cuenta"
+                className="rounded-pill transition-transform active:scale-95"
+              >
+                <Avatar nombre={usuario.nombre} size="sm" />
+              </Link>
             </div>
           </div>
         </header>
@@ -91,13 +91,16 @@ export async function PanelShell({
         marca={<Marca />}
         campana={<Campana usuarioId={usuario.id} iniciales={notificaciones} />}
         pie={
-          <div className="flex md:flex-col md:gap-2 items-center md:items-stretch">
-            <div className="hidden md:flex items-center gap-2 px-3">
-              <Badge tono="brand">{NOMBRE_ROL[usuario.rol]}</Badge>
+          <div className="flex md:flex-col md:gap-3 items-center md:items-stretch">
+            <div className="hidden md:flex items-center gap-2.5 px-3 min-w-0">
+              <Avatar nombre={usuario.nombre} size="md" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{usuario.nombre}</p>
+                <p className="text-[11px] text-muted truncate">
+                  {NOMBRE_ROL[usuario.rol]}
+                </p>
+              </div>
             </div>
-            <p className="hidden md:block px-3 text-[13px] text-muted truncate">
-              {usuario.nombre}
-            </p>
             {botonSalir}
           </div>
         }

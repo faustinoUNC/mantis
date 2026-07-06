@@ -2,7 +2,7 @@
 name: MANTIS 2
 description: Design contract del sistema de gestión de mantenimiento inmobiliario. Dirección "Esmeralda técnica" — minimalista y moderna. Tailwind 4 CSS-first; los tokens de este archivo SON los del @theme de codigo/app/globals.css.
 status: final
-updated: 2026-07-05
+updated: 2026-07-06 (STORY-907: avatar, input-archivo, stagger — aditivo)
 sources:
   - specs/PRD.md (v1.2.0 §12)
 colors:
@@ -115,6 +115,12 @@ components:
     estilo: 'input (caja o editorial) + botón ojito (mostrar/ocultar) a la derecha — OBLIGATORIO en todo campo de contraseña'
   iconos:
     fuente: 'set propio SVG stroke 1.8 currentColor en components/ui/iconos.tsx — nunca librerías de íconos'
+  avatar:
+    estilo: 'círculo {colors.brand-soft} + borde {colors.brand-soft-border}, iniciales en {colors.brand-active} semibold; tamaños sm 28px / md 32px / lg 48px'
+    uso: 'identidad del usuario logueado: header del técnico (link a Perfil), pie del sidebar staff, encabezado del perfil'
+  input-archivo:
+    estilo: 'file input nativo oculto + botón secundario con ícono cámara y nombre del archivo elegido al lado (truncado)'
+    uso: 'toda subida de foto/archivo — el file input nativo desborda en 390px'
   mapa:
     estilo: 'iframe Google Maps embed con el tratamiento de card (borde {colors.border}, radio {rounded.lg}); botón "Abrir en Google Maps" = button-secondary con pin esmeralda'
     uso: 'preview al cargar dirección (validación visual), detalle de propiedad, detalle de gestión'
@@ -171,6 +177,11 @@ MANTIS 2 es una herramienta de trabajo diaria para una inmobiliaria: el diseño 
 - **Tarjeta de gestión (Kanban)**: card compacta; urgencia como banda/badge ámbar; fuera de competencia → `opacity-50` + sin acciones (solo lectura).
 - **Header de panel**: claro (`surface` + borde inferior `border`), wordmark chico con guión esmeralda, badge de rol, salir como botón fantasma. **Se retira el header oscuro y la franja diagonal.**
 - **Login (pantalla de marca — concepto "editorial con pulso")**: única pantalla con licencia propia, definida acá: layout asimétrico anclado a la izquierda (nunca card centrada ni banner lateral — anti-patrón "login de IA"), wordmark gigante con el **guión esmeralda latiendo** (animación `latido`, el pulso del sistema), fondo `fondo-tecnico` (grilla de puntos al 7%), campos `input-editorial` y entrada escalonada con `aparecer`.
+
+## Motion
+
+- La animación del sistema sigue siendo UNA: `aparecer`. Las listas (cards del técnico, tiles y cards de inicio) entran **escalonadas** con la utility `.stagger` (delay ~35ms por ítem, tope en el 8º) — mismo keyframe, cero animaciones nuevas.
+- Feedback táctil en superficies tocables del técnico: `active:scale-[0.985]` + transición corta. Nada de bounce ni parallax.
 
 ## Do's and Don'ts
 

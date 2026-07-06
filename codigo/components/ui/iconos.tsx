@@ -88,6 +88,26 @@ const TRAZOS: Record<string, React.ReactNode> = {
       <path d="m16 17 5-5-5-5M21 12H9" />
     </>
   ),
+  pin: (
+    <>
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0" />
+      <circle cx="12" cy="10" r="3" />
+    </>
+  ),
+  reloj: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </>
+  ),
+  chevron: <path d="m9 18 6-6-6-6" />,
+  camara: (
+    <>
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+      <circle cx="12" cy="13" r="3" />
+    </>
+  ),
+  check: <path d="M20 6 9 17l-5-5" />,
 };
 
 export type IconoId = keyof typeof TRAZOS;
