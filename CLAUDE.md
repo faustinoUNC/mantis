@@ -19,6 +19,7 @@ Evolución del MANTIS original (`/Users/fausti/Downloads/projects/tesis/sist_ges
 - Fuente de verdad: `specs/`. Ningún código en `codigo/` sin STORY aprobada.
 - BMAD instalado en `_bmad/` (skills `bmad-*` en `.claude/skills/`). Output en `_bmad-output/`.
 - Docs base: `specs/PRD.md` y `specs/ARQUITECTURA.md`. Índice: `specs/README.md`.
+- **Pendientes del proyecto: `tasks/PENDIENTES.md`** (única fuente de verdad — mantenerla al día: completados a "Hechos", descartados quedan documentados para no re-proponerlos).
 
 ### 2. Dominio — decisiones innegociables
 - Se dice **"gestión de mantenimiento"**, nunca "incidente".
