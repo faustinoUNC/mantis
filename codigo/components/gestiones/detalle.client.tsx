@@ -673,24 +673,148 @@ function ReasignarGestor({
   );
 }
 
-// ── Secciones informativas (encabezado uniforme) ──
+// ── Actividad: línea de tiempo única (STORY-905) ──
+// Todo lo que pasó, en orden, en un solo lugar: cambios de etapa como
+// separadores, notas del técnico con foto, decisiones con su motivo.
 
-function Seccion({
-  titulo,
-  children,
-}: {
-  titulo: string;
-  children: React.ReactNode;
-}) {
+const SELLO_NOTA: Record<string, string> = {
+  inspeccion: "Inspección",
+  avance: "Avance de obra",
+};
+
+type ItemActividad =
+  | { clase: "etapa"; etapa: string; fecha: string }
+  | { clase: "evento"; texto: string; detalle: string | null; fecha: string }
+  | { clase: "nota"; sello: string; nota: string; foto: string | null; fecha: string }
+  | { clase: "conformidad"; estado: string; motivo: string | null; foto: string | null; fecha: string };
+
+function FechaItem({ fecha }: { fecha: string }) {
+  return (
+    <span className="font-mono text-[11px] text-muted shrink-0">
+      {fechaHora(fecha)}
+    </span>
+  );
+}
+
+function Actividad({ gestion }: { gestion: GestionDetalle }) {
+  const items: ItemActividad[] = [
+    ...gestion.eventos.map((e): ItemActividad =>
+      e.tipo === "transicion"
+        ? { clase: "etapa", etapa: etiquetaEtapa(e.a_etapa), fecha: e.creado_en }
+        : {
+            clase: "evento",
+            texto: LABEL_EVENTO[e.tipo] ?? e.tipo,
+            detalle: e.detalle?.motivo != null ? String(e.detalle.motivo) : null,
+            fecha: e.creado_en,
+          }
+    ),
+    ...gestion.avances.map((a): ItemActividad => ({
+      clase: "nota",
+      sello: SELLO_NOTA[a.tipo] ?? a.tipo,
+      nota: a.nota,
+      foto: a.foto_url,
+      fecha: a.creado_en,
+    })),
+    ...gestion.conformidades.map((c): ItemActividad => ({
+      clase: "conformidad",
+      estado: c.estado,
+      motivo: c.motivo_rechazo,
+      foto: c.foto_url,
+      fecha: c.creado_en,
+    })),
+  ].sort((a, b) => b.fecha.localeCompare(a.fecha));
+
   return (
     <section className="mt-7">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted mb-2.5">
-        {titulo}
+      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted mb-3">
+        Actividad
       </h2>
-      {children}
+      <ol className="relative flex flex-col gap-4 pl-5 before:absolute before:left-[5px] before:top-1 before:bottom-1 before:w-px before:bg-border">
+        {items.map((item, i) => {
+          if (item.clase === "etapa") {
+            return (
+              <li key={i} className="relative">
+                <span className="absolute -left-[19.5px] top-1 size-2.5 rounded-pill bg-brand ring-4 ring-background" aria-hidden />
+                <div className="flex items-center gap-2">
+                  <span className="rounded-pill border border-brand-soft-border bg-brand-soft px-2.5 py-0.5 text-[12px] font-semibold text-brand-active">
+                    → {item.etapa}
+                  </span>
+                  <FechaItem fecha={item.fecha} />
+                </div>
+              </li>
+            );
+          }
+          if (item.clase === "nota") {
+            return (
+              <li key={i} className="relative">
+                <span className="absolute -left-[17.5px] top-1.5 size-1.5 rounded-pill bg-border-strong" aria-hidden />
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-sm leading-relaxed">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-active mr-2">
+                      {item.sello}
+                    </span>
+                    {item.nota}
+                  </p>
+                  <FechaItem fecha={item.fecha} />
+                </div>
+                {item.foto && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.foto}
+                    alt="Foto del registro"
+                    className="mt-2 rounded-md max-h-44 border border-border"
+                  />
+                )}
+              </li>
+            );
+          }
+          if (item.clase === "conformidad") {
+            return (
+              <li key={i} className="relative">
+                <span className="absolute -left-[17.5px] top-1.5 size-1.5 rounded-pill bg-border-strong" aria-hidden />
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-sm">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-active mr-2">
+                      Conformidad
+                    </span>
+                    {item.estado === "subida"
+                      ? "Subida por el técnico"
+                      : item.estado === "aprobada"
+                        ? "Subida y aprobada"
+                        : "Subida (luego rechazada)"}
+                    {item.motivo && <span className="text-muted"> · {item.motivo}</span>}
+                  </p>
+                  <FechaItem fecha={item.fecha} />
+                </div>
+                {item.foto && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.foto}
+                    alt="Conformidad firmada"
+                    className="mt-2 rounded-md max-h-44 border border-border"
+                  />
+                )}
+              </li>
+            );
+          }
+          return (
+            <li key={i} className="relative">
+              <span className="absolute -left-[17.5px] top-1.5 size-1.5 rounded-pill bg-border-strong" aria-hidden />
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm">
+                  {item.texto}
+                  {item.detalle && <span className="text-muted"> · {item.detalle}</span>}
+                </p>
+                <FechaItem fecha={item.fecha} />
+              </div>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }
+
 
 // ── Detalle ──
 
@@ -824,107 +948,7 @@ export function DetalleGestion({
 
       {esAdmin && <ReasignarGestor gestion={gestion} gestores={gestores} />}
 
-      {gestion.presupuestos.length > 0 && gestion.etapa !== "presupuesto" && (
-        <Seccion titulo="Presupuestos">
-          <div className="flex flex-col gap-3">
-            {gestion.presupuestos.map((p) => (
-              <div key={p.id} className="relative">
-                <FichaPresupuesto presupuesto={p} />
-                <div className="absolute top-3 right-3">
-                  <Badge tono={p.estado === "aprobado" ? "brand" : p.estado === "rechazado" ? "error" : "urgente"}>
-                    {p.estado}
-                  </Badge>
-                </div>
-                {p.motivo_rechazo && (
-                  <p className="text-[13px] text-error mt-1 px-1">Motivo: {p.motivo_rechazo}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Seccion>
-      )}
-
-      {gestion.avances.length > 0 && (
-        <Seccion titulo="Avances del técnico">
-          <Card className="divide-y divide-border">
-            {gestion.avances.map((a) => (
-              <div key={a.id} className="px-4 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm leading-relaxed">
-                    {a.tipo === "inspeccion" && (
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-active mr-2">
-                        Inspección
-                      </span>
-                    )}
-                    {a.nota}
-                  </p>
-                  <span className="font-mono text-[11px] text-muted shrink-0 mt-0.5">
-                    {fechaHora(a.creado_en)}
-                  </span>
-                </div>
-                {a.foto_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={a.foto_url}
-                    alt="Foto del avance"
-                    className="mt-2 rounded-md max-h-48 border border-border"
-                  />
-                )}
-              </div>
-            ))}
-          </Card>
-        </Seccion>
-      )}
-
-      {gestion.conformidades.length > 0 && gestion.etapa !== "conformidad" && (
-        <Seccion titulo="Conformidades">
-          <Card className="divide-y divide-border">
-            {gestion.conformidades.map((c) => (
-              <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                <div>
-                  {c.foto_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={c.foto_url}
-                      alt="Conformidad"
-                      className="rounded-md max-h-40 border border-border"
-                    />
-                  )}
-                  {c.motivo_rechazo && (
-                    <p className="text-sm text-error mt-1">Motivo: {c.motivo_rechazo}</p>
-                  )}
-                </div>
-                <Badge tono={c.estado === "aprobada" ? "brand" : c.estado === "rechazada" ? "error" : "urgente"}>
-                  {c.estado}
-                </Badge>
-              </div>
-            ))}
-          </Card>
-        </Seccion>
-      )}
-
-      <Seccion titulo="Historial">
-        <Card className="divide-y divide-border">
-          {gestion.eventos.map((e) => (
-            <div key={e.id} className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
-              <span>
-                {LABEL_EVENTO[e.tipo] ?? e.tipo}
-                {e.tipo === "transicion" && (
-                  <span className="text-muted">
-                    {" "}· {etiquetaEtapa(e.de_etapa)} → {etiquetaEtapa(e.a_etapa)}
-                  </span>
-                )}
-                {e.detalle?.motivo != null && (
-                  <span className="text-muted"> · {String(e.detalle.motivo)}</span>
-                )}
-              </span>
-              <span className="font-mono text-[11px] text-muted shrink-0">
-                {fechaHora(e.creado_en)}
-              </span>
-            </div>
-          ))}
-        </Card>
-      </Seccion>
+      <Actividad gestion={gestion} />
     </div>
   );
 }

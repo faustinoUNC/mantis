@@ -78,6 +78,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-902](STORY-902.md) | Presupuesto formal (PDF/email) + rediseño del detalle vivo | ✅ done |
 | [STORY-903](STORY-903.md) | Cargo administrativo + vista previa y envío unificado de PDFs | ✅ done |
 | [STORY-904](STORY-904.md) | Stepper + feedback de avance, restyle del tablero, bloqueo por presencia | ✅ done |
+| [STORY-905](STORY-905.md) | Actividad: línea de tiempo única del detalle | ✅ done |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.
 
