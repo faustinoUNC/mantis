@@ -106,9 +106,13 @@ async function datosDocumento(
   }
 
   const cargoAdmin = Number(g.cargo_admin ?? 0);
+  // El fee de la inmobiliaria viaja al PAGADOR: entra al presupuesto (lo
+  // aprueba sabiendo el total real) y a la nota. Nunca al comprobante.
   const total =
     tipo === "presupuesto"
-      ? Number(vigente?.monto_materiales ?? 0) + Number(vigente?.monto_mano_obra ?? 0)
+      ? Number(vigente?.monto_materiales ?? 0) +
+        Number(vigente?.monto_mano_obra ?? 0) +
+        cargoAdmin
       : tipo === "comprobante"
         ? Number(g.liq_monto ?? g.costo_final ?? 0)
         : Number(g.costo_final ?? 0) + cargoAdmin;
@@ -138,7 +142,7 @@ async function datosDocumento(
       total,
       facturaRef: tipo === "presupuesto" ? null : g.liq_factura_ref,
       plazoDias: tipo === "presupuesto" ? vigente?.plazo_dias ?? null : null,
-      cargoAdmin: tipo === "nota" ? cargoAdmin : null,
+      cargoAdmin: tipo === "comprobante" ? null : cargoAdmin,
     },
   };
 }
@@ -230,11 +234,13 @@ export async function descargarDocumento(
 
 // PDF/email del presupuesto en su etapa (staff de mantenimiento).
 export async function descargarPresupuestoPDF(
-  gestionId: string
+  gestionId: string,
+  opciones?: { cargoAdmin?: number }
 ): Promise<ActionResult<DocumentoGenerado>> {
   const actual = await exigirMantenimiento();
   if (!actual) return { ok: false, error: "No tenés permiso." };
 
+  await guardarCargoAdmin(gestionId, opciones?.cargoAdmin);
   const doc = await datosDocumento(gestionId, "presupuesto");
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
   if (!doc.datos.total) return { ok: false, error: "No hay presupuesto cargado." };
@@ -255,11 +261,13 @@ export async function descargarPresupuestoPDF(
 }
 
 export async function enviarPresupuestoEmail(
-  gestionId: string
+  gestionId: string,
+  cargoAdmin?: number
 ): Promise<ActionResult> {
   const actual = await exigirMantenimiento();
   if (!actual) return { ok: false, error: "No tenés permiso." };
 
+  await guardarCargoAdmin(gestionId, cargoAdmin);
   const doc = await datosDocumento(gestionId, "presupuesto");
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
   if (!doc.datos.total) return { ok: false, error: "No hay presupuesto cargado." };

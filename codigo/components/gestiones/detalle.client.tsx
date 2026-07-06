@@ -358,6 +358,9 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const [pagador, setPagador] = useState<Pagador>(gestion.pagador_sugerido);
   const [rechazando, setRechazando] = useState(false);
+  const [cargoAdmin, setCargoAdmin] = useState<number>(
+    Number(gestion.cargo_admin ?? 0)
+  );
   const enviado = gestion.presupuestos.find((p) => p.estado === "enviado");
   const inspecciones = gestion.avances.filter((a) => a.tipo === "inspeccion");
 
@@ -390,11 +393,45 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
       )}
       <FichaPresupuesto presupuesto={enviado} />
 
+      {/* El fee de la inmobiliaria se define ACÁ: el pagador aprueba
+          conociendo el total real (pedido Fausti) */}
+      <div className="max-w-md flex flex-col gap-3">
+        <Input
+          label="Gestión administrativa ($) — fee de la inmobiliaria"
+          type="number"
+          min="0"
+          step="0.01"
+          value={cargoAdmin || ""}
+          placeholder="0"
+          onChange={(e) => setCargoAdmin(Number(e.target.value) || 0)}
+        />
+        <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
+          <div className="flex justify-between">
+            <span className="text-muted">Presupuesto del técnico</span>
+            <span className="font-mono">
+              {plata(Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra))}
+            </span>
+          </div>
+          {cargoAdmin > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted">Gestión administrativa</span>
+              <span className="font-mono">{plata(cargoAdmin)}</span>
+            </div>
+          )}
+          <div className="flex justify-between pt-1 border-t border-border font-semibold">
+            <span>Total al {gestion.pagador ?? gestion.pagador_sugerido}</span>
+            <span className="font-mono">
+              {plata(Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra) + cargoAdmin)}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <EnvioDocumento
         etiqueta="presupuesto"
         destinatarioEtiqueta={gestion.pagador ?? gestion.pagador_sugerido}
-        generar={() => descargarPresupuestoPDF(gestion.id)}
-        enviar={() => enviarPresupuestoEmail(gestion.id)}
+        generar={() => descargarPresupuestoPDF(gestion.id, { cargoAdmin })}
+        enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdmin)}
       />
 
       {rechazando ? (

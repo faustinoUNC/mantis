@@ -50,7 +50,7 @@ export function FinanzasAcciones({
         {/* Composición de la nota: trabajo + gestión administrativa */}
         <div className="max-w-md flex flex-col gap-3">
           <Input
-            label="Gestión administrativa ($) — fee de la inmobiliaria"
+            label="Gestión administrativa ($) — definido en el presupuesto, corregible acá"
             type="number"
             min="0"
             step="0.01"
