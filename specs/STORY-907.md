@@ -47,7 +47,7 @@ micro-vida (stagger de entrada, hover, avatares) con los tokens existentes.
 - Dark mode, librerías de íconos/animaciones: prohibido por contract.
 
 ## Dev Agent Record
-- **Commit:** ea414f0
+- **Commit:** 50565f9
 - **Archivos:** `globals.css` (stagger + `--radius-pill` que faltaba — `rounded-pill` no generaba nada), `ui/avatar.tsx` (nuevo), `ui/input-archivo.client.tsx` (nuevo), `ui/iconos.tsx` (pin/reloj/chevron/camara/check), `mis-trabajos.client.tsx` (rediseño), `tecnico/page.tsx`, `tecnico/perfil/page.tsx`, `panel-shell.tsx`, `inicio-rol.tsx`, `detalle.client.tsx`, `campana.client.tsx`, DESIGN.md (bump aditivo).
 - **Extra encontrado y corregido:** (a) token `--radius-pill` inexistente pese a usos previos de `rounded-pill`; (b) error de hidratación preexistente en el detalle — `toLocaleString` emite U+202F distinto entre Node y navegador → `fechaHora()` manual 24h.
 - **Verificación:** capturas 390px (home/perfil/detalle técnico) y 1440px (inicio admin) después del cambio; consola limpia (sin el error de la campana ni la hidratación); `npm run build` verde.
