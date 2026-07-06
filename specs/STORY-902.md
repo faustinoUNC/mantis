@@ -15,6 +15,10 @@ Versión: 1.0.0
 6. **Fix Resend + plus-addressing**: el modo testing de Resend rebota los alias `ausitesis+x@gmail.com` (compara la dirección exacta) — se normalizan al enviar (hack de testing documentado; el log guarda el destinatario real). Presupuesto entregado ✓.
 7. Admin ve también las tiles financieras en su Inicio.
 
+## Post-fix (v1.1, reporte de Fausti)
+
+- Tras enviar el presupuesto, el técnico seguía viendo el form de notas de inspección en "Presupuesto — acción". Ahora, con presupuesto pendiente, ve solo "Presupuesto enviado — esperando la evaluación del gestor" + la ficha de lo que envió (solo lectura).
+
 ## Dev Agent Record
 
 ### Agent Model Used

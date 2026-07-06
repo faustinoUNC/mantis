@@ -734,10 +734,22 @@ export function DetalleGestion({
           <AccionResponderAsignacion gestion={gestion} />
         )}
         {gestion.etapa === "presupuesto" && esTecnicoAsignado && (
-          <div className="flex flex-col gap-6">
-            <FormAvance gestion={gestion} />
-            <FormPresupuestoTecnico gestion={gestion} />
-          </div>
+          gestion.presupuestos.some((p) => p.estado === "enviado") ? (
+            // Presupuesto enviado: al técnico solo le queda esperar al gestor
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-muted">
+                Presupuesto enviado — esperando la evaluación del gestor.
+              </p>
+              <FichaPresupuesto
+                presupuesto={gestion.presupuestos.find((p) => p.estado === "enviado")!}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6">
+              <FormAvance gestion={gestion} />
+              <FormPresupuestoTecnico gestion={gestion} />
+            </div>
+          )
         )}
         {gestion.etapa === "presupuesto" && esGestorOwner && (
           <EvaluacionPresupuesto gestion={gestion} />
