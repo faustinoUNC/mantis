@@ -60,7 +60,7 @@ export const NAV_POR_ROL: Record<Rol, ItemNav[]> = {
 
 export const NOMBRE_ROL: Record<Rol, string> = {
   administrador: "Administrador",
-  gestor_mantenimiento: "Gestor de mantenimiento",
-  gestor_administrativo: "Gestor administrativo",
+  gestor_mantenimiento: "Gestor Comercial",
+  gestor_administrativo: "Gestor Financiero",
   tecnico: "Técnico",
 };
