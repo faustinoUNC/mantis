@@ -2,9 +2,10 @@
 
 > **✅ RESUELTO (2026-07-06, STORY-906):** todos los hallazgos de este archivo
 > fueron corregidos y verificados, salvo **INB-4** (decisión consciente para la
-> casilla de prueba) y **BAJA-1** (pendiente para producción). Las dimensiones
-> que faltaban (realtime y consistencia UI) se relanzaron: 7 hallazgos nuevos,
-> todos corregidos. Detalle completo en `specs/STORY-906.md`.
+> casilla de prueba) y **BAJA-1** (descartado por decisión de Fausti — riesgo
+> bajo, no se hará). Las dimensiones que faltaban (realtime y consistencia UI)
+> se relanzaron: 7 hallazgos nuevos, todos corregidos. Detalle completo en
+> `specs/STORY-906.md`.
 
 **Fecha:** 2026-07-06
 **Método:** Revisión multi-agente por dimensiones (seguridad/RLS, funnel, finanzas, realtime, inbox/cron, consistencia UI) + verificación adversarial de cada hallazgo. Los hallazgos de seguridad y funnel fueron verificados manualmente contra las policies (`pg_policies`) y funciones (`avanzar_etapa`, `responder_asignacion`) reales de la base remota `ejwokycbyjtlxwusbhtt`.

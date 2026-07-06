@@ -97,4 +97,4 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 # 🎉 LAS 8 ÉPICAS ESTÁN COMPLETAS — MVP de MANTIS 2 terminado (2026-07-05)
 
-Pendientes de producción (Fausti): verificar dominio en Resend (enviar a destinatarios reales) · activar leaked password protection en Supabase Auth.
+Pendientes de producción (Fausti): activar leaked password protection en Supabase Auth (toggle en el dashboard) · verificar dominio en Resend (enviar a destinatarios reales) · relajar el filtro `subject:mantenimiento` del inbox cuando haya casilla exclusiva · probar a mano el flujo de presupuesto (pagador + fee) en la app deployada.

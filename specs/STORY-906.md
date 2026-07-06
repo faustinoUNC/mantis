@@ -58,7 +58,7 @@ el mismo estado en lista y detalle.
 - **MET-2** — `inicioMes` calculado en `America/Argentina/Buenos_Aires` (antes UTC del server).
 
 ### No corregido (documentado)
-- **BAJA-1** — `CRON_SECRET` literal en `cron.job`: riesgo bajo (requiere leer el schema `cron`), pendiente para producción (Vault).
+- **BAJA-1** — `CRON_SECRET` literal en `cron.job`: **descartado por decisión de Fausti (2026-07-06)** — riesgo bajo (requiere acceso directo a la base; el peor abuso es forzar sincronizaciones del inbox). No se hará.
 
 ## Dev Agent Record
 - **Verificación:** typecheck + lint + build OK. SEC-1/FUN-3 verificados E2E contra la base real con sesiones de gestor y administrativo (PATCH directo de `etapa` → `etapa_solo_por_funcion`; columnas no-finanzas del administrativo → `sin_permiso`; RPC `avanzar_etapa` y updates legítimos pasan; volver-a-asignación limpia técnico y rechaza el presupuesto).
