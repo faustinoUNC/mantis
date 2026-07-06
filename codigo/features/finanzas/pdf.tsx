@@ -41,6 +41,7 @@ export interface DatosDocumento {
   total: number;
   facturaRef?: string | null;
   plazoDias?: number | null;
+  cargoAdmin?: number | null;
 }
 
 function monto(n: number) {
@@ -99,14 +100,20 @@ function Documento({ datos }: { datos: DatosDocumento }) {
           {datos.presupuesto && (
             <>
               <View style={s.filaTabla}>
-                <Text>Materiales (presupuesto aprobado)</Text>
+                <Text>Materiales{datos.tipo === "presupuesto" ? "" : " (presupuesto aprobado)"}</Text>
                 <Text>{monto(datos.presupuesto.materiales)}</Text>
               </View>
               <View style={s.filaTabla}>
-                <Text>Mano de obra (presupuesto aprobado)</Text>
+                <Text>Mano de obra{datos.tipo === "presupuesto" ? "" : " (presupuesto aprobado)"}</Text>
                 <Text>{monto(datos.presupuesto.manoObra)}</Text>
               </View>
             </>
+          )}
+          {datos.cargoAdmin != null && datos.cargoAdmin > 0 && (
+            <View style={s.filaTabla}>
+              <Text>Gestión administrativa</Text>
+              <Text>{monto(datos.cargoAdmin)}</Text>
+            </View>
           )}
           <View style={s.total}>
             <Text style={s.totalTexto}>

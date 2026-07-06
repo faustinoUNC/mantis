@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { EnvioDocumento } from "@/components/gestiones/envio-documento.client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -13,19 +13,28 @@ import {
 } from "@/features/finanzas/service";
 import type { GestionDetalle } from "@/features/gestiones/types";
 
-function descargarBase64(base64: string, filename: string) {
-  const enlace = document.createElement("a");
-  enlace.href = `data:application/pdf;base64,${base64}`;
-  enlace.download = filename;
-  enlace.click();
+function plata(n: number) {
+  return `$ ${n.toLocaleString("es-AR")}`;
 }
 
-export function FinanzasAcciones({ gestion }: { gestion: GestionDetalle & { nota_emitida_en?: string | null; cobrado_en?: string | null; liq_pagada_en?: string | null } }) {
+export function FinanzasAcciones({
+  gestion,
+}: {
+  gestion: GestionDetalle & {
+    nota_emitida_en?: string | null;
+    cargo_admin?: number | null;
+  };
+}) {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
-  const [notaEmitida, setNotaEmitida] = useState(Boolean(gestion.nota_emitida_en));
+  const [cargoAdmin, setCargoAdmin] = useState<number>(
+    Number(gestion.cargo_admin ?? 0)
+  );
 
-  async function correr(clave: string, fn: () => Promise<{ ok: boolean; error?: string }>) {
+  async function correr(
+    clave: string,
+    fn: () => Promise<{ ok: boolean; error?: string }>
+  ) {
     setError(null);
     setCargando(clave);
     const r = await fn();
@@ -34,41 +43,48 @@ export function FinanzasAcciones({ gestion }: { gestion: GestionDetalle & { nota
     return r.ok;
   }
 
-  async function descargar(tipo: "nota" | "comprobante") {
-    setError(null);
-    setCargando(`descargar-${tipo}`);
-    const r = await descargarDocumento(gestion.id, tipo);
-    setCargando(null);
-    if (!r.ok) return setError(r.error);
-    if (r.data) descargarBase64(r.data.base64, r.data.filename);
-  }
-
   if (gestion.etapa === "facturacion_cobro") {
+    const trabajo = Number(gestion.costo_final ?? 0);
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          {notaEmitida && <Badge tono="brand">Nota enviada al {gestion.pagador}</Badge>}
-          <Button
-            disabled={cargando !== null}
-            variante={notaEmitida ? "secundario" : "primario"}
-            onClick={async () => {
-              const ok = await correr("emitir", () => emitirNotaCobro(gestion.id));
-              if (ok) setNotaEmitida(true);
-            }}
-          >
-            {cargando === "emitir"
-              ? "Enviando…"
-              : notaEmitida
-                ? "Reenviar nota de cobro"
-                : `Emitir y enviar nota al ${gestion.pagador ?? "pagador"}`}
-          </Button>
-          <Button variante="fantasma" disabled={cargando !== null} onClick={() => descargar("nota")}>
-            {cargando === "descargar-nota" ? "Generando…" : "Descargar PDF"}
-          </Button>
+      <div className="flex flex-col gap-5">
+        {/* Composición de la nota: trabajo + gestión administrativa */}
+        <div className="max-w-md flex flex-col gap-3">
+          <Input
+            label="Gestión administrativa ($) — fee de la inmobiliaria"
+            type="number"
+            min="0"
+            step="0.01"
+            value={cargoAdmin || ""}
+            placeholder="0"
+            onChange={(e) => setCargoAdmin(Number(e.target.value) || 0)}
+          />
+          <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
+            <div className="flex justify-between">
+              <span className="text-muted">Trabajo realizado</span>
+              <span className="font-mono">{plata(trabajo)}</span>
+            </div>
+            {cargoAdmin > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted">Gestión administrativa</span>
+                <span className="font-mono">{plata(cargoAdmin)}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-1 border-t border-border font-semibold">
+              <span>Total a facturar al {gestion.pagador ?? "pagador"}</span>
+              <span className="font-mono">{plata(trabajo + cargoAdmin)}</span>
+            </div>
+          </div>
         </div>
 
+        <EnvioDocumento
+          etiqueta="nota de cobro"
+          yaEnviado={Boolean(gestion.nota_emitida_en)}
+          generar={() => descargarDocumento(gestion.id, "nota", { cargoAdmin })}
+          enviar={() => emitirNotaCobro(gestion.id, cargoAdmin)}
+        />
+
         <form
-          className="flex flex-wrap items-end gap-3 pt-3 border-t border-border"
+          className="flex flex-wrap items-end gap-3 pt-4 border-t border-border"
           onSubmit={(e) => {
             e.preventDefault();
             const medio = String(new FormData(e.currentTarget).get("medio")) as
@@ -129,16 +145,17 @@ export function FinanzasAcciones({ gestion }: { gestion: GestionDetalle & { nota
     );
   }
 
-  // Finalizado: re-descarga de documentos
+  // Finalizado: ver/descargar los documentos emitidos
   return (
     <div className="flex flex-wrap gap-3">
-      <Button variante="secundario" disabled={cargando !== null} onClick={() => descargar("nota")}>
-        {cargando === "descargar-nota" ? "Generando…" : "Descargar nota de cobro"}
-      </Button>
-      <Button variante="secundario" disabled={cargando !== null} onClick={() => descargar("comprobante")}>
-        {cargando === "descargar-comprobante" ? "Generando…" : "Descargar comprobante"}
-      </Button>
-      {error && <p className="text-sm font-medium text-error w-full">{error}</p>}
+      <EnvioDocumento
+        etiqueta="nota de cobro"
+        generar={() => descargarDocumento(gestion.id, "nota")}
+      />
+      <EnvioDocumento
+        etiqueta="comprobante de liquidación"
+        generar={() => descargarDocumento(gestion.id, "comprobante")}
+      />
     </div>
   );
 }

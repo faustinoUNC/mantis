@@ -92,6 +92,8 @@ export interface GestionDetalle extends GestionResumen {
   pagador_sugerido: Pagador;
   pagador: Pagador | null;
   costo_final: number | null;
+  cargo_admin: number | null;
+  nota_emitida_en: string | null;
   gestor_id: string;
   tecnico_id: string | null;
   propiedad_id: string;

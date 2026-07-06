@@ -43,7 +43,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, pagador_sugerido, costo_final, liq_monto, liq_factura_ref, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, descripcion, pagador, pagador_sugerido, costo_final, cargo_admin, liq_monto, liq_factura_ref, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -105,12 +105,13 @@ async function datosDocumento(
     emailDestinatario = inq?.email ?? null;
   }
 
+  const cargoAdmin = Number(g.cargo_admin ?? 0);
   const total =
     tipo === "presupuesto"
       ? Number(vigente?.monto_materiales ?? 0) + Number(vigente?.monto_mano_obra ?? 0)
       : tipo === "comprobante"
         ? Number(g.liq_monto ?? g.costo_final ?? 0)
-        : Number(g.costo_final ?? 0);
+        : Number(g.costo_final ?? 0) + cargoAdmin;
 
   return {
     emailDestinatario,
@@ -137,6 +138,7 @@ async function datosDocumento(
       total,
       facturaRef: tipo === "presupuesto" ? null : g.liq_factura_ref,
       plazoDias: tipo === "presupuesto" ? vigente?.plazo_dias ?? null : null,
+      cargoAdmin: tipo === "nota" ? cargoAdmin : null,
     },
   };
 }
@@ -148,10 +150,20 @@ async function registrarEvento(gestionId: string, tipo: string, actorId: string)
     .insert({ gestion_id: gestionId, tipo, actor_id: actorId });
 }
 
-export async function emitirNotaCobro(gestionId: string): Promise<ActionResult> {
+async function guardarCargoAdmin(gestionId: string, cargoAdmin?: number) {
+  if (cargoAdmin == null || cargoAdmin < 0) return;
+  const admin = createAdminClient();
+  await admin.from("gestiones").update({ cargo_admin: cargoAdmin }).eq("id", gestionId);
+}
+
+export async function emitirNotaCobro(
+  gestionId: string,
+  cargoAdmin?: number
+): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
 
+  await guardarCargoAdmin(gestionId, cargoAdmin);
   const doc = await datosDocumento(gestionId, "nota");
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
   if (!doc.datos.total) return { ok: false, error: "La gestión no tiene costo final." };
@@ -183,13 +195,21 @@ export async function emitirNotaCobro(gestionId: string): Promise<ActionResult> 
   return { ok: true };
 }
 
+export interface DocumentoGenerado {
+  base64: string;
+  filename: string;
+  destinatario: { nombre: string; rotulo: string; email: string | null };
+}
+
 export async function descargarDocumento(
   gestionId: string,
-  tipo: "nota" | "comprobante"
-): Promise<ActionResult<{ base64: string; filename: string }>> {
+  tipo: "nota" | "comprobante",
+  opciones?: { cargoAdmin?: number }
+): Promise<ActionResult<DocumentoGenerado>> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
 
+  if (tipo === "nota") await guardarCargoAdmin(gestionId, opciones?.cargoAdmin);
   const doc = await datosDocumento(gestionId, tipo);
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
 
@@ -199,6 +219,11 @@ export async function descargarDocumento(
     data: {
       base64,
       filename: `${tipo === "nota" ? "nota-cobro" : "comprobante-liquidacion"}-${doc.datos.numero}.pdf`,
+      destinatario: {
+        nombre: doc.datos.destinatarioNombre,
+        rotulo: doc.datos.destinatarioRotulo,
+        email: doc.emailDestinatario,
+      },
     },
   };
 }
@@ -206,7 +231,7 @@ export async function descargarDocumento(
 // PDF/email del presupuesto en su etapa (staff de mantenimiento).
 export async function descargarPresupuestoPDF(
   gestionId: string
-): Promise<ActionResult<{ base64: string; filename: string }>> {
+): Promise<ActionResult<DocumentoGenerado>> {
   const actual = await exigirMantenimiento();
   if (!actual) return { ok: false, error: "No tenés permiso." };
 
@@ -217,7 +242,15 @@ export async function descargarPresupuestoPDF(
   const base64 = await generarPDF(doc.datos);
   return {
     ok: true,
-    data: { base64, filename: `presupuesto-${doc.datos.numero}.pdf` },
+    data: {
+      base64,
+      filename: `presupuesto-${doc.datos.numero}.pdf`,
+      destinatario: {
+        nombre: doc.datos.destinatarioNombre,
+        rotulo: doc.datos.destinatarioRotulo,
+        email: doc.emailDestinatario,
+      },
+    },
   };
 }
 

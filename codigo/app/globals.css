@@ -54,7 +54,9 @@
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      /* none (no translateY(0)): un transform residual convierte al
+         contenedor en containing block y rompe los overlays fixed hijos */
+      transform: none;
     }
   }
 

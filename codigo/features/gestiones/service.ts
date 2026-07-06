@@ -122,7 +122,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_RESUMEN}, causa, pagador_sugerido, pagador, costo_final, gestor_id, tecnico_id, propiedad_id, especialidad_id`
+      `${SELECT_RESUMEN}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, nota_emitida_en, gestor_id, tecnico_id, propiedad_id, especialidad_id`
     )
     .eq("id", id)
     .single();
@@ -158,6 +158,8 @@ export async function obtenerGestion(
     pagador_sugerido: Pagador;
     pagador: Pagador | null;
     costo_final: number | null;
+    cargo_admin: number | null;
+    nota_emitida_en: string | null;
     gestor_id: string;
     tecnico_id: string | null;
     propiedad_id: string;
@@ -170,6 +172,8 @@ export async function obtenerGestion(
     pagador_sugerido: fila.pagador_sugerido,
     pagador: fila.pagador,
     costo_final: fila.costo_final,
+    cargo_admin: fila.cargo_admin,
+    nota_emitida_en: fila.nota_emitida_en,
     gestor_id: fila.gestor_id,
     tecnico_id: fila.tecnico_id,
     propiedad_id: fila.propiedad_id,

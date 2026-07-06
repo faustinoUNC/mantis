@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { EnvioDocumento } from "@/components/gestiones/envio-documento.client";
 import { FinanzasAcciones } from "@/components/gestiones/finanzas.client";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
@@ -355,7 +356,6 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const [pagador, setPagador] = useState<Pagador>(gestion.pagador_sugerido);
   const [rechazando, setRechazando] = useState(false);
-  const [aviso, setAviso] = useState<string | null>(null);
   const enviado = gestion.presupuestos.find((p) => p.estado === "enviado");
   const inspecciones = gestion.avances.filter((a) => a.tipo === "inspeccion");
 
@@ -374,24 +374,6 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
     );
   }
 
-  async function descargar() {
-    setAviso(null);
-    const r = await descargarPresupuestoPDF(gestion.id);
-    if (!r.ok) return setAviso(r.error);
-    if (r.data) {
-      const a = document.createElement("a");
-      a.href = `data:application/pdf;base64,${r.data.base64}`;
-      a.download = r.data.filename;
-      a.click();
-    }
-  }
-
-  async function enviarEmail() {
-    setAviso(null);
-    const r = await enviarPresupuestoEmail(gestion.id);
-    setAviso(r.ok ? "enviado" : (r.error ?? "Error"));
-  }
-
   return (
     <div className="flex flex-col gap-4">
       {inspecciones.length > 0 && (
@@ -406,20 +388,11 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
       )}
       <FichaPresupuesto presupuesto={enviado} />
 
-      <div className="flex flex-wrap gap-2">
-        <Button variante="secundario" onClick={descargar}>
-          Descargar PDF
-        </Button>
-        <Button variante="secundario" onClick={enviarEmail}>
-          Enviar al {gestion.pagador ?? gestion.pagador_sugerido} por email
-        </Button>
-        {aviso === "enviado" && (
-          <span className="self-center text-[13px] font-medium text-brand-active">Enviado ✓</span>
-        )}
-        {aviso && aviso !== "enviado" && (
-          <span className="self-center text-[13px] font-medium text-error">{aviso}</span>
-        )}
-      </div>
+      <EnvioDocumento
+        etiqueta="presupuesto"
+        generar={() => descargarPresupuestoPDF(gestion.id)}
+        enviar={() => enviarPresupuestoEmail(gestion.id)}
+      />
 
       {rechazando ? (
         <form
