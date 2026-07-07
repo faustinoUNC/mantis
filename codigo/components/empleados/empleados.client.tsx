@@ -77,6 +77,7 @@ function FormNuevo({ onListo }: { onListo: () => void }) {
 function Fila({ empleado }: { empleado: Empleado }) {
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -115,10 +116,12 @@ function Fila({ empleado }: { empleado: Empleado }) {
     );
   }
 
-  async function toggleEstado() {
+  // Habilitar (reversible) es directo; inhabilitar exige confirmación inline (STORY-909).
+  async function aplicarEstado(activo: boolean) {
     setGuardando(true);
-    const r = await cambiarEstadoEmpleado(empleado.id, !empleado.esta_activo);
+    const r = await cambiarEstadoEmpleado(empleado.id, activo);
     setGuardando(false);
+    setConfirmando(false);
     if (!r.ok) alert(r.error);
   }
 
@@ -139,19 +142,43 @@ function Fila({ empleado }: { empleado: Empleado }) {
         </Badge>
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        <Button variante="fantasma" className="min-h-0 h-8 px-2.5 text-sm" onClick={() => setEditando(true)}>
-          Editar
-        </Button>
-        <Button
-          variante="fantasma"
-          disabled={guardando}
-          className={`min-h-0 h-8 px-2.5 text-sm ${
-            empleado.esta_activo ? "text-error hover:text-error" : ""
-          }`}
-          onClick={toggleEstado}
-        >
-          {empleado.esta_activo ? "Inhabilitar" : "Habilitar"}
-        </Button>
+        {confirmando ? (
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-sm text-muted">¿Inhabilitar a {empleado.nombre}?</span>
+            <Button
+              variante="fantasma"
+              disabled={guardando}
+              className="min-h-0 h-8 px-2.5 text-sm text-error hover:text-error"
+              onClick={() => aplicarEstado(false)}
+            >
+              {guardando ? "Inhabilitando…" : "Sí, inhabilitar"}
+            </Button>
+            <Button
+              variante="fantasma"
+              disabled={guardando}
+              className="min-h-0 h-8 px-2.5 text-sm"
+              onClick={() => setConfirmando(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        ) : (
+          <>
+            <Button variante="fantasma" className="min-h-0 h-8 px-2.5 text-sm" onClick={() => setEditando(true)}>
+              Editar
+            </Button>
+            <Button
+              variante="fantasma"
+              disabled={guardando}
+              className={`min-h-0 h-8 px-2.5 text-sm ${
+                empleado.esta_activo ? "text-error hover:text-error" : ""
+              }`}
+              onClick={empleado.esta_activo ? () => setConfirmando(true) : () => aplicarEstado(true)}
+            >
+              {empleado.esta_activo ? "Inhabilitar" : "Habilitar"}
+            </Button>
+          </>
+        )}
       </td>
     </tr>
   );
