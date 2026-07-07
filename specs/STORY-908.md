@@ -36,7 +36,7 @@ Que al llegar una solicitud de enrolamiento, cada gestor comercial y administrad
 - Excluir a un actor: el enrolamiento corre sin sesión (no hay `actor_id`), todo el staff recibe — igual que `notificar_inbox`.
 
 ## Dev Agent Record
-- **Commit:** _(pendiente)_
+- **Commit:** 61d5492 (pusheado a main → auto-deploy)
 - **Migración aplicada:** `notificar_solicitud_tecnico` (función `public.notificar_solicitud_tecnico()` + trigger `trg_notificar_solicitud_tecnico AFTER INSERT ON public.tecnicos WHEN (new.estado='pendiente')`).
 - **Sin cambios de código** (reuso del outbox + campana existentes).
 - **Verificación (tests transaccionales auto-revertidos contra la DB de prod):**

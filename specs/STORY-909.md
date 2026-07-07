@@ -32,7 +32,7 @@ Evitar la inhabilitación accidental: pedir confirmación explícita antes de de
 - Diferenciar en el login "cuenta inhabilitada" vs "credenciales incorrectas": el login **ya** muestra el mensaje correcto ("Tu cuenta está inhabilitada"), no es necesario.
 
 ## Dev Agent Record
-- **Commit:** _(pendiente)_
+- **Commit:** 61d5492 (pusheado a main → auto-deploy)
 - **Archivos:** `components/empleados/empleados.client.tsx` (componente `Fila`: estado `confirmando`, `toggleEstado` → `aplicarEstado(activo)`, celda de acciones con confirmación inline de dos pasos).
 - **Verificación (navegador real contra dev server + Supabase prod, sesión admin):**
   - Click "Inhabilitar" → aparece "¿Inhabilitar a {nombre}? · Sí, inhabilitar · Cancelar" y el empleado **sigue Activo** (no se deshabilita). ✅
