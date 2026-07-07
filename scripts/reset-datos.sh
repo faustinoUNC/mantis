@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
-# MANTIS 2 — Reset de datos operativos para pruebas
+# MANTIS 2 — RESET LIVIANO (probar de cero SIN re-registrar nada)
 #
-# Borra: gestiones (+ eventos, presupuestos, avances, conformidades
-#        por cascade), inbox de reportes, notificaciones, log de
-#        emails y las fotos del bucket "gestiones".
-# Conserva: usuarios, técnicos, especialidades, propiedades,
-#           legajos, propietarios, inquilinos y toda la config.
+# Borra SOLO lo operativo: gestiones (+ eventos, presupuestos,
+#   avances, conformidades por cascade), inbox, notificaciones,
+#   log de emails y las fotos del bucket "gestiones".
+# CONSERVA: usuarios, técnicos, cartera (propiedades/propietarios/
+#   inquilinos/legajos), especialidades y toda la config.
+#
+# ¿Querés vaciar TODO (usuarios, técnicos y cartera incluidos)?
+#   → usá ./scripts/reset-total.sh
 #
 # Uso:  ./scripts/reset-datos.sh
 # Lee la service key de codigo/.env.local — no requiere psql.
