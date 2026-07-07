@@ -27,11 +27,20 @@ function esc(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function plantilla(titulo: string, cuerpo: string): string {
+// El saludo por nombre hace que se sepa a simple vista para quién es el
+// mail (clave mientras la casilla de prueba es compartida). Se omite si no
+// hay un nombre real ("—" es el fallback de datosDocumento).
+function plantilla(titulo: string, cuerpo: string, destinatario?: string): string {
+  const nombre = destinatario?.trim();
+  const saludo =
+    nombre && nombre !== "—"
+      ? `<p style="margin:0 0 14px;font-size:15px;color:#18181b">Hola, ${esc(nombre)}:</p>`
+      : "";
   return `<!doctype html><body style="margin:0;background:#fafafa;font-family:system-ui,-apple-system,sans-serif;padding:32px 16px">
   <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:28px">
     <p style="margin:0 0 20px;font-weight:800;font-size:15px;letter-spacing:-0.02em;text-transform:uppercase;color:#18181b">Man<span style="color:#059669">—</span>tis</p>
     <h1 style="margin:0 0 10px;font-size:19px;letter-spacing:-0.01em;color:#18181b">${esc(titulo)}</h1>
+    ${saludo}
     <p style="margin:0;font-size:15px;line-height:1.6;color:#52525b">${esc(cuerpo)}</p>
     <hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0 14px">
     <p style="margin:0;font-size:12px;color:#a1a1aa">Este correo es informativo — no hace falta responderlo. Ante cualquier consulta, contactá a la inmobiliaria.</p>
@@ -40,6 +49,7 @@ function plantilla(titulo: string, cuerpo: string): string {
 
 async function enviarEmail(datos: {
   para: string;
+  destinatario?: string; // nombre para el saludo del cuerpo
   asunto: string;
   titulo: string;
   cuerpo: string;
@@ -62,7 +72,7 @@ async function enviarEmail(datos: {
         from: REMITENTE,
         to: [destinoEntregable(datos.para)],
         subject: datos.asunto,
-        html: plantilla(datos.titulo, datos.cuerpo),
+        html: plantilla(datos.titulo, datos.cuerpo, datos.destinatario),
         ...(datos.adjunto && {
           attachments: [
             {
@@ -119,6 +129,7 @@ const EMAILS_ESTADO: Record<
 // Documentos de finanzas (nota de cobro / comprobante) con PDF adjunto.
 export async function enviarEmailDocumento(datos: {
   para: string;
+  destinatario?: string;
   asunto: string;
   titulo: string;
   cuerpo: string;
@@ -146,16 +157,20 @@ export async function emailEstadoGestion(
 
   const { data: legajo } = await admin
     .from("legajos")
-    .select("inquilinos(email)")
+    .select("inquilinos(nombre, email)")
     .eq("id", g.legajo_id)
     .single();
-  const inquilino = legajo?.inquilinos as unknown as { email: string } | null;
+  const inquilino = legajo?.inquilinos as unknown as {
+    nombre: string;
+    email: string;
+  } | null;
   if (!inquilino?.email) return;
 
   const propiedad = g.propiedades as unknown as { direccion: string } | null;
   const def = EMAILS_ESTADO[tipo];
   await enviarEmail({
     para: inquilino.email,
+    destinatario: inquilino.nombre,
     asunto: def.asunto,
     titulo: def.titulo,
     cuerpo: def.cuerpo(propiedad?.direccion ?? "tu propiedad"),

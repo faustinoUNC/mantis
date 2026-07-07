@@ -42,6 +42,7 @@ claude-fable-5 (Claude Code, 2026-07-05)
 - Bug corregido: la Campana estaba dentro del <form> de Salir y su botón sin type disparaba el logout — movida afuera + type="button".
 - **Email entregado real**: reporte_recibido a ausitesis@gmail.com (dueño de la cuenta Resend) estado=enviado; el intento a otro destinatario quedó logueado como fallido con el error de Resend (dominio sin verificar) SIN romper el flujo. Hooks: creada / técnico aceptó / conformidad aprobada.
 - Pendiente de Fausti: verificar dominio en resend.com/domains para enviar a inquilinos/propietarios reales (y cambiar REMITENTE en features/email/service.ts).
+- **Patch v1.1 (2026-07-07):** saludo por nombre en el cuerpo de TODOS los emails ("Hola, {nombre}:"). Motivo (Fausti): con la casilla de prueba compartida no se distinguía para quién era cada mail. `plantilla()` recibe el nombre y lo omite si no hay uno real ("—"/vacío). Alimentado por `destinatarioNombre` en los 3 documentos de finanzas (presupuesto/nota/comprobante) y por el nombre del inquilino en los emails de estado. De paso: `campana.client.tsx` usa `useId()` en vez de `Math.random()` en render (fix de pureza que rompía el lint).
 
 ### File List
 

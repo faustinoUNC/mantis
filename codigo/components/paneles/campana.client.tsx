@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   marcarLeidas,
   misNotificaciones,
@@ -32,8 +32,9 @@ export function Campana({
   const botonRef = useRef<HTMLButtonElement>(null);
   // La campana se monta 2 veces (sidebar desktop + barra mobile): cada
   // instancia necesita su propio canal o la segunda revienta con
-  // "cannot add postgres_changes callbacks after subscribe()".
-  const instancia = useRef(Math.random().toString(36).slice(2, 8));
+  // "cannot add postgres_changes callbacks after subscribe()". useId da un
+  // id estable por instancia y SSR-safe (sin impureza en render).
+  const instancia = useId();
   const noLeidas = items.filter((n) => !n.leida_en).length;
 
   // Entrega realtime (RLS limita la suscripción a las propias filas).
@@ -54,7 +55,7 @@ export function Campana({
       if (desmontado) return;
 
       canal = supabase
-        .channel(`notif-${usuarioId}-${instancia.current}`)
+        .channel(`notif-${usuarioId}-${instancia}`)
         .on(
           "postgres_changes",
           {
@@ -78,7 +79,7 @@ export function Campana({
       desmontado = true;
       if (canal) supabase.removeChannel(canal);
     };
-  }, [usuarioId]);
+  }, [usuarioId, instancia]);
 
   useEffect(() => {
     function cerrar(e: MouseEvent) {

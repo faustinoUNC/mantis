@@ -207,6 +207,7 @@ export async function emitirNotaCobro(
   const pdf = await generarPDF(doc.datos);
   await enviarEmailDocumento({
     para: doc.emailDestinatario,
+    destinatario: doc.datos.destinatarioNombre,
     asunto: `Nota de cobro — ${doc.datos.direccion}`,
     titulo: "Nota de cobro por trabajo de mantenimiento",
     cuerpo: `Te enviamos el detalle del trabajo realizado en ${doc.datos.direccion}. El documento adjunto tiene el desglose completo.`,
@@ -332,6 +333,7 @@ export async function enviarPresupuestoEmail(
   const pdf = await generarPDF(doc.datos);
   await enviarEmailDocumento({
     para: doc.emailDestinatario,
+    destinatario: doc.datos.destinatarioNombre,
     asunto: `Presupuesto de obra — ${doc.datos.direccion}`,
     titulo: "Presupuesto por trabajo de mantenimiento",
     cuerpo: `Te enviamos el presupuesto por el trabajo a realizar en ${doc.datos.direccion}. El documento adjunto tiene el detalle completo.`,
@@ -401,6 +403,7 @@ export async function registrarLiquidacion(
     const pdf = await generarPDF(doc.datos);
     await enviarEmailDocumento({
       para: doc.emailDestinatario,
+      destinatario: doc.datos.destinatarioNombre,
       asunto: `Comprobante de liquidación — ${doc.datos.direccion}`,
       titulo: "Liquidación de tu trabajo",
       cuerpo: `Registramos el pago por el trabajo en ${doc.datos.direccion}. Adjuntamos el comprobante con el detalle.`,
