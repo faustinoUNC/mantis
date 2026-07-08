@@ -12,9 +12,9 @@ import {
 import { Card } from "@/components/ui/card";
 import type { Metricas } from "@/features/metricas/service";
 
-// Reglas dataviz aplicadas: serie única esmeralda (paleta validada), sin
-// leyenda (el título nombra la serie), barras finas con punta redondeada,
-// grid recesivo, texto SIEMPRE en tokens de tinta, tooltip por barra.
+// Bloque "Rendimiento" del Inicio (STORY-912): tiles de análisis + gráficos.
+// Los tiles accionables (activas, urgentes, por cobrar…) viven arriba, en InicioRol.
+// Reglas dataviz: serie única esmeralda, sin leyenda, barras finas, grid recesivo.
 
 const BRAND = "#059669";
 const GRID = "#e4e4e7";
@@ -42,25 +42,11 @@ function TooltipCaja({
   );
 }
 
-function Tile({
-  label,
-  valor,
-  alerta,
-}: {
-  label: string;
-  valor: string;
-  alerta?: boolean;
-}) {
+function Tile({ label, valor }: { label: string; valor: string }) {
   return (
     <Card className="p-4">
       <p className="text-[13px] font-medium text-muted">{label}</p>
-      <p
-        className={`text-2xl font-semibold tracking-tight mt-1 ${
-          alerta ? "text-urgente-fuerte" : ""
-        }`}
-      >
-        {valor}
-      </p>
+      <p className="text-2xl font-semibold tracking-tight mt-1">{valor}</p>
     </Card>
   );
 }
@@ -69,29 +55,18 @@ function plata(n: number) {
   return `$ ${n.toLocaleString("es-AR")}`;
 }
 
-export function Dashboard({ metricas }: { metricas: Metricas }) {
+export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   const esAdmin = metricas.rol === "administrador";
   const operativa = esAdmin || metricas.rol === "gestor_mantenimiento";
   const finanzas = esAdmin || metricas.rol === "gestor_administrativo";
 
   return (
-    <div className="animate-aparecer">
-      <p className="text-[13px] font-medium text-muted">
-        {metricas.rol === "gestor_mantenimiento" ? "Tus gestiones" : "Panorama"}
-      </p>
-      <h1 className="text-2xl font-semibold tracking-tight mt-0.5 mb-5">
-        Métricas
-      </h1>
+    <section>
+      <h2 className="text-[15px] font-semibold tracking-tight mb-4">Rendimiento</h2>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {operativa && (
           <>
-            <Tile label="Gestiones activas" valor={String(metricas.activas)} />
-            <Tile
-              label="Urgentes +24 h sin técnico"
-              valor={String(metricas.urgentesDemoradas)}
-              alerta={metricas.urgentesDemoradas > 0}
-            />
             <Tile
               label="Primera respuesta (mediana)"
               valor={
@@ -112,16 +87,6 @@ export function Dashboard({ metricas }: { metricas: Metricas }) {
         )}
         {finanzas && (
           <>
-            <Tile
-              label="Por cobrar"
-              valor={`${metricas.pendientesCobro} · ${plata(metricas.montoPorCobrar)}`}
-              alerta={metricas.pendientesCobro > 0}
-            />
-            <Tile
-              label="Por liquidar a técnicos"
-              valor={`${metricas.pendientesLiquidacion} · ${plata(metricas.montoPorLiquidar)}`}
-              alerta={metricas.pendientesLiquidacion > 0}
-            />
             <Tile label="Resueltas este mes" valor={String(metricas.resueltasMes)} />
             <Tile label="Cobrado este mes" valor={plata(metricas.cobradoMes)} />
             <Tile label="Fee inmobiliaria este mes" valor={plata(metricas.feeMes)} />
@@ -132,9 +97,9 @@ export function Dashboard({ metricas }: { metricas: Metricas }) {
       {operativa && (
         <div className="grid lg:grid-cols-2 gap-4">
           <Card className="p-5">
-            <h2 className="text-[15px] font-semibold tracking-tight mb-4">
+            <h3 className="text-[15px] font-semibold tracking-tight mb-4">
               Gestiones por etapa
-            </h2>
+            </h3>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={metricas.porEtapa} margin={{ left: -24, right: 4 }}>
                 <CartesianGrid stroke={GRID} strokeDasharray="0" vertical={false} />
@@ -158,20 +123,15 @@ export function Dashboard({ metricas }: { metricas: Metricas }) {
                   cursor={{ fill: "rgba(24,24,27,0.04)" }}
                   content={<TooltipCaja sufijo="gestiones" />}
                 />
-                <Bar
-                  dataKey="cantidad"
-                  fill={BRAND}
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={26}
-                />
+                <Bar dataKey="cantidad" fill={BRAND} radius={[4, 4, 0, 0]} maxBarSize={26} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
 
           <Card className="p-5">
-            <h2 className="text-[15px] font-semibold tracking-tight mb-4">
+            <h3 className="text-[15px] font-semibold tracking-tight mb-4">
               Resolución mediana por especialidad (días)
-            </h2>
+            </h3>
             {metricas.porEspecialidad.length === 0 ? (
               <p className="text-sm text-muted py-16 text-center">
                 Todavía no hay gestiones finalizadas para medir.
@@ -202,18 +162,13 @@ export function Dashboard({ metricas }: { metricas: Metricas }) {
                     cursor={{ fill: "rgba(24,24,27,0.04)" }}
                     content={<TooltipCaja sufijo="días" />}
                   />
-                  <Bar
-                    dataKey="dias"
-                    fill={BRAND}
-                    radius={[0, 4, 4, 0]}
-                    maxBarSize={18}
-                  />
+                  <Bar dataKey="dias" fill={BRAND} radius={[0, 4, 4, 0]} maxBarSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </Card>
         </div>
       )}
-    </div>
+    </section>
   );
 }

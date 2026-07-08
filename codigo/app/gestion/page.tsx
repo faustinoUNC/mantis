@@ -1,22 +1,12 @@
 import { InicioRol } from "@/components/paneles/inicio-rol";
 import { obtenerUsuarioActual } from "@/features/auth/service";
-import { tableroGestiones } from "@/features/gestiones/service";
 import { listarInbox } from "@/features/inbox/service";
 import { obtenerMetricas } from "@/features/metricas/service";
 import { listarTecnicos } from "@/features/tecnicos/service";
 
-const MIS_ETAPAS = new Set([
-  "ingresado",
-  "asignacion",
-  "presupuesto",
-  "en_ejecucion",
-  "conformidad",
-]);
-
 export default async function GestionInicio() {
-  const [usuario, gestiones, metricas, inbox, tecnicos] = await Promise.all([
+  const [usuario, metricas, inbox, tecnicos] = await Promise.all([
     obtenerUsuarioActual(),
-    tableroGestiones(),
     obtenerMetricas(),
     listarInbox(),
     listarTecnicos(),
@@ -47,9 +37,7 @@ export default async function GestionInicio() {
           href: "/tecnicos",
         },
       ]}
-      acciones={gestiones.filter((g) => MIS_ETAPAS.has(g.etapa)).slice(0, 6)}
-      tituloAcciones="Requieren tu acción"
-      vacioAcciones="Nada pendiente de tu lado. ✦"
+      metricas={metricas}
     />
   );
 }

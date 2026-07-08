@@ -1,10 +1,9 @@
 import Link from "next/link";
+import { PanelMetricas } from "@/components/metricas/panel-metricas.client";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Icono } from "@/components/ui/iconos";
-import type { GestionResumen } from "@/features/gestiones/types";
-import { ETAPAS } from "@/features/gestiones/types";
+import type { Metricas } from "@/features/metricas/service";
 
 export interface TileInicio {
   label: string;
@@ -38,24 +37,16 @@ function fechaHoy() {
   return f.charAt(0).toUpperCase() + f.slice(1);
 }
 
-function diasEn(fecha: string) {
-  const dias = Math.floor((Date.now() - new Date(fecha).getTime()) / 86400000);
-  return dias === 0 ? "hoy" : `${dias} d`;
-}
-
-// Dashboard de Inicio por rol (STORY-901): saludo + tiles + acción requerida.
+// Dashboard de Inicio por rol (STORY-901 + STORY-912): saludo + tiles
+// accionables + bloque de Rendimiento (gráficos y métricas, antes en /metricas).
 export function InicioRol({
   nombre,
   tiles,
-  acciones,
-  tituloAcciones,
-  vacioAcciones,
+  metricas,
 }: {
   nombre: string;
   tiles: TileInicio[];
-  acciones: GestionResumen[];
-  tituloAcciones: string;
-  vacioAcciones: string;
+  metricas: Metricas | null;
 }) {
   return (
     <div className="animate-aparecer">
@@ -103,58 +94,7 @@ export function InicioRol({
         })}
       </div>
 
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[15px] font-semibold tracking-tight">
-          {tituloAcciones}
-        </h2>
-        <Link
-          href="/tablero"
-          className="flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-hover"
-        >
-          <Icono id="tablero" size={15} />
-          Ver tablero completo
-        </Link>
-      </div>
-
-      {acciones.length === 0 ? (
-        <Card className="fondo-tecnico p-10 text-center">
-          <span className="mx-auto flex items-center justify-center size-11 rounded-pill bg-brand-soft border border-brand-soft-border text-brand-active">
-            <Icono id="check" size={20} strokeWidth={2} />
-          </span>
-          <p className="text-sm text-muted mt-3">{vacioAcciones}</p>
-        </Card>
-      ) : (
-        <div className="stagger grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {acciones.map((g) => (
-            <Link key={g.id} href={`/gestiones/${g.id}`} className="group">
-              <Card
-                className={`p-4 h-full flex flex-col transition-all duration-150 group-hover:border-border-strong group-hover:-translate-y-px ${
-                  g.urgencia === "urgente" ? "border-l-2 border-l-urgente" : ""
-                }`}
-              >
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Badge tono="brand">
-                    {ETAPAS.find((e) => e.id === g.etapa)?.label}
-                  </Badge>
-                  {g.urgencia === "urgente" && <Badge tono="urgente">Urgente</Badge>}
-                </div>
-                <p className="text-sm font-medium leading-snug line-clamp-2">
-                  {g.descripcion}
-                </p>
-                <div className="flex items-center gap-1.5 text-[13px] text-muted mt-auto pt-2 min-w-0">
-                  <Icono id="pin" size={13} />
-                  <span className="truncate">
-                    {g.direccion} · {g.especialidad}
-                  </span>
-                  <span className="ml-auto font-mono text-[11px] shrink-0">
-                    {diasEn(g.creado_en)}
-                  </span>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
+      {metricas && <PanelMetricas metricas={metricas} />}
     </div>
   );
 }

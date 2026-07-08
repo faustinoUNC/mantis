@@ -32,7 +32,6 @@ export const NAV_POR_ROL: Record<Rol, ItemNav[]> = {
     { href: "/inbox", label: "Inbox", icono: "inbox" },
     { href: "/cartera/propiedades", label: "Cartera", icono: "cartera" },
     { href: "/tecnicos", label: "Técnicos", icono: "tecnicos" },
-    { href: "/metricas", label: "Métricas", icono: "metricas" },
     { href: "/admin/auditoria", label: "Auditoría", icono: "auditoria" },
     { href: "/admin/empleados", label: "Empleados", icono: "empleados" },
     { href: "/admin/especialidades", label: "Especialidades", icono: "especialidades" },
@@ -43,13 +42,11 @@ export const NAV_POR_ROL: Record<Rol, ItemNav[]> = {
     { href: "/inbox", label: "Inbox", icono: "inbox" },
     { href: "/cartera/propiedades", label: "Cartera", icono: "cartera" },
     { href: "/tecnicos", label: "Técnicos", icono: "tecnicos" },
-    { href: "/metricas", label: "Métricas", icono: "metricas" },
   ],
   gestor_administrativo: [
     { href: "/administracion", label: "Inicio", icono: "inicio" },
     { href: "/tablero", label: "Tablero", icono: "tablero" },
     { href: "/cartera/propiedades", label: "Cartera", icono: "cartera" },
-    { href: "/metricas", label: "Métricas", icono: "metricas" },
   ],
   tecnico: [
     { href: "/tecnico", label: "Trabajos", icono: "tecnicos" },
