@@ -12,7 +12,7 @@ import type { Especialidad } from "@/features/especialidades/types";
 import { cambiarEstadoTecnico } from "@/features/tecnicos/service";
 import type { EstadoTecnico, TecnicoResumen } from "@/features/tecnicos/types";
 import { usePaginado } from "@/shared/hooks/use-paginado";
-import { coincideTexto, enRangoFecha } from "@/shared/utils/filtros";
+import { coincideTexto } from "@/shared/utils/filtros";
 
 const TONO_ESTADO: Record<EstadoTecnico, "urgente" | "brand" | "error"> = {
   pendiente: "urgente",
@@ -89,28 +89,24 @@ export function Tecnicos({
 }) {
   const [creando, setCreando] = useState(false);
   const [consulta, setConsulta] = useState("");
-  const [desde, setDesde] = useState("");
-  const [hasta, setHasta] = useState("");
   const pendientes = tecnicos.filter((t) => t.estado === "pendiente").length;
 
-  // Filtra (búsqueda + fecha de registro) y ordena pendientes primero.
+  // Filtra por búsqueda y ordena pendientes primero.
   const filtrados = useMemo(
     () =>
       tecnicos
-        .filter(
-          (t) =>
-            coincideTexto(consulta, t.nombre, t.email, t.especialidades.join(" ")) &&
-            enRangoFecha(t.creado_en, desde, hasta)
+        .filter((t) =>
+          coincideTexto(consulta, t.nombre, t.email, t.especialidades.join(" "))
         )
         .sort(
           (a, b) =>
             (a.estado === "pendiente" ? -1 : 1) - (b.estado === "pendiente" ? -1 : 1)
         ),
-    [tecnicos, consulta, desde, hasta]
+    [tecnicos, consulta]
   );
 
   const { pageItems, setPagina, paginadorProps } = usePaginado(filtrados);
-  useEffect(() => setPagina(1), [consulta, desde, hasta, setPagina]);
+  useEffect(() => setPagina(1), [consulta, setPagina]);
 
   return (
     <div className="animate-aparecer">
@@ -145,7 +141,6 @@ export function Tecnicos({
         consulta={consulta}
         onConsulta={setConsulta}
         placeholder="Buscar por nombre, correo o especialidad…"
-        fecha={{ desde, hasta, onDesde: setDesde, onHasta: setHasta }}
       />
 
       <Card className="overflow-x-auto">

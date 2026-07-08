@@ -17,7 +17,7 @@ import {
 } from "@/features/empleados/service";
 import type { Empleado } from "@/features/empleados/types";
 import { usePaginado } from "@/shared/hooks/use-paginado";
-import { coincideTexto, enRangoFecha } from "@/shared/utils/filtros";
+import { coincideTexto } from "@/shared/utils/filtros";
 
 // Los técnicos se gestionan SOLO en la sección Técnicos (STORY-901).
 const ROLES = (Object.keys(NOMBRE_ROL) as Rol[]).filter((r) => r !== "tecnico");
@@ -191,20 +191,16 @@ function Fila({ empleado }: { empleado: Empleado }) {
 export function Empleados({ empleados }: { empleados: Empleado[] }) {
   const [creando, setCreando] = useState(false);
   const [consulta, setConsulta] = useState("");
-  const [desde, setDesde] = useState("");
-  const [hasta, setHasta] = useState("");
 
   const filtrados = useMemo(
     () =>
-      empleados.filter(
-        (e) =>
-          coincideTexto(consulta, e.nombre, e.email, NOMBRE_ROL[e.rol]) &&
-          enRangoFecha(e.creado_en, desde, hasta)
+      empleados.filter((e) =>
+        coincideTexto(consulta, e.nombre, e.email, NOMBRE_ROL[e.rol])
       ),
-    [empleados, consulta, desde, hasta]
+    [empleados, consulta]
   );
   const { pageItems, setPagina, paginadorProps } = usePaginado(filtrados);
-  useEffect(() => setPagina(1), [consulta, desde, hasta, setPagina]);
+  useEffect(() => setPagina(1), [consulta, setPagina]);
 
   return (
     <div className="animate-aparecer">
@@ -224,7 +220,6 @@ export function Empleados({ empleados }: { empleados: Empleado[] }) {
         consulta={consulta}
         onConsulta={setConsulta}
         placeholder="Buscar por nombre, correo o rol…"
-        fecha={{ desde, hasta, onDesde: setDesde, onHasta: setHasta }}
       />
 
       <Card className="overflow-x-auto">

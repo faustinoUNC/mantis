@@ -15,7 +15,7 @@ import { crearGestion } from "@/features/gestiones/service";
 import type { GestionResumen, Urgencia, Causa } from "@/features/gestiones/types";
 import { ETAPAS, LABEL_CAUSA } from "@/features/gestiones/types";
 import { cn } from "@/shared/utils/cn";
-import { coincideTexto, enRangoFecha } from "@/shared/utils/filtros";
+import { coincideTexto } from "@/shared/utils/filtros";
 
 // Columnas accionables por rol (visual; el permiso real vive en avanzar_etapa)
 const COLUMNAS_MANTENIMIENTO = new Set([
@@ -170,9 +170,8 @@ export function Tablero({
 }) {
   const [creando, setCreando] = useState(false);
   const [consulta, setConsulta] = useState("");
-  const [desde, setDesde] = useState("");
-  const [hasta, setHasta] = useState("");
   const [gestor, setGestor] = useState("");
+  const [orden, setOrden] = useState<"desc" | "asc">("desc");
   const puedeCrear = rol === "administrador" || rol === "gestor_mantenimiento";
   const esAdmin = rol === "administrador";
 
@@ -182,16 +181,21 @@ export function Tablero({
     [gestiones]
   );
 
-  // Búsqueda + fecha de ingreso + (admin) gestor asignado.
+  // Búsqueda + (admin) gestor asignado + orden por fecha de ingreso.
   const filtradas = useMemo(
     () =>
-      gestiones.filter(
-        (g) =>
-          coincideTexto(consulta, g.descripcion, g.direccion, g.especialidad, g.tecnico_nombre) &&
-          enRangoFecha(g.creado_en, desde, hasta) &&
-          (gestor === "" || g.gestor_nombre === gestor)
-      ),
-    [gestiones, consulta, desde, hasta, gestor]
+      gestiones
+        .filter(
+          (g) =>
+            coincideTexto(consulta, g.descripcion, g.direccion, g.especialidad, g.tecnico_nombre) &&
+            (gestor === "" || g.gestor_nombre === gestor)
+        )
+        .sort((a, b) =>
+          orden === "desc"
+            ? b.creado_en.localeCompare(a.creado_en)
+            : a.creado_en.localeCompare(b.creado_en)
+        ),
+    [gestiones, consulta, gestor, orden]
   );
 
   return (
@@ -223,24 +227,35 @@ export function Tablero({
         consulta={consulta}
         onConsulta={setConsulta}
         placeholder="Buscar por descripción, dirección, especialidad o técnico…"
-        fecha={{ desde, hasta, onDesde: setDesde, onHasta: setHasta }}
         extra={
-          esAdmin && (
+          <>
             <div className="w-52">
               <Select
-                label="Gestor"
-                value={gestor}
-                onChange={(e) => setGestor(e.target.value)}
+                label="Orden por fecha"
+                value={orden}
+                onChange={(e) => setOrden(e.target.value as "desc" | "asc")}
               >
-                <option value="">Todos los gestores</option>
-                {gestores.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
+                <option value="desc">Más recientes primero</option>
+                <option value="asc">Más antiguas primero</option>
               </Select>
             </div>
-          )
+            {esAdmin && (
+              <div className="w-52">
+                <Select
+                  label="Gestor"
+                  value={gestor}
+                  onChange={(e) => setGestor(e.target.value)}
+                >
+                  <option value="">Todos los gestores</option>
+                  {gestores.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+          </>
         }
       />
 

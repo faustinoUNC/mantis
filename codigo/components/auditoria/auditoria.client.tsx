@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador.client";
 import { Select } from "@/components/ui/select";
 import type { EventoAuditoria } from "@/features/auditoria/service";
+import { usePaginado } from "@/shared/hooks/use-paginado";
 
 const LABEL: Record<string, string> = {
   creada: "Gestión creada",
@@ -28,14 +30,21 @@ export function Auditoria({ eventos }: { eventos: EventoAuditoria[] }) {
   const [tipo, setTipo] = useState("");
   const [busqueda, setBusqueda] = useState("");
 
-  const filtrados = eventos.filter((e) => {
-    if (tipo && e.tipo !== tipo) return false;
-    if (busqueda) {
-      const texto = `${e.gestion_descripcion} ${e.direccion} ${e.actor_nombre}`.toLowerCase();
-      if (!texto.includes(busqueda.toLowerCase())) return false;
-    }
-    return true;
-  });
+  const filtrados = useMemo(
+    () =>
+      eventos.filter((e) => {
+        if (tipo && e.tipo !== tipo) return false;
+        if (busqueda) {
+          const texto = `${e.gestion_descripcion} ${e.direccion} ${e.actor_nombre}`.toLowerCase();
+          if (!texto.includes(busqueda.toLowerCase())) return false;
+        }
+        return true;
+      }),
+    [eventos, tipo, busqueda]
+  );
+
+  const { pageItems, setPagina, paginadorProps } = usePaginado(filtrados);
+  useEffect(() => setPagina(1), [tipo, busqueda, setPagina]);
 
   return (
     <div className="animate-aparecer">
@@ -88,7 +97,7 @@ export function Auditoria({ eventos }: { eventos: EventoAuditoria[] }) {
                 </td>
               </tr>
             )}
-            {filtrados.map((e) => (
+            {pageItems.map((e) => (
               <tr key={e.id} className="border-b border-border last:border-0 hover:bg-surface-2/60 transition-colors">
                 <td className="px-4 py-2.5">
                   {LABEL[e.tipo] ?? e.tipo}
@@ -117,6 +126,8 @@ export function Auditoria({ eventos }: { eventos: EventoAuditoria[] }) {
           </tbody>
         </table>
       </Card>
+
+      <Paginador {...paginadorProps} />
     </div>
   );
 }

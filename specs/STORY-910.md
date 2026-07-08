@@ -1,6 +1,12 @@
-# STORY-910 — Búsqueda, filtros y paginación en listados de alto volumen + fix de scroll del tablero (v1.0)
+# STORY-910 — Búsqueda, filtros y paginación en listados de alto volumen + fix de scroll del tablero (v1.1)
 
 **Estado:** 🚧 en desarrollo · **Fecha:** 2026-07-07
+
+## Cambios v1.1 (pedido de Fausti tras probar v1.0)
+- **Se quitan los filtros de rango de fecha (Desde/Hasta)** de técnicos, empleados y tablero. Especialidades ya no tenía.
+- **Tablero:** en lugar del rango de fecha, un **orden por fecha de ingreso** (select "Más recientes primero" / "Más antiguas primero"; default desc). Ordena las tarjetas dentro de cada columna.
+- **Auditoría** (`/admin/auditoria`): se agrega **paginación** (12/pág) sobre sus filtros ya existentes (búsqueda + tipo de evento).
+- Se simplifican las piezas compartidas: `FiltrosLista` pierde la prop `fecha` (sin uso) y se elimina el helper `enRangoFecha` de `filtros.ts` (código muerto — Regla #0).
 **Origen:** Prueba de carga (50 gestiones / 50 técnicos / 50 especialidades sembradas con marcador `[CARGA]`). Con volumen alto, los listados (técnicos, especialidades, empleados) se vuelven una tira larga sin forma de buscar/acotar, y el **tablero** tiene un bug de scroll: cuando una columna tiene muchas tarjetas, la barra de scroll horizontal queda al fondo de la página y **no se puede desplazar de costado sin bajar hasta el final**.
 
 ## Objetivo
