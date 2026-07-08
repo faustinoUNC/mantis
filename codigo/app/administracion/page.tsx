@@ -12,15 +12,16 @@ export default async function AdministracionInicio() {
     <InicioRol
       nombre={usuario!.nombre}
       tiles={[
+        // Contadores accionables; los importes viven en Métricas → "Dinero pendiente".
         {
-          label: "Por cobrar",
-          valor: `$ ${(metricas?.montoPorCobrar ?? 0).toLocaleString("es-AR")}`,
+          label: "Gestiones por cobrar",
+          valor: String(metricas?.pendientesCobro ?? 0),
           alerta: (metricas?.pendientesCobro ?? 0) > 0,
           href: "/tablero",
         },
         {
           label: "Por liquidar a técnicos",
-          valor: `$ ${(metricas?.montoPorLiquidar ?? 0).toLocaleString("es-AR")}`,
+          valor: String(metricas?.pendientesLiquidacion ?? 0),
           alerta: (metricas?.pendientesLiquidacion ?? 0) > 0,
           href: "/tablero",
         },

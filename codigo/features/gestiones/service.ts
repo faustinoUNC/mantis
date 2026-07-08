@@ -12,6 +12,7 @@ import type {
   GestionDetalle,
   GestionResumen,
   Pagador,
+  StatsTecnico,
   TecnicoDisponible,
   Urgencia,
 } from "./types";
@@ -130,7 +131,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_RESUMEN}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, nota_emitida_en, gestor_id, tecnico_id, propiedad_id, especialidad_id`
+      `${SELECT_RESUMEN}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, nota_emitida_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -172,10 +173,19 @@ export async function obtenerGestion(
     tecnico_id: string | null;
     propiedad_id: string;
     especialidad_id: string;
+    // to-ONE (gestion_id UNIQUE): PostgREST devuelve objeto, no array.
+    calificaciones:
+      | { estrellas: number; comentario: string | null }
+      | { estrellas: number; comentario: string | null }[]
+      | null;
   };
 
+  const calif = Array.isArray(fila.calificaciones)
+    ? fila.calificaciones[0]
+    : fila.calificaciones;
   return {
     ...base,
+    calificacion: calif ?? null,
     causa: fila.causa,
     pagador_sugerido: fila.pagador_sugerido,
     pagador: fila.pagador,
@@ -235,6 +245,72 @@ export async function avanzarEtapa(
   return { ok: true };
 }
 
+// STORY-914: cancelar una gestión (estado terminal con motivo obligatorio).
+// La validación de etapa/permiso/motivo vive en avanzar_etapa (Postgres).
+export async function cancelarGestion(
+  gestionId: string,
+  motivo: string
+): Promise<ActionResult> {
+  if (!motivo?.trim()) return { ok: false, error: "Indicá el motivo de la cancelación." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("avanzar_etapa", {
+    p_gestion: gestionId,
+    p_nueva: "cancelada",
+    p_detalle: { motivo: motivo.trim() },
+  });
+  if (error) {
+    const mensajes: Record<string, string> = {
+      motivo_requerido: "Indicá el motivo de la cancelación.",
+      transicion_invalida: "Esta gestión ya no se puede cancelar.",
+      sin_permiso: "No tenés permiso para cancelar esta gestión.",
+    };
+    const clave = Object.keys(mensajes).find((k) => error.message.includes(k));
+    return { ok: false, error: clave ? mensajes[clave] : "No se pudo cancelar." };
+  }
+  refrescarTablero(gestionId);
+  return { ok: true };
+}
+
+// STORY-914: calificación del técnico (estrellas 1–5) que carga el gestor
+// dueño al finalizar. Un hecho por gestión (unique), inmutable. RLS valida
+// que sea admin o gestor owner.
+export async function calificarTecnico(
+  gestionId: string,
+  estrellas: number,
+  comentario?: string
+): Promise<ActionResult> {
+  const actual = await obtenerUsuarioActual();
+  if (!actual) return { ok: false, error: "Sin sesión." };
+  if (!Number.isInteger(estrellas) || estrellas < 1 || estrellas > 5) {
+    return { ok: false, error: "Elegí entre 1 y 5 estrellas." };
+  }
+
+  const supabase = await createClient();
+  const { data: g } = await supabase
+    .from("gestiones")
+    .select("tecnico_id, etapa")
+    .eq("id", gestionId)
+    .single();
+  if (!g?.tecnico_id) return { ok: false, error: "La gestión no tiene técnico asignado." };
+  if (g.etapa !== "finalizado") {
+    return { ok: false, error: "La calificación se registra al finalizar la gestión." };
+  }
+
+  const { error } = await supabase.from("calificaciones").insert({
+    gestion_id: gestionId,
+    tecnico_id: g.tecnico_id,
+    autor_id: actual.id,
+    estrellas,
+    comentario: comentario?.trim() || null,
+  });
+  if (error) {
+    if (error.code === "23505") return { ok: false, error: "Esta gestión ya fue calificada." };
+    return { ok: false, error: "No se pudo guardar la calificación." };
+  }
+  refrescarTablero(gestionId);
+  return { ok: true };
+}
+
 // ── Asignación (STORY-404) ──
 
 export async function tecnicosDisponibles(
@@ -261,13 +337,94 @@ export async function tecnicosDisponibles(
     nombre: string;
     franjas_disponibilidad: TecnicoDisponible["franjas"];
   };
-  return ((data ?? []) as unknown as Fila[])
-    .filter((t) => idsActivos.has(t.id))
-    .map((t) => ({
-      id: t.id,
-      nombre: t.nombre,
-      franjas: t.franjas_disponibilidad ?? [],
-    }));
+  const candidatos = ((data ?? []) as unknown as Fila[]).filter((t) =>
+    idsActivos.has(t.id)
+  );
+
+  const stats = await estadisticasTecnicos(candidatos.map((t) => t.id));
+  return candidatos.map((t) => ({
+    id: t.id,
+    nombre: t.nombre,
+    franjas: t.franjas_disponibilidad ?? [],
+    stats: stats.get(t.id) ?? null,
+  }));
+}
+
+// STORY-915: desempeño agregado por técnico para el scorecard de asignación.
+// Usa admin client a propósito: las stats deben mirar TODAS las gestiones del
+// técnico (no solo las del gestor actual, que es lo que ve por RLS). Devuelve
+// solo números agregados — nunca gestiones de otros gestores.
+async function estadisticasTecnicos(
+  ids: string[]
+): Promise<Map<string, StatsTecnico>> {
+  const salida = new Map<string, StatsTecnico>();
+  if (ids.length === 0) return salida;
+
+  const admin = createAdminClient();
+  const [{ data: califs }, { data: gestiones }] = await Promise.all([
+    admin.from("calificaciones").select("tecnico_id, estrellas").in("tecnico_id", ids),
+    admin
+      .from("gestiones")
+      .select(
+        "tecnico_id, etapa, asignacion_aceptada, costo_final, presupuestos(estado, monto_materiales, monto_mano_obra)"
+      )
+      .in("tecnico_id", ids),
+  ]);
+
+  type GFila = {
+    tecnico_id: string;
+    etapa: string;
+    asignacion_aceptada: boolean | null;
+    costo_final: number | null;
+    presupuestos: { estado: string; monto_materiales: number; monto_mano_obra: number }[] | null;
+  };
+  const terminales = new Set(["finalizado", "cancelada"]);
+
+  for (const id of ids) {
+    const gs = ((gestiones ?? []) as unknown as GFila[]).filter((g) => g.tecnico_id === id);
+    const estrellasArr = (califs ?? [])
+      .filter((c) => c.tecnico_id === id)
+      .map((c) => Number(c.estrellas));
+
+    const respondidas = gs.filter((g) => g.asignacion_aceptada !== null);
+    const rechazadas = gs.filter((g) => g.asignacion_aceptada === false);
+    const terminadas = gs.filter((g) => terminales.has(g.etapa));
+
+    const desvios: number[] = [];
+    for (const g of gs) {
+      if (g.costo_final == null) continue;
+      const aprob = (g.presupuestos ?? []).find((p) => p.estado === "aprobado");
+      if (!aprob) continue;
+      const base = Number(aprob.monto_materiales) + Number(aprob.monto_mano_obra);
+      if (base <= 0) continue;
+      desvios.push((Number(g.costo_final) - base) / base);
+    }
+
+    const prom = (arr: number[]) =>
+      arr.length ? arr.reduce((s, n) => s + n, 0) / arr.length : null;
+
+    salida.set(id, {
+      estrellas: prom(estrellasArr),
+      nCalif: estrellasArr.length,
+      desvioPct: desvios.length ? Math.round((prom(desvios) ?? 0) * 1000) / 10 : null,
+      nDesvio: desvios.length,
+      obrasActivas: gs.filter((g) => !terminales.has(g.etapa)).length,
+      // Realizadas = solo finalizadas (una cancelada no es un trabajo hecho).
+      obrasRealizadas: gs.filter((g) => g.etapa === "finalizado").length,
+      pctRechazoAsig: respondidas.length
+        ? Math.round((rechazadas.length / respondidas.length) * 100)
+        : null,
+      nAsig: respondidas.length,
+      // Sobre terminadas (finalizadas + canceladas): las activas no diluyen la señal.
+      pctCancelacion: terminadas.length
+        ? Math.round(
+            (terminadas.filter((g) => g.etapa === "cancelada").length / terminadas.length) * 100
+          )
+        : null,
+      nTerminadas: terminadas.length,
+    });
+  }
+  return salida;
 }
 
 export async function asignarTecnico(

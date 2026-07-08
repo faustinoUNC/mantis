@@ -19,10 +19,11 @@ export default async function GestionInicio() {
       tiles={[
         { label: "Mis gestiones activas", valor: String(metricas?.activas ?? 0), href: "/tablero" },
         {
-          label: "Urgentes +24 h sin técnico",
-          valor: String(metricas?.urgentesDemoradas ?? 0),
-          alerta: (metricas?.urgentesDemoradas ?? 0) > 0,
+          label: "Urgentes sin asignar",
+          valor: String(metricas?.urgentesSinAsignar ?? 0),
+          alerta: (metricas?.urgentesSinAsignar ?? 0) > 0,
           href: "/tablero",
+          hint: "Gestiones urgentes en Ingresado o Asignación — todavía sin arrancar.",
         },
         {
           label: "Reportes en el inbox",

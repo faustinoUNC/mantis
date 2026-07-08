@@ -58,11 +58,11 @@ function TarjetaGestion({
           !activa && "opacity-50"
         )}
       >
-        <p className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-brand-active transition-colors">
-          {gestion.descripcion}
-        </p>
-        <p className="text-[12px] text-muted mt-1.5 truncate">
+        <p className="text-sm font-medium leading-snug truncate group-hover:text-brand-active transition-colors">
           {gestion.direccion}
+        </p>
+        <p className="text-[12px] text-muted mt-1.5 line-clamp-2">
+          {gestion.descripcion}
         </p>
         <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border/70">
           <div className="flex items-center gap-1.5 min-w-0">

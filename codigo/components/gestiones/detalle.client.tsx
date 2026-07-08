@@ -23,6 +23,8 @@ import {
 import {
   asignarTecnico,
   avanzarEtapa,
+  calificarTecnico,
+  cancelarGestion,
   cancelarSolicitudAsignacion,
   enviarPresupuesto,
   reasignarGestor,
@@ -39,7 +41,6 @@ import type {
   TecnicoDisponible,
 } from "@/features/gestiones/types";
 import { ETAPAS, LABEL_CAUSA } from "@/features/gestiones/types";
-import { DIAS } from "@/features/tecnicos/types";
 
 const LABEL_EVENTO: Record<string, string> = {
   creada: "Gestión creada",
@@ -160,6 +161,182 @@ function AccionIngresado({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
+// ── Scorecard del técnico (STORY-915): desempeño a golpe de vista ──
+
+const INICIALES_DIA = ["D", "L", "M", "M", "J", "V", "S"];
+const DIAS_CORTO = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+// Semana laboral: Lun→Sáb y el Domingo al final.
+const ORDEN_SEMANA = [1, 2, 3, 4, 5, 6, 0];
+
+function horariosPorDia(franjas: TecnicoDisponible["franjas"]) {
+  const porDia = new Map<number, string[]>();
+  for (const f of franjas) {
+    const rango = `${f.hora_desde.slice(0, 5)}–${f.hora_hasta.slice(0, 5)}`;
+    porDia.set(f.dia_semana, [...(porDia.get(f.dia_semana) ?? []), rango]);
+  }
+  return ORDEN_SEMANA.filter((d) => porDia.has(d)).map((d) => ({
+    dia: DIAS_CORTO[d],
+    rangos: (porDia.get(d) ?? []).sort(),
+  }));
+}
+
+function TiraDias({ franjas }: { franjas: TecnicoDisponible["franjas"] }) {
+  const dias = new Set(franjas.map((f) => f.dia_semana));
+  if (dias.size === 0) {
+    return <span className="text-[12px] text-muted">sin horarios</span>;
+  }
+  const horarios = horariosPorDia(franjas);
+  return (
+    <div className="group/dias relative shrink-0">
+      <div className="flex gap-0.5 cursor-help">
+        {INICIALES_DIA.map((ini, i) => (
+          <span
+            key={i}
+            className={`w-4 h-4 rounded-sm text-[9px] font-semibold flex items-center justify-center ${
+              dias.has(i) ? "bg-brand text-white" : "bg-surface-2 text-muted/40"
+            }`}
+          >
+            {ini}
+          </span>
+        ))}
+      </div>
+      <div className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-max rounded-md bg-foreground px-3 py-2 opacity-0 shadow-overlay transition-opacity duration-150 group-hover/dias:opacity-100">
+        <p className="text-[10px] uppercase tracking-wide text-background/60 mb-1">
+          Horarios de trabajo
+        </p>
+        <ul className="flex flex-col gap-0.5">
+          {horarios.map((h) => (
+            <li key={h.dia} className="flex justify-between gap-4 text-[11px] text-background">
+              <span className="font-semibold">{h.dia}</span>
+              <span className="text-background/80 tabular-nums">{h.rangos.join(", ")}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function ChipStat({
+  label,
+  valor,
+  ayuda,
+  tono = "neutro",
+  align = "izq",
+}: {
+  label: string;
+  valor: string;
+  ayuda: string;
+  tono?: "neutro" | "alerta" | "bien";
+  align?: "izq" | "der";
+}) {
+  const color =
+    tono === "alerta"
+      ? "text-urgente-fuerte"
+      : tono === "bien"
+        ? "text-brand"
+        : "text-foreground";
+  return (
+    <div className="group/chip relative flex flex-col cursor-help" title={ayuda}>
+      <span className="text-[10px] uppercase tracking-wide text-muted underline decoration-dotted decoration-muted/40 underline-offset-2">
+        {label}
+      </span>
+      <span className={`text-[13px] font-semibold ${color}`}>{valor}</span>
+      <span
+        className={`pointer-events-none absolute bottom-full z-20 mb-1.5 w-44 rounded-md bg-foreground px-2.5 py-1.5 text-[11px] leading-snug text-background opacity-0 shadow-overlay transition-opacity duration-150 group-hover/chip:opacity-100 ${
+          align === "der" ? "right-0" : "left-0"
+        }`}
+      >
+        {ayuda}
+      </span>
+    </div>
+  );
+}
+
+function ScorecardTecnico({
+  tecnico,
+  seleccionado,
+  onSelect,
+}: {
+  tecnico: TecnicoDisponible;
+  seleccionado: boolean;
+  onSelect: () => void;
+}) {
+  const s = tecnico.stats;
+  const desvio =
+    s?.desvioPct == null
+      ? { valor: "s/d", tono: "neutro" as const }
+      : {
+          valor: `${s.desvioPct > 0 ? "+" : ""}${s.desvioPct}%`,
+          tono: s.desvioPct > 10 ? ("alerta" as const) : ("bien" as const),
+        };
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`text-left rounded-lg border p-3 transition-all ${
+        seleccionado
+          ? "border-brand bg-brand-soft/40 ring-1 ring-brand"
+          : "border-border hover:border-border-strong"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3 mb-2.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className={`size-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+              seleccionado ? "border-brand" : "border-border-strong"
+            }`}
+          >
+            {seleccionado && <span className="size-2 rounded-full bg-brand" />}
+          </span>
+          <span className="font-medium truncate">{tecnico.nombre}</span>
+        </div>
+        <TiraDias franjas={tecnico.franjas} />
+      </div>
+      <div className="grid grid-cols-3 gap-x-2 gap-y-2.5 pl-6">
+        <ChipStat
+          label="Calif."
+          valor={s?.estrellas != null ? `${s.estrellas.toFixed(1)}★` : "s/d"}
+          ayuda="Promedio de estrellas que le pusieron los gestores al terminar sus trabajos."
+          tono={s?.estrellas != null && s.estrellas >= 4 ? "bien" : "neutro"}
+        />
+        <ChipStat
+          label="Desvío"
+          valor={desvio.valor}
+          ayuda="Cuánto se desvió el costo final de lo que presupuestó. ~0% cumple; positivo = se pasó."
+          tono={desvio.tono}
+        />
+        <ChipStat
+          label="Hechas"
+          valor={s ? String(s.obrasRealizadas) : "0"}
+          ayuda="Trabajos que ya finalizó (su experiencia acumulada). Las canceladas no cuentan."
+          tono={s && s.obrasRealizadas > 0 ? "bien" : "neutro"}
+          align="der"
+        />
+        <ChipStat
+          label="En curso"
+          valor={s ? String(s.obrasActivas) : "0"}
+          ayuda="Trabajos activos que tiene asignados ahora (su carga actual)."
+          tono={s && s.obrasActivas >= 4 ? "alerta" : "neutro"}
+        />
+        <ChipStat
+          label="Rechaza"
+          valor={s?.pctRechazoAsig != null ? `${s.pctRechazoAsig}%` : "s/d"}
+          ayuda="De las asignaciones que le mandaron, qué porcentaje rechazó."
+          tono={s?.pctRechazoAsig != null && s.pctRechazoAsig >= 30 ? "alerta" : "neutro"}
+        />
+        <ChipStat
+          label="Cancela"
+          valor={s?.pctCancelacion != null ? `${s.pctCancelacion}%` : "s/d"}
+          ayuda="De sus gestiones terminadas, qué porcentaje terminó cancelada."
+          tono={s?.pctCancelacion != null && s.pctCancelacion >= 20 ? "alerta" : "neutro"}
+          align="der"
+        />
+      </div>
+    </button>
+  );
+}
+
 function AccionAsignar({
   gestion,
   tecnicos,
@@ -169,7 +346,6 @@ function AccionAsignar({
 }) {
   const { error, cargando, correr } = useAccion();
   const [elegido, setElegido] = useState(tecnicos[0]?.id ?? "");
-  const tecnico = tecnicos.find((t) => t.id === elegido);
 
   if (gestion.tecnico_id && gestion.asignacion_aceptada === null) {
     // Salida si el técnico no responde: cancelar la solicitud y reelegir
@@ -203,28 +379,21 @@ function AccionAsignar({
   }
 
   return (
-    <div className="flex flex-col gap-3 max-w-md">
-      <Select
-        label="Técnico (según especialidad)"
-        value={elegido}
-        onChange={(e) => setElegido(e.target.value)}
-      >
+    <div className="flex flex-col gap-3">
+      <p className="text-[12px] text-muted">
+        Elegí al técnico viendo su desempeño. <span className="font-medium">s/d</span> = sin
+        datos suficientes.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
         {tecnicos.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.nombre}
-          </option>
+          <ScorecardTecnico
+            key={t.id}
+            tecnico={t}
+            seleccionado={elegido === t.id}
+            onSelect={() => setElegido(t.id)}
+          />
         ))}
-      </Select>
-      {tecnico && (
-        <div className="text-[13px] text-muted bg-surface-2 rounded-md px-3 py-2">
-          <span className="font-medium text-foreground">Horarios de trabajo: </span>
-          {tecnico.franjas.length === 0
-            ? "sin horarios cargados"
-            : tecnico.franjas
-                .map((f) => `${DIAS[f.dia_semana]} ${f.hora_desde.slice(0, 5)}–${f.hora_hasta.slice(0, 5)}`)
-                .join(" · ")}
-        </div>
-      )}
+      </div>
       <Button
         disabled={cargando || !elegido}
         onClick={() => correr(() => asignarTecnico(gestion.id, elegido))}
@@ -665,6 +834,130 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
+// ── Calificación del técnico (STORY-914) — la carga el gestor al finalizar ──
+
+function Estrellas({
+  valor,
+  onChange,
+}: {
+  valor: number;
+  onChange?: (n: number) => void;
+}) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={!onChange}
+          onClick={() => onChange?.(n)}
+          aria-label={`${n} estrella${n > 1 ? "s" : ""}`}
+          className={`text-3xl leading-none transition-colors ${
+            n <= valor ? "text-urgente" : "text-border-strong"
+          } ${onChange ? "cursor-pointer hover:text-urgente" : "cursor-default"}`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CalificarTecnico({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  const [estrellas, setEstrellas] = useState(0);
+  const [comentario, setComentario] = useState("");
+
+  if (gestion.calificacion) {
+    return (
+      <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3">
+        <p className="text-[13px] font-medium text-muted mb-1.5">
+          Calificación del técnico
+        </p>
+        <Estrellas valor={gestion.calificacion.estrellas} />
+        {gestion.calificacion.comentario && (
+          <p className="text-sm text-muted mt-1.5">{gestion.calificacion.comentario}</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border border-brand-soft-border bg-brand-soft/40 px-4 py-4 flex flex-col gap-3">
+      <div>
+        <p className="text-[13px] font-semibold text-brand-active">
+          ¿Cómo estuvo el técnico?
+        </p>
+        <p className="text-[12px] text-muted">
+          Queda registrado para las métricas de calidad del equipo.
+        </p>
+      </div>
+      <Estrellas valor={estrellas} onChange={setEstrellas} />
+      <Textarea
+        label="Comentario (opcional)"
+        value={comentario}
+        onChange={(e) => setComentario(e.target.value)}
+        placeholder="Puntualidad, prolijidad, trato…"
+      />
+      <Button
+        disabled={cargando || estrellas === 0}
+        onClick={() => correr(() => calificarTecnico(gestion.id, estrellas, comentario))}
+        className="self-start"
+      >
+        Guardar calificación
+      </Button>
+      {error && <p className="text-sm font-medium text-error">{error}</p>}
+    </div>
+  );
+}
+
+// ── Cancelar gestión (STORY-914) — estado terminal con motivo obligatorio ──
+
+function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  const [abierto, setAbierto] = useState(false);
+
+  if (!abierto) {
+    return (
+      <Card className="p-4 mt-4 border-dashed">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[13px] text-muted">¿Esta gestión no va a continuar?</p>
+          <Button variante="fantasma" onClick={() => setAbierto(true)}>
+            Cancelar gestión
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-4 mt-4 border-dashed border-error-soft-border">
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const motivo = String(new FormData(e.currentTarget).get("motivo"));
+          correr(() => cancelarGestion(gestion.id, motivo));
+        }}
+      >
+        <p className="text-[13px] font-medium text-muted">
+          Cancelar la gestión — queda registrada con su motivo (no se borra).
+        </p>
+        <Input label="Motivo de la cancelación" name="motivo" required placeholder="Por qué no continúa" />
+        <div className="flex gap-2">
+          <Button type="submit" variante="secundario" disabled={cargando}>
+            Confirmar cancelación
+          </Button>
+          <Button type="button" variante="fantasma" onClick={() => setAbierto(false)}>
+            No cancelar
+          </Button>
+        </div>
+        {error && <p className="text-sm font-medium text-error">{error}</p>}
+      </form>
+    </Card>
+  );
+}
+
 function ReasignarGestor({
   gestion,
   gestores,
@@ -750,7 +1043,15 @@ function FechaItem({ fecha }: { fecha: string }) {
 function Actividad({ gestion }: { gestion: GestionDetalle }) {
   const items: ItemActividad[] = [
     ...gestion.eventos.map((e): ItemActividad =>
-      e.tipo === "transicion"
+      e.tipo === "transicion" && e.a_etapa === "cancelada"
+        ? {
+            clase: "evento",
+            texto: "Gestión cancelada",
+            detalle: detalleLegible(e.detalle),
+            actor: e.actor?.nombre ?? null,
+            fecha: e.creado_en,
+          }
+        : e.tipo === "transicion"
         ? { clase: "etapa", etapa: etiquetaEtapa(e.a_etapa), fecha: e.creado_en }
         : {
             clase: "evento",
@@ -894,14 +1195,9 @@ export function DetalleGestion({
   const esAdministrativo = esAdmin || usuario.rol === "gestor_administrativo";
   const esTecnicoAsignado = usuario.rol === "tecnico" && gestion.tecnico_id === usuario.id;
 
-  const volver =
-    usuario.rol === "tecnico"
-      ? "/tecnico"
-      : usuario.rol === "gestor_administrativo"
-        ? "/administracion"
-        : usuario.rol === "gestor_mantenimiento"
-          ? "/gestion"
-          : "/admin";
+  // STORY-916: se vuelve al lugar de origen (el tablero, de donde se abren las
+  // gestiones), no al Inicio. El técnico vuelve a su home (su lista de trabajos).
+  const volver = usuario.rol === "tecnico" ? "/tecnico" : "/tablero";
 
   return (
     <div className="animate-aparecer max-w-3xl">
@@ -923,7 +1219,11 @@ export function DetalleGestion({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Badge tono="brand">{etiquetaEtapa(gestion.etapa)}</Badge>
+        {gestion.etapa === "cancelada" ? (
+          <Badge tono="neutro">Cancelada</Badge>
+        ) : (
+          <Badge tono="brand">{etiquetaEtapa(gestion.etapa)}</Badge>
+        )}
         {gestion.urgencia === "urgente" && <Badge tono="urgente">Urgente</Badge>}
         <Badge tono="neutro">{gestion.especialidad}</Badge>
       </div>
@@ -931,7 +1231,7 @@ export function DetalleGestion({
         {gestion.descripcion}
       </h1>
 
-      <EtapaStepper etapa={gestion.etapa} />
+      {gestion.etapa !== "cancelada" && <EtapaStepper etapa={gestion.etapa} />}
 
       <DatosGestion gestion={gestion} />
 
@@ -1011,8 +1311,14 @@ export function DetalleGestion({
         {gestion.etapa === "finalizado" && (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted">Gestión finalizada — quedó en el legajo.</p>
+            {esGestorOwner && gestion.tecnico_id && <CalificarTecnico gestion={gestion} />}
             {esAdministrativo && <FinanzasAcciones gestion={gestion} />}
           </div>
+        )}
+        {gestion.etapa === "cancelada" && (
+          <p className="text-sm text-muted">
+            Gestión cancelada — el motivo quedó registrado en la actividad.
+          </p>
         )}
         {/* Gestor administrativo antes de Facturación: sin acciones todavía */}
         {esAdministrativo && !esGestorOwner && !esTecnicoAsignado &&
@@ -1026,6 +1332,11 @@ export function DetalleGestion({
         )}
       </Card>
       </PresenciaGestion>
+
+      {esGestorOwner &&
+        ["ingresado", "asignacion", "presupuesto", "en_ejecucion", "conformidad"].includes(
+          gestion.etapa
+        ) && <CancelarGestion gestion={gestion} />}
 
       {esAdmin && <ReasignarGestor gestion={gestion} gestores={gestores} />}
 

@@ -144,6 +144,14 @@ MANTIS 2 es una herramienta de trabajo diaria para una inmobiliaria: el diseño 
 - **Ámbar urgente**: exclusivo del estado urgencia (badges, indicadores de plazo). Nunca decorativo.
 - Tonos `-soft` + su `-soft-border`: fondos de badges y avisos. Texto del badge siempre en el color pleno correspondiente (`brand-active`, `urgente` oscurecido a #B45309 si hace falta contraste, `error`).
 
+### Escala de magnitud (métricas — STORY-919)
+
+Un **acento** (esmeralda/ámbar/rojo) marca un **estado discreto**: activo, urgente, error. Distinto de eso, una **escala de magnitud** representa una **cantidad continua que empeora** (más días, más desvío) y solo vive dentro de gráficos de métricas. No es un cuarto acento y **no reutiliza el rojo de error**.
+
+- Rampa de 3 paradas, interpolada por valor normalizado `[0..1]`: **teal-600 `#0D9488` (mejor) → ámbar-600 `#D97706` → terracota-800 `#C2410C` (peor)**. El extremo cálido es terracota, deliberadamente distinto del `error #DC2626`.
+- **Solo** en magnitudes ordenables dentro de una tarjeta de métrica (hoy: "Cuellos de botella" por días, "Cumplimiento de presupuesto" por % de desvío). Prohibido sobre categorías o como color de UI general.
+- La **tendencia** en series temporales usa un neutro (`#52525B`), línea punteada — tampoco es un acento.
+
 ## Typography
 
 - **Archivo** única familia de UI (ya cargada, eje `wdth`). El **wordmark** "MAN—TIS" es el único uso permitido del expandido black uppercase; el resto de la UI usa pesos 400–650 en caja normal.

@@ -1,0 +1,53 @@
+{
+  "proyecto": "ejwokycbyjtlxwusbhtt",
+  "story": "STORY-918",
+  "descripcion": "Carga demo de 80 gestiones realistas para probar métricas. v2 (STORY-919): fee 15-22%, rango ~10 meses (sep-2025→jul-2026). Revertir con scripts/demo-borrar.sh (base + fotos) o scripts/demo-borrar.sql (solo base).",
+  "nota_uuids": "Los UUIDs de auth_users_demo abajo son de una siembra previa e ILUSTRATIVOS: se regeneran en cada re-seed (los usuarios auth se recrean vía GoTrue). La reversión NO depende de ellos (ancla en email/relación).",
+  "sembrado_en": "2026-07-08 (v2 re-seed)",
+  "marcadores": {
+    "gestiones": "descripcion LIKE '[DEMO] %'",
+    "personas": "email LIKE 'ausitesis+demo%'",
+    "inbox": "gmail_message_id LIKE 'demo-%'",
+    "cartera": "por FK a propietarios/inquilinos con email demo (no tienen campo marcable)"
+  },
+  "auth_users_demo": [
+    { "id": "8964cecf-1283-43f1-8b75-64fb0fee3ddf", "email": "ausitesis+demogestorvalentina@gmail.com", "rol": "gestor_mantenimiento", "nombre": "Valentina Suárez" },
+    { "id": "d659c936-4860-4710-83df-cf5bee1ab826", "email": "ausitesis+demogestormarcos@gmail.com", "rol": "gestor_mantenimiento", "nombre": "Marcos Gutiérrez" },
+    { "id": "6185fe9e-5bd9-4bb6-84c5-4c9676f0132b", "email": "ausitesis+demoadministrativolaura@gmail.com", "rol": "gestor_administrativo", "nombre": "Laura Benítez" },
+    { "id": "bee485bc-30dd-46a3-ae9f-6dd6ee4f4302", "email": "ausitesis+demotecnicoraul@gmail.com", "tecnico": "aprobado", "nombre": "Raúl Medina" },
+    { "id": "06f1131f-f76d-428a-be59-fcb86c13e96b", "email": "ausitesis+demotecnicosergio@gmail.com", "tecnico": "aprobado", "nombre": "Sergio Álvarez" },
+    { "id": "4b296b31-65f5-4817-8689-49c03e4ab5f4", "email": "ausitesis+demotecnicopablo@gmail.com", "tecnico": "aprobado", "nombre": "Pablo Castro" },
+    { "id": "f9364b42-3df5-45f2-94e9-c59cf7b7be2b", "email": "ausitesis+demotecnicaandrea@gmail.com", "tecnico": "aprobado", "nombre": "Andrea Roldán" },
+    { "id": "6c65520d-32c2-4c0a-9bdb-b1b88c4e2fb2", "email": "ausitesis+demotecnicojose@gmail.com", "tecnico": "aprobado", "nombre": "José Luna" },
+    { "id": "c27c48ff-55a3-4943-a025-d6517adab8f5", "email": "ausitesis+demotecnicodario@gmail.com", "tecnico": "aprobado", "nombre": "Darío Peralta" },
+    { "id": "494cc97a-b46e-4a70-86f4-24dafea95024", "email": "ausitesis+demotecnicofede@gmail.com", "tecnico": "pendiente", "nombre": "Federico Ibáñez" },
+    { "id": "96a76fa5-5def-4597-82cd-e8e0bd004b0b", "email": "ausitesis+demotecnicogaston@gmail.com", "tecnico": "rechazado", "nombre": "Gastón Vera" }
+  ],
+  "password_convencion": "el usuario123 (p.ej. demotecnicoraul123). Todos entregan a ausitesis@gmail.com.",
+  "conteos_sembrados": {
+    "gestiones": 80,
+    "propietarios": 6,
+    "propiedades": 14,
+    "inquilinos": 10,
+    "legajos": 10,
+    "eventos": 824,
+    "presupuestos": 66,
+    "avances": 81,
+    "conformidades": 47,
+    "calificaciones": 23,
+    "notificaciones": 454,
+    "emails": 185,
+    "inbox": 10,
+    "fotos_storage": 86
+  },
+  "distribucion_etapas": {
+    "finalizado": 30, "cancelada": 6, "ingresado": 6, "asignacion": 8,
+    "presupuesto": 8, "en_ejecucion": 9, "conformidad": 5,
+    "facturacion_cobro": 5, "liquidacion_tecnico": 3
+  },
+  "estado_real_previo": {
+    "gestiones": 7, "usuarios": 4, "tecnicos": 2, "propietarios": 1,
+    "inquilinos": 2, "legajos": 2, "emails": 22,
+    "nota": "a esto debe volver la base tras revertir"
+  }
+}
