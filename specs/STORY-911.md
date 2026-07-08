@@ -49,7 +49,7 @@ Clasificación **lógica, intuitiva y mutuamente excluyente** de las gestiones d
 - Cambios en el detalle o la agenda.
 
 ## Dev Agent Record
-- **Commit:** _(pendiente — sin commitear, a la espera del OK de Fausti)_
+- **Commit:** e265d81 (pusheado a main → auto-deploy)
 - **Archivos:** `components/gestiones/mis-trabajos.client.tsx` (reescritura: grupos mutuamente excluyentes por etapa; `GrupoTareas` con paginación "Mostrar más" por sección; `TarjetaAccion` / `TarjetaSeguimiento`; `subEstado()`; búsqueda con `coincideTexto`). Sin cambios de datos/servicio.
 - **Verificación (navegador real, 390px, sesión técnico `tecnicouno`, carga `[CARGA]` = 37 gestiones activas):**
   - 4 grupos por etapa: Por responder 7 · A presupuestar 5 · En obra 6 · En seguimiento 19 (suman 37). Cada gestión en **un solo** grupo. "A corregir" no aparece (no hay conformidad rechazada) — se muestran solo los grupos con items. ✅
