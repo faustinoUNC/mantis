@@ -74,7 +74,7 @@ Que el sistema siga siendo usable con mucha data: poder **buscar** y **acotar po
 - Guardar/persistir filtros en la URL o entre sesiones: no se pidió.
 
 ## Dev Agent Record
-- **Commit:** _(pendiente — sin commitear todavía)_
+- **Commit:** 0eaba70 (pusheado a main → auto-deploy)
 - **Archivos:**
   - Nuevos: `shared/utils/filtros.ts` (`coincideTexto`, `enRangoFecha`), `shared/hooks/use-paginado.ts` (`usePaginado`), `components/ui/paginador.client.tsx`, `components/ui/filtros-lista.client.tsx`.
   - `features/tecnicos/types.ts` + `features/tecnicos/service.ts`: `creado_en` en `TecnicoResumen`/`TecnicoDetalle` y en los `select`/map de `listarTecnicos` y `obtenerTecnico`.
