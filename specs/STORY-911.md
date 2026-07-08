@@ -56,7 +56,7 @@ Clasificación **lógica, intuitiva y mutuamente excluyente** de las gestiones d
 
 ## Dev Agent Record
 - **Commit (v2, reemplazado):** e265d81 — secciones por etapa sin filtro, seguimiento amontonado. Fausti pidió filtro por etapa (no chip) + seguimiento desglosado.
-- **Commit (v3):** _(pendiente)_
+- **Commit (v3):** 69a5b68 (pusheado a main → auto-deploy)
 - **Archivos (v3):**
   - `components/gestiones/mis-trabajos.client.tsx`: etapas del técnico desglosadas en `ETAPAS_TEC` (incluye seguimiento separado: Presupuesto enviado / Esperando aprobación / En facturación / En liquidación + catch-all "Otras"); `SelectorEtapa` (campo "Etapa: X (N)" + hoja bottom-sheet montada con `createPortal` en `document.body` para evitar el containing-block del `.animate-aparecer` raíz); `FilaEtapa` (dot esmeralda/gris + contador); `SeccionEtapa` con paginación "Mostrar más".
   - `app/globals.css`: keyframe `--animate-subir` (slide-up de la hoja).
