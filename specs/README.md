@@ -84,6 +84,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-908](STORY-908.md) | Bug: notificación realtime en la campana al recibir una solicitud de técnico (trigger sobre `tecnicos`) | 🚧 en desarrollo |
 | [STORY-909](STORY-909.md) | UX: confirmación inline antes de inhabilitar un empleado (evitar deshabilitación accidental) | 🚧 en desarrollo |
 | [STORY-910](STORY-910.md) | Búsqueda + paginación en listados (técnicos/especialidades/empleados/auditoría) + filtro por gestor y orden por fecha + fix de scroll horizontal del tablero | 🚧 en desarrollo |
+| [STORY-911](STORY-911.md) | Home del técnico: agrupación por etapa del trabajo + búsqueda + paginación "Mostrar más" + cards mobile | 🚧 en desarrollo |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.
 
