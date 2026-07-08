@@ -86,6 +86,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-910](STORY-910.md) | Búsqueda + paginación en listados (técnicos/especialidades/empleados/auditoría) + filtro por gestor y orden por fecha + fix de scroll horizontal del tablero | 🚧 en desarrollo |
 | [STORY-911](STORY-911.md) | Home del técnico: filtro por etapa (selector + hoja), seguimiento separado, paginación; stepper responsive; etapa Presupuesto mobile; copy "Horarios" | 🚧 en desarrollo |
 | [STORY-912](STORY-912.md) | Consolidar Métricas dentro del Inicio (un dashboard, menos menú); importes sin contador | 🚧 en desarrollo |
+| [STORY-913](STORY-913.md) | El técnico ve sus gestiones finalizadas como historial (etapa más en su home) | 🚧 en desarrollo |
 | [STORY-911](STORY-911.md) | Home del técnico: agrupación por etapa del trabajo + búsqueda + paginación "Mostrar más" + cards mobile | 🚧 en desarrollo |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.

@@ -17,7 +17,7 @@ const POR_PAGINA = 5;
 // Etapas del técnico — mutuamente excluyentes, en orden del funnel. Los estados
 // de seguimiento (sin acción del técnico) van desglosados, no amontonados.
 // La primera cuyo `match` da true es la etapa de la gestión.
-type TipoEtapa = "accion" | "seguimiento";
+type TipoEtapa = "accion" | "seguimiento" | "historial";
 interface DefEtapa {
   id: string;
   label: string;
@@ -43,6 +43,9 @@ const ETAPAS_TEC: DefEtapa[] = [
     match: (g) => g.etapa === "facturacion_cobro" },
   { id: "liquidacion", label: "En liquidación", tipo: "seguimiento", cta: null,
     match: (g) => g.etapa === "liquidacion_tecnico" },
+  // Historial: gestiones cerradas — el técnico las ve como registro (última sección).
+  { id: "finalizado", label: "Finalizado", tipo: "historial", cta: null,
+    match: (g) => g.etapa === "finalizado" },
   // Catch-all (p. ej. asignación ya respondida a la espera de avanzar): que nada desaparezca.
   { id: "otras", label: "Otras", tipo: "seguimiento", cta: null, match: () => true },
 ];
@@ -318,17 +321,19 @@ export function MisTrabajos({
   const [consulta, setConsulta] = useState("");
   const [filtro, setFiltro] = useState("todas"); // "todas" o id de etapa
 
-  const activos = useMemo(
-    () => gestiones.filter((g) => g.etapa !== "finalizado"),
-    [gestiones]
-  );
-
+  // Incluye finalizadas: el técnico las ve como historial (STORY-913), igual
+  // que cualquier otra etapa (sección propia + opción en el selector).
   const buscados = useMemo(
     () =>
-      activos.filter((g) =>
+      gestiones.filter((g) =>
         coincideTexto(consulta, g.descripcion, g.direccion, g.especialidad)
       ),
-    [activos, consulta]
+    [gestiones, consulta]
+  );
+
+  const hayActivas = useMemo(
+    () => gestiones.some((g) => g.etapa !== "finalizado"),
+    [gestiones]
   );
 
   // Reparte en etapas (una sola cada gestión) y arma las secciones con items.
@@ -360,7 +365,7 @@ export function MisTrabajos({
   const resumen =
     accionables > 0
       ? `Tenés ${accionables === 1 ? "1 trabajo que requiere" : `${accionables} trabajos que requieren`} tu acción.`
-      : activos.length > 0
+      : hayActivas
         ? "Nada pendiente de tu lado — todo en marcha."
         : null;
 
@@ -373,7 +378,7 @@ export function MisTrabajos({
       </h1>
       {resumen && <p className="text-sm text-muted mt-1">{resumen}</p>}
 
-      {activos.length === 0 ? (
+      {gestiones.length === 0 ? (
         <Card className="fondo-tecnico p-10 mt-6 text-center">
           <span className="mx-auto flex items-center justify-center size-11 rounded-pill bg-brand-soft border border-brand-soft-border text-brand-active">
             <Icono id="check" size={20} strokeWidth={2} />
