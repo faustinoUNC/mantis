@@ -349,9 +349,6 @@ export function MisTrabajos({
   const accionables = secciones
     .filter((s) => s.def.tipo === "accion")
     .reduce((n, s) => n + s.gestiones.length, 0);
-  const urgentesAcc = secciones
-    .filter((s) => s.def.tipo === "accion")
-    .reduce((n, s) => n + s.gestiones.filter((x) => x.urgencia === "urgente").length, 0);
 
   const fechaCruda = new Date().toLocaleDateString("es-AR", {
     weekday: "long",
@@ -362,7 +359,7 @@ export function MisTrabajos({
 
   const resumen =
     accionables > 0
-      ? `Tenés ${accionables === 1 ? "1 trabajo que te espera" : `${accionables} trabajos que te esperan`}${urgentesAcc > 0 ? ` — ${urgentesAcc === 1 ? "1 urgente" : `${urgentesAcc} urgentes`}` : ""}.`
+      ? `Tenés ${accionables === 1 ? "1 trabajo que requiere" : `${accionables} trabajos que requieren`} tu acción.`
       : activos.length > 0
         ? "Nada pendiente de tu lado — todo en marcha."
         : null;
