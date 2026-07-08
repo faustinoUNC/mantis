@@ -49,6 +49,18 @@
   --animate-toast: toast-entrar 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) both;
   --animate-flash-brand: flash-brand 1.1s ease-out both;
   --animate-latido: latido 2.6s ease-in-out infinite;
+  --animate-subir: subir 0.24s cubic-bezier(0.21, 1.02, 0.73, 1) both;
+
+  @keyframes subir {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 
   @keyframes toast-entrar {
     from {

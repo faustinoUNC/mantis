@@ -1,6 +1,12 @@
-# STORY-911 — Home del técnico: agrupación por etapa del trabajo + paginación + cards mobile (v2.0)
+# STORY-911 — Home del técnico: filtro por etapa (selector + hoja) + estados de seguimiento separados + paginación (v3.0)
 
 **Estado:** 🚧 en desarrollo · **Fecha:** 2026-07-07
+
+## Cambios v3.0 (segunda devolución de Fausti)
+La v2 (secciones por etapa, siempre visibles) no lo convenció por dos motivos: (1) quería un **filtro por etapa** — pero **no** un chip genérico; y (2) los estados que **no** implican actividad del técnico estaban **amontonados** en una sola división "En seguimiento", cuando quiere verlos **separados y filtrables**.
+- **Control elegido (sobre mockups):** **selector + hoja (bottom sheet)**. Un campo "Etapa: Todas (N) ⌄" que abre una hoja desde abajo con la lista de etapas + contador + **punto de color** (esmeralda = te toca actuar, gris = en seguimiento). Cero chips.
+- **Estados de seguimiento desglosados** en etapas propias y filtrables: **Presupuesto enviado**, **Esperando aprobación**, **En facturación**, **En liquidación** (antes eran un solo "En seguimiento").
+- **"Todas"** = todas las secciones (por etapa) apiladas; elegir una etapa = solo esa sección. Paginación "Mostrar más" por sección se mantiene.
 **Origen:** Pedido de Fausti tras la carga de prueba. Con **varias gestiones activas**, el home del técnico (`/tecnico` → `MisTrabajos`) se vuelve un caos en el celular. Un primer intento (v1, chips "Todas/Te esperan/Urgentes/En espera" + búsqueda) fue **rechazado**: los chips no eran categorías excluyentes (Urgentes se pisaba con las otras), la estética de las cards no convencía y **no paginaba**. Se revirtió (main volvió a `27789b4`).
 
 ## Objetivo
@@ -49,11 +55,13 @@ Clasificación **lógica, intuitiva y mutuamente excluyente** de las gestiones d
 - Cambios en el detalle o la agenda.
 
 ## Dev Agent Record
-- **Commit:** e265d81 (pusheado a main → auto-deploy)
-- **Archivos:** `components/gestiones/mis-trabajos.client.tsx` (reescritura: grupos mutuamente excluyentes por etapa; `GrupoTareas` con paginación "Mostrar más" por sección; `TarjetaAccion` / `TarjetaSeguimiento`; `subEstado()`; búsqueda con `coincideTexto`). Sin cambios de datos/servicio.
-- **Verificación (navegador real, 390px, sesión técnico `tecnicouno`, carga `[CARGA]` = 37 gestiones activas):**
-  - 4 grupos por etapa: Por responder 7 · A presupuestar 5 · En obra 6 · En seguimiento 19 (suman 37). Cada gestión en **un solo** grupo. "A corregir" no aparece (no hay conformidad rechazada) — se muestran solo los grupos con items. ✅
-  - Paginación por sección: 5 iniciales + "Mostrar más (N)" → +5 (probado 5→10→15 en "En seguimiento"). ✅
-  - Búsqueda ("ventana") acota todos los grupos; los sin match desaparecen; sin resultados → empty state de búsqueda. ✅
-  - Urgencia como señal visual (borde ámbar + orden urgentes-primero); sub-estado de seguimiento en badge **neutro** (se corrigió doble-acento ámbar). ✅
+- **Commit (v2, reemplazado):** e265d81 — secciones por etapa sin filtro, seguimiento amontonado. Fausti pidió filtro por etapa (no chip) + seguimiento desglosado.
+- **Commit (v3):** _(pendiente)_
+- **Archivos (v3):**
+  - `components/gestiones/mis-trabajos.client.tsx`: etapas del técnico desglosadas en `ETAPAS_TEC` (incluye seguimiento separado: Presupuesto enviado / Esperando aprobación / En facturación / En liquidación + catch-all "Otras"); `SelectorEtapa` (campo "Etapa: X (N)" + hoja bottom-sheet montada con `createPortal` en `document.body` para evitar el containing-block del `.animate-aparecer` raíz); `FilaEtapa` (dot esmeralda/gris + contador); `SeccionEtapa` con paginación "Mostrar más".
+  - `app/globals.css`: keyframe `--animate-subir` (slide-up de la hoja).
+- **Verificación (navegador real, 390px, sesión técnico `tecnicouno`, carga `[CARGA]` = 36 activas):**
+  - Campo "Etapa: Todas (36)" abre la hoja desde abajo con etapas separadas + contador + punto de color (esmeralda = te toca: Por responder/A presupuestar/En obra; gris = seguimiento: Esperando aprobación/En facturación/En liquidación). ✅
+  - Elegir "En facturación" cierra la hoja, el campo pasa a "En facturación (6)" y se muestra solo esa sección (6, con "Mostrar más (1)"). Los estados de seguimiento quedaron **separados y filtrables**. ✅
+  - Fix del portal: la hoja quedaba fuera del viewport (contenida por el div raíz con transform de animación) → `createPortal` a `document.body` la ancla al viewport. ✅
   - `npx tsc --noEmit` verde; `eslint` del archivo sin errores.

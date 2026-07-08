@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -13,13 +14,41 @@ import { coincideTexto } from "@/shared/utils/filtros";
 
 const POR_PAGINA = 5;
 
-// Sub-estado legible para las gestiones en seguimiento (sin acción del técnico).
-function subEstado(g: GestionResumen): string {
-  if (g.etapa === "presupuesto") return "Presupuesto enviado";
-  if (g.etapa === "conformidad") return "Esperando aprobación";
-  if (g.etapa === "facturacion_cobro") return "En facturación";
-  if (g.etapa === "liquidacion_tecnico") return "En liquidación";
-  return "En seguimiento";
+// Etapas del técnico — mutuamente excluyentes, en orden del funnel. Los estados
+// de seguimiento (sin acción del técnico) van desglosados, no amontonados.
+// La primera cuyo `match` da true es la etapa de la gestión.
+type TipoEtapa = "accion" | "seguimiento";
+interface DefEtapa {
+  id: string;
+  label: string;
+  tipo: TipoEtapa;
+  cta: string | null;
+  match: (g: GestionResumen) => boolean;
+}
+
+const ETAPAS_TEC: DefEtapa[] = [
+  { id: "responder", label: "Por responder", tipo: "accion", cta: "Responder solicitud",
+    match: (g) => g.etapa === "asignacion" && g.asignacion_aceptada === null },
+  { id: "presupuestar", label: "A presupuestar", tipo: "accion", cta: "Cargar presupuesto",
+    match: (g) => g.etapa === "presupuesto" && !g.presupuesto_pendiente },
+  { id: "obra", label: "En obra", tipo: "accion", cta: "Registrar avance",
+    match: (g) => g.etapa === "en_ejecucion" },
+  { id: "corregir", label: "A corregir", tipo: "accion", cta: "Resubir conformidad",
+    match: (g) => g.etapa === "conformidad" && g.conformidad_rechazada },
+  { id: "presup_enviado", label: "Presupuesto enviado", tipo: "seguimiento", cta: null,
+    match: (g) => g.etapa === "presupuesto" && g.presupuesto_pendiente },
+  { id: "esperando", label: "Esperando aprobación", tipo: "seguimiento", cta: null,
+    match: (g) => g.etapa === "conformidad" },
+  { id: "facturacion", label: "En facturación", tipo: "seguimiento", cta: null,
+    match: (g) => g.etapa === "facturacion_cobro" },
+  { id: "liquidacion", label: "En liquidación", tipo: "seguimiento", cta: null,
+    match: (g) => g.etapa === "liquidacion_tecnico" },
+  // Catch-all (p. ej. asignación ya respondida a la espera de avanzar): que nada desaparezca.
+  { id: "otras", label: "Otras", tipo: "seguimiento", cta: null, match: () => true },
+];
+
+function etapaDe(g: GestionResumen): DefEtapa {
+  return ETAPAS_TEC.find((e) => e.match(g))!;
 }
 
 function hace(fecha: string) {
@@ -66,7 +95,7 @@ function TarjetaAccion({ g, cta }: { g: GestionResumen; cta: string }) {
   );
 }
 
-function TarjetaSeguimiento({ g }: { g: GestionResumen }) {
+function TarjetaSeguimiento({ g, estado }: { g: GestionResumen; estado: string }) {
   return (
     <Link href={`/gestiones/${g.id}`} className="block group">
       <Card
@@ -89,7 +118,7 @@ function TarjetaSeguimiento({ g }: { g: GestionResumen }) {
         <div className="flex flex-col items-end gap-1 shrink-0">
           {/* El borde izquierdo ya señala la urgencia; el badge queda neutro
               (un acento = un significado: ámbar = urgente, no sub-estado). */}
-          <Badge tono="neutro">{subEstado(g)}</Badge>
+          <Badge tono="neutro">{estado}</Badge>
           <span className="font-mono text-[11px] text-muted">
             {hace(g.creado_en)}
           </span>
@@ -99,32 +128,27 @@ function TarjetaSeguimiento({ g }: { g: GestionResumen }) {
   );
 }
 
-// ── Sección por grupo, con paginación mobile ("Mostrar más") ──────────
+// ── Sección por etapa, con paginación mobile ("Mostrar más") ──────────
 
-function GrupoTareas({
-  titulo,
-  cta,
-  gestiones,
-  acento,
-}: {
-  titulo: string;
-  cta: string | null;
-  gestiones: GestionResumen[];
-  acento: boolean;
-}) {
+function SeccionEtapa({ def, gestiones }: { def: DefEtapa; gestiones: GestionResumen[] }) {
   const [visibles, setVisibles] = useState(POR_PAGINA);
   const restantes = gestiones.length - visibles;
+  const acento = def.tipo === "accion";
 
   return (
     <section className="mt-6">
       <div className="flex items-center gap-2 mb-3">
+        <span
+          className={cn("size-2 rounded-pill shrink-0", acento ? "bg-brand" : "bg-border-strong")}
+          aria-hidden
+        />
         <h2
           className={cn(
             "text-[13px] font-semibold tracking-wide uppercase",
             acento ? "text-foreground" : "text-muted"
           )}
         >
-          {titulo}
+          {def.label}
         </h2>
         <span
           className={cn(
@@ -137,12 +161,12 @@ function GrupoTareas({
           {gestiones.length}
         </span>
       </div>
-      <div className={cn("stagger flex flex-col", cta ? "gap-3" : "gap-2.5")}>
+      <div className={cn("stagger flex flex-col", def.cta ? "gap-3" : "gap-2.5")}>
         {gestiones.slice(0, visibles).map((g) =>
-          cta ? (
-            <TarjetaAccion key={g.id} g={g} cta={cta} />
+          def.cta ? (
+            <TarjetaAccion key={g.id} g={g} cta={def.cta} />
           ) : (
-            <TarjetaSeguimiento key={g.id} g={g} />
+            <TarjetaSeguimiento key={g.id} g={g} estado={def.label} />
           )
         )}
       </div>
@@ -159,6 +183,129 @@ function GrupoTareas({
   );
 }
 
+// ── Selector de etapa (campo + hoja desde abajo) ──────────────────────
+
+function SelectorEtapa({
+  opciones,
+  valor,
+  total,
+  onElegir,
+}: {
+  opciones: { def: DefEtapa; cuenta: number }[];
+  valor: string; // "todas" o id de etapa
+  total: number;
+  onElegir: (id: string) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const activa = opciones.find((o) => o.def.id === valor);
+  // El label sale de la lista estática (así se mantiene aunque la búsqueda deje
+  // esa etapa en 0 y desaparezca de las opciones); el contador refleja el filtro.
+  const etiqueta =
+    valor === "todas" ? "Todas" : (ETAPAS_TEC.find((e) => e.id === valor)?.label ?? "Todas");
+  const cuentaActiva = valor === "todas" ? total : (activa?.cuenta ?? 0);
+
+  function elegir(id: string) {
+    onElegir(id);
+    setAbierto(false);
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="w-full min-h-tap flex items-center gap-2 px-3.5 rounded-md border border-border-strong bg-surface text-left transition-colors hover:bg-surface-2"
+      >
+        <span className="text-[13px] font-medium text-muted">Etapa</span>
+        <span className="font-semibold truncate">{etiqueta}</span>
+        <span className="font-mono text-[12px] text-muted">({cuentaActiva})</span>
+        <span className="ml-auto rotate-90 text-muted" aria-hidden>
+          <Icono id="chevron" size={16} />
+        </span>
+      </button>
+
+      {abierto &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex flex-col justify-end" role="dialog" aria-modal="true">
+            <button
+              type="button"
+              aria-label="Cerrar"
+              onClick={() => setAbierto(false)}
+              className="absolute inset-0 bg-black/40 animate-aparecer"
+            />
+            <div className="relative w-full max-w-lg mx-auto bg-surface rounded-t-xl border-t border-x border-border p-4 pb-6 max-h-[70vh] overflow-y-auto animate-subir">
+              <div className="mx-auto mb-4 h-1 w-10 rounded-pill bg-border-strong" aria-hidden />
+              <p className="text-[13px] font-medium text-muted mb-2">Elegí una etapa</p>
+              <ul className="flex flex-col">
+                <FilaEtapa
+                  label="Todas"
+                  cuenta={total}
+                  punto={null}
+                  activa={valor === "todas"}
+                  onClick={() => elegir("todas")}
+                />
+                {opciones.map(({ def, cuenta }) => (
+                  <FilaEtapa
+                    key={def.id}
+                    label={def.label}
+                    cuenta={cuenta}
+                    punto={def.tipo}
+                    activa={valor === def.id}
+                    onClick={() => elegir(def.id)}
+                  />
+                ))}
+              </ul>
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}
+
+function FilaEtapa({
+  label,
+  cuenta,
+  punto,
+  activa,
+  onClick,
+}: {
+  label: string;
+  cuenta: number;
+  punto: TipoEtapa | null;
+  activa: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-current={activa}
+        className={cn(
+          "w-full min-h-tap flex items-center gap-2.5 px-2 rounded-md transition-colors",
+          activa ? "bg-brand-soft" : "hover:bg-surface-2"
+        )}
+      >
+        {punto && (
+          <span
+            className={cn(
+              "size-2 rounded-pill shrink-0",
+              punto === "accion" ? "bg-brand" : "bg-border-strong"
+            )}
+            aria-hidden
+          />
+        )}
+        <span className={cn("font-medium", !punto && "ml-[18px]", activa && "text-brand-active")}>
+          {label}
+        </span>
+        <span className="ml-auto font-mono text-[12px] text-muted tabular-nums">{cuenta}</span>
+      </button>
+    </li>
+  );
+}
+
 // ── Home ──────────────────────────────────────────────────────────────
 
 export function MisTrabajos({
@@ -169,6 +316,7 @@ export function MisTrabajos({
   nombre: string;
 }) {
   const [consulta, setConsulta] = useState("");
+  const [filtro, setFiltro] = useState("todas"); // "todas" o id de etapa
 
   const activos = useMemo(
     () => gestiones.filter((g) => g.etapa !== "finalizado"),
@@ -183,42 +331,27 @@ export function MisTrabajos({
     [activos, consulta]
   );
 
-  // Cada gestión cae en EXACTAMENTE un grupo (mutuamente excluyentes).
-  const grupos = useMemo(() => {
-    const b = {
-      responder: [] as GestionResumen[],
-      presupuestar: [] as GestionResumen[],
-      obra: [] as GestionResumen[],
-      corregir: [] as GestionResumen[],
-      seguimiento: [] as GestionResumen[],
-    };
+  // Reparte en etapas (una sola cada gestión) y arma las secciones con items.
+  const secciones = useMemo(() => {
+    const porEtapa = new Map<string, GestionResumen[]>();
     for (const g of buscados) {
-      if (g.etapa === "asignacion" && g.asignacion_aceptada === null)
-        b.responder.push(g);
-      else if (g.etapa === "presupuesto" && !g.presupuesto_pendiente)
-        b.presupuestar.push(g);
-      else if (g.etapa === "en_ejecucion") b.obra.push(g);
-      else if (g.etapa === "conformidad" && g.conformidad_rechazada)
-        b.corregir.push(g);
-      else b.seguimiento.push(g);
+      const def = etapaDe(g);
+      (porEtapa.get(def.id) ?? porEtapa.set(def.id, []).get(def.id)!).push(g);
     }
-    const defs: { id: string; titulo: string; cta: string | null; gestiones: GestionResumen[] }[] = [
-      { id: "responder", titulo: "Por responder", cta: "Responder solicitud", gestiones: b.responder },
-      { id: "presupuestar", titulo: "A presupuestar", cta: "Cargar presupuesto", gestiones: b.presupuestar },
-      { id: "obra", titulo: "En obra", cta: "Registrar avance", gestiones: b.obra },
-      { id: "corregir", titulo: "A corregir", cta: "Resubir conformidad", gestiones: b.corregir },
-      { id: "seguimiento", titulo: "En seguimiento", cta: null, gestiones: b.seguimiento },
-    ];
-    for (const d of defs) d.gestiones.sort(urgentesPrimero);
-    return defs.filter((d) => d.gestiones.length > 0);
+    return ETAPAS_TEC.map((def) => ({ def, gestiones: porEtapa.get(def.id) ?? [] }))
+      .filter((s) => s.gestiones.length > 0)
+      .map((s) => ({ ...s, gestiones: [...s.gestiones].sort(urgentesPrimero) }));
   }, [buscados]);
 
-  const accionables = grupos
-    .filter((g) => g.cta)
-    .reduce((n, g) => n + g.gestiones.length, 0);
-  const urgentesAcc = grupos
-    .filter((g) => g.cta)
-    .reduce((n, g) => n + g.gestiones.filter((x) => x.urgencia === "urgente").length, 0);
+  const opciones = secciones.map((s) => ({ def: s.def, cuenta: s.gestiones.length }));
+  const visibles = filtro === "todas" ? secciones : secciones.filter((s) => s.def.id === filtro);
+
+  const accionables = secciones
+    .filter((s) => s.def.tipo === "accion")
+    .reduce((n, s) => n + s.gestiones.length, 0);
+  const urgentesAcc = secciones
+    .filter((s) => s.def.tipo === "accion")
+    .reduce((n, s) => n + s.gestiones.filter((x) => x.urgencia === "urgente").length, 0);
 
   const fechaCruda = new Date().toLocaleDateString("es-AR", {
     weekday: "long",
@@ -256,7 +389,13 @@ export function MisTrabajos({
         </Card>
       ) : (
         <>
-          <div className="mt-5">
+          <div className="mt-5 flex flex-col gap-2.5">
+            <SelectorEtapa
+              opciones={opciones}
+              valor={filtro}
+              total={buscados.length}
+              onElegir={setFiltro}
+            />
             <Input
               label="Buscar"
               value={consulta}
@@ -265,19 +404,17 @@ export function MisTrabajos({
             />
           </div>
 
-          {grupos.length === 0 ? (
+          {visibles.length === 0 ? (
             <Card className="p-8 mt-5 text-center">
-              <p className="text-sm text-muted">Nada coincide con la búsqueda.</p>
+              <p className="text-sm text-muted">
+                {secciones.length === 0
+                  ? "Nada coincide con la búsqueda."
+                  : "No hay gestiones en esta etapa."}
+              </p>
             </Card>
           ) : (
-            grupos.map((g) => (
-              <GrupoTareas
-                key={g.id}
-                titulo={g.titulo}
-                cta={g.cta}
-                gestiones={g.gestiones}
-                acento={g.cta !== null}
-              />
+            visibles.map((s) => (
+              <SeccionEtapa key={s.def.id} def={s.def} gestiones={s.gestiones} />
             ))
           )}
         </>
