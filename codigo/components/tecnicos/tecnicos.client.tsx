@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FiltrosLista } from "@/components/ui/filtros-lista.client";
+import { Paginador } from "@/components/ui/paginador.client";
 import { TecnicoForm } from "@/components/tecnicos/form-tecnico.client";
 import type { Especialidad } from "@/features/especialidades/types";
 import { cambiarEstadoTecnico } from "@/features/tecnicos/service";
 import type { EstadoTecnico, TecnicoResumen } from "@/features/tecnicos/types";
+import { usePaginado } from "@/shared/hooks/use-paginado";
+import { coincideTexto, enRangoFecha } from "@/shared/utils/filtros";
 
 const TONO_ESTADO: Record<EstadoTecnico, "urgente" | "brand" | "error"> = {
   pendiente: "urgente",
@@ -84,10 +88,29 @@ export function Tecnicos({
   especialidades: Especialidad[];
 }) {
   const [creando, setCreando] = useState(false);
+  const [consulta, setConsulta] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
   const pendientes = tecnicos.filter((t) => t.estado === "pendiente").length;
-  const ordenados = [...tecnicos].sort(
-    (a, b) => (a.estado === "pendiente" ? -1 : 1) - (b.estado === "pendiente" ? -1 : 1)
+
+  // Filtra (búsqueda + fecha de registro) y ordena pendientes primero.
+  const filtrados = useMemo(
+    () =>
+      tecnicos
+        .filter(
+          (t) =>
+            coincideTexto(consulta, t.nombre, t.email, t.especialidades.join(" ")) &&
+            enRangoFecha(t.creado_en, desde, hasta)
+        )
+        .sort(
+          (a, b) =>
+            (a.estado === "pendiente" ? -1 : 1) - (b.estado === "pendiente" ? -1 : 1)
+        ),
+    [tecnicos, consulta, desde, hasta]
   );
+
+  const { pageItems, setPagina, paginadorProps } = usePaginado(filtrados);
+  useEffect(() => setPagina(1), [consulta, desde, hasta, setPagina]);
 
   return (
     <div className="animate-aparecer">
@@ -118,6 +141,13 @@ export function Tecnicos({
         </Card>
       )}
 
+      <FiltrosLista
+        consulta={consulta}
+        onConsulta={setConsulta}
+        placeholder="Buscar por nombre, correo o especialidad…"
+        fecha={{ desde, hasta, onDesde: setDesde, onHasta: setHasta }}
+      />
+
       <Card className="overflow-x-auto">
         <table className="w-full text-[15px]">
           <thead>
@@ -130,19 +160,23 @@ export function Tecnicos({
             </tr>
           </thead>
           <tbody>
-            {ordenados.length === 0 && (
+            {filtrados.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm">
-                  Todavía no hay técnicos. Cargalos con “Alta manual” o esperá registros nuevos.
+                  {tecnicos.length === 0
+                    ? "Todavía no hay técnicos. Cargalos con “Alta manual” o esperá registros nuevos."
+                    : "Ningún técnico coincide con la búsqueda."}
                 </td>
               </tr>
             )}
-            {ordenados.map((t) => (
+            {pageItems.map((t) => (
               <Fila key={t.id} tecnico={t} />
             ))}
           </tbody>
         </table>
       </Card>
+
+      <Paginador {...paginadorProps} />
     </div>
   );
 }

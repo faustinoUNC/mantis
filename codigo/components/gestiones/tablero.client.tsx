@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { Rol } from "@/features/auth/types";
@@ -14,6 +15,7 @@ import { crearGestion } from "@/features/gestiones/service";
 import type { GestionResumen, Urgencia, Causa } from "@/features/gestiones/types";
 import { ETAPAS, LABEL_CAUSA } from "@/features/gestiones/types";
 import { cn } from "@/shared/utils/cn";
+import { coincideTexto, enRangoFecha } from "@/shared/utils/filtros";
 
 // Columnas accionables por rol (visual; el permiso real vive en avanzar_etapa)
 const COLUMNAS_MANTENIMIENTO = new Set([
@@ -167,7 +169,30 @@ export function Tablero({
   especialidades: Especialidad[];
 }) {
   const [creando, setCreando] = useState(false);
+  const [consulta, setConsulta] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [gestor, setGestor] = useState("");
   const puedeCrear = rol === "administrador" || rol === "gestor_mantenimiento";
+  const esAdmin = rol === "administrador";
+
+  // Gestores presentes en las gestiones (para el filtro del admin).
+  const gestores = useMemo(
+    () => [...new Set(gestiones.map((g) => g.gestor_nombre))].sort(),
+    [gestiones]
+  );
+
+  // Búsqueda + fecha de ingreso + (admin) gestor asignado.
+  const filtradas = useMemo(
+    () =>
+      gestiones.filter(
+        (g) =>
+          coincideTexto(consulta, g.descripcion, g.direccion, g.especialidad, g.tecnico_nombre) &&
+          enRangoFecha(g.creado_en, desde, hasta) &&
+          (gestor === "" || g.gestor_nombre === gestor)
+      ),
+    [gestiones, consulta, desde, hasta, gestor]
+  );
 
   return (
     <div className="animate-aparecer">
@@ -194,20 +219,45 @@ export function Tablero({
         />
       )}
 
-      <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0">
+      <FiltrosLista
+        consulta={consulta}
+        onConsulta={setConsulta}
+        placeholder="Buscar por descripción, dirección, especialidad o técnico…"
+        fecha={{ desde, hasta, onDesde: setDesde, onHasta: setHasta }}
+        extra={
+          esAdmin && (
+            <div className="w-52">
+              <Select
+                label="Gestor"
+                value={gestor}
+                onChange={(e) => setGestor(e.target.value)}
+              >
+                <option value="">Todos los gestores</option>
+                {gestores.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )
+        }
+      />
+
+      <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0 max-h-[calc(100dvh-13rem)]">
         {ETAPAS.map((etapa) => {
-          const columna = gestiones.filter((g) => g.etapa === etapa.id);
+          const columna = filtradas.filter((g) => g.etapa === etapa.id);
           const activa = accionable(rol, etapa.id);
           return (
             <section
               key={etapa.id}
               className={cn(
-                "w-64 shrink-0 snap-start rounded-lg border bg-surface-2/50 flex flex-col",
+                "w-64 shrink-0 snap-start rounded-lg border bg-surface-2/50 flex flex-col min-h-0",
                 activa ? "border-border" : "border-transparent opacity-80"
               )}
               aria-label={etapa.label}
             >
-              <header className="flex items-center gap-2 px-3 pt-3 pb-2">
+              <header className="flex items-center gap-2 px-3 pt-3 pb-2 shrink-0">
                 <span
                   className={cn(
                     "size-1.5 rounded-pill shrink-0",
@@ -234,7 +284,7 @@ export function Tablero({
                   {columna.length}
                 </span>
               </header>
-              <div className="flex flex-col gap-2 flex-1 min-h-28 px-2 pb-2">
+              <div className="flex flex-col gap-2 flex-1 min-h-28 overflow-y-auto px-2 pb-2">
                 {columna.length === 0 && (
                   <div className="flex-1 grid place-items-center rounded-md border border-dashed border-border/80 py-6">
                     <span className="text-[12px] text-muted/60">Sin gestiones</span>

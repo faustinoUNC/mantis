@@ -212,7 +212,7 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
     supabase
       .from("tecnicos")
       .select(
-        "id, nombre, email, telefono, estado, tecnico_especialidades(especialidades(nombre))"
+        "id, nombre, email, telefono, estado, creado_en, tecnico_especialidades(especialidades(nombre))"
       )
       .order("creado_en", { ascending: false }),
     supabase.from("usuarios").select("id, esta_activo").eq("rol", "tecnico"),
@@ -226,6 +226,7 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
     email: string;
     telefono: string | null;
     estado: EstadoTecnico;
+    creado_en: string;
     tecnico_especialidades: { especialidades: { nombre: string } | null }[];
   };
   return ((tecnicos ?? []) as unknown as Fila[]).map((t) => ({
@@ -234,6 +235,7 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
     email: t.email,
     telefono: t.telefono,
     estado: t.estado,
+    creado_en: t.creado_en,
     especialidades: t.tecnico_especialidades
       .map((te) => te.especialidades?.nombre)
       .filter(Boolean) as string[],
@@ -250,7 +252,7 @@ export async function obtenerTecnico(
   const { data: t } = await supabase
     .from("tecnicos")
     .select(
-      "id, nombre, email, telefono, dni, estado, motivo_rechazo, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidad_id, especialidades(nombre))"
+      "id, nombre, email, telefono, dni, estado, creado_en, motivo_rechazo, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidad_id, especialidades(nombre))"
     )
     .eq("id", id)
     .single();
@@ -279,6 +281,7 @@ export async function obtenerTecnico(
     telefono: t.telefono,
     dni: t.dni,
     estado: t.estado as EstadoTecnico,
+    creado_en: t.creado_en,
     motivo_rechazo: t.motivo_rechazo,
     especialidades: tes.map((te) => te.especialidades?.nombre).filter(Boolean) as string[],
     especialidad_ids: tes.map((te) => te.especialidad_id),

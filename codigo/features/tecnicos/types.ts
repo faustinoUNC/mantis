@@ -8,6 +8,7 @@ export interface TecnicoResumen {
   estado: EstadoTecnico;
   especialidades: string[];
   esta_activo: boolean | null; // null = sin fila en usuarios (pendiente/rechazado)
+  creado_en: string; // fecha de registro/alta del técnico
 }
 
 export interface TecnicoDetalle extends TecnicoResumen {

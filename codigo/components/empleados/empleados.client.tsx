@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { Input } from "@/components/ui/input";
 import { InputPassword } from "@/components/ui/input-password.client";
+import { Paginador } from "@/components/ui/paginador.client";
 import { Select } from "@/components/ui/select";
 import { NOMBRE_ROL, type Rol } from "@/features/auth/types";
 import {
@@ -14,6 +16,8 @@ import {
   editarEmpleado,
 } from "@/features/empleados/service";
 import type { Empleado } from "@/features/empleados/types";
+import { usePaginado } from "@/shared/hooks/use-paginado";
+import { coincideTexto, enRangoFecha } from "@/shared/utils/filtros";
 
 // Los técnicos se gestionan SOLO en la sección Técnicos (STORY-901).
 const ROLES = (Object.keys(NOMBRE_ROL) as Rol[]).filter((r) => r !== "tecnico");
@@ -186,6 +190,21 @@ function Fila({ empleado }: { empleado: Empleado }) {
 
 export function Empleados({ empleados }: { empleados: Empleado[] }) {
   const [creando, setCreando] = useState(false);
+  const [consulta, setConsulta] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+
+  const filtrados = useMemo(
+    () =>
+      empleados.filter(
+        (e) =>
+          coincideTexto(consulta, e.nombre, e.email, NOMBRE_ROL[e.rol]) &&
+          enRangoFecha(e.creado_en, desde, hasta)
+      ),
+    [empleados, consulta, desde, hasta]
+  );
+  const { pageItems, setPagina, paginadorProps } = usePaginado(filtrados);
+  useEffect(() => setPagina(1), [consulta, desde, hasta, setPagina]);
 
   return (
     <div className="animate-aparecer">
@@ -201,6 +220,13 @@ export function Empleados({ empleados }: { empleados: Empleado[] }) {
 
       {creando && <FormNuevo onListo={() => setCreando(false)} />}
 
+      <FiltrosLista
+        consulta={consulta}
+        onConsulta={setConsulta}
+        placeholder="Buscar por nombre, correo o rol…"
+        fecha={{ desde, hasta, onDesde: setDesde, onHasta: setHasta }}
+      />
+
       <Card className="overflow-x-auto">
         <table className="w-full text-[15px]">
           <thead>
@@ -213,12 +239,21 @@ export function Empleados({ empleados }: { empleados: Empleado[] }) {
             </tr>
           </thead>
           <tbody>
-            {empleados.map((e) => (
+            {filtrados.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm">
+                  Ningún empleado coincide con la búsqueda.
+                </td>
+              </tr>
+            )}
+            {pageItems.map((e) => (
               <Fila key={e.id} empleado={e} />
             ))}
           </tbody>
         </table>
       </Card>
+
+      <Paginador {...paginadorProps} />
     </div>
   );
 }

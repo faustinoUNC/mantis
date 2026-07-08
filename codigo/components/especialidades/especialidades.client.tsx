@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { Input } from "@/components/ui/input";
+import { Paginador } from "@/components/ui/paginador.client";
 import {
   cambiarEstadoEspecialidad,
   crearEspecialidad,
   editarEspecialidad,
 } from "@/features/especialidades/service";
 import type { Especialidad } from "@/features/especialidades/types";
+import { usePaginado } from "@/shared/hooks/use-paginado";
+import { coincideTexto } from "@/shared/utils/filtros";
 
 function CheckMatricula({ defaultChecked }: { defaultChecked?: boolean }) {
   return (
@@ -147,6 +151,14 @@ export function Especialidades({
   especialidades: Especialidad[];
 }) {
   const [creando, setCreando] = useState(false);
+  const [consulta, setConsulta] = useState("");
+
+  const filtradas = useMemo(
+    () => especialidades.filter((e) => coincideTexto(consulta, e.nombre)),
+    [especialidades, consulta]
+  );
+  const { pageItems, setPagina, paginadorProps } = usePaginado(filtradas);
+  useEffect(() => setPagina(1), [consulta, setPagina]);
 
   return (
     <div className="animate-aparecer">
@@ -164,6 +176,12 @@ export function Especialidades({
 
       {creando && <FormNueva onListo={() => setCreando(false)} />}
 
+      <FiltrosLista
+        consulta={consulta}
+        onConsulta={setConsulta}
+        placeholder="Buscar especialidad…"
+      />
+
       <Card className="overflow-x-auto">
         <table className="w-full text-[15px]">
           <thead>
@@ -175,12 +193,21 @@ export function Especialidades({
             </tr>
           </thead>
           <tbody>
-            {especialidades.map((e) => (
+            {filtradas.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-muted text-sm">
+                  Ninguna especialidad coincide con la búsqueda.
+                </td>
+              </tr>
+            )}
+            {pageItems.map((e) => (
               <Fila key={e.id} especialidad={e} />
             ))}
           </tbody>
         </table>
       </Card>
+
+      <Paginador {...paginadorProps} />
     </div>
   );
 }
