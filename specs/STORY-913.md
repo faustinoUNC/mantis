@@ -38,5 +38,5 @@ Que las gestiones **finalizadas** del técnico aparezcan en su home (`/tecnico` 
 - Orden cronológico especial dentro de Finalizado (usa el orden urgentes-primero → en finalizadas es indistinto; alcanza).
 
 ## Dev Agent Record
-- **Commit:** _(pendiente)_
+- **Commit:** 097ba82 (pusheado a main → auto-deploy)
 - **Verificación (navegador real, 390px, técnico `tecnicouno` con 3 finalizadas):** el home muestra la sección "FINALIZADO · 3" con cards "Finalizado" (punto gris); el selector lista "Todas (3)" y "Finalizado (3)". No aparece "Estás al día" (tiene historial). `tsc`+`eslint` verdes.

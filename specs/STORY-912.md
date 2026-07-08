@@ -47,6 +47,6 @@ Un solo lugar: el **Inicio** pasa a ser el dashboard completo (accionables + ren
 - Nuevos gráficos o KPIs.
 
 ## Dev Agent Record
-- **Commit:** _(pendiente)_
+- **Commit:** 8cc292c (pusheado a main → auto-deploy)
 - **Archivos:** nuevo `components/metricas/panel-metricas.client.tsx`; `components/paneles/inicio-rol.tsx` (props: `metricas` en vez de `acciones`; embebe PanelMetricas); `app/{admin,gestion,administracion}/page.tsx` (pasan `metricas`, sin `acciones`; administración saca cobrado/fee de arriba); `features/auth/types.ts` (Métricas fuera del nav en 3 roles); `app/metricas/page.tsx` (redirect a `RUTA_POR_ROL`); eliminado `components/metricas/dashboard.client.tsx`.
 - **Verificación (navegador real, sesión admin):** Inicio muestra fila accionable (Gestiones activas, Urgentes, Inbox, Solicitudes, Por cobrar $ 0, Por liquidar $ 0) + sección "Rendimiento" (Primera respuesta, Resolución, Resueltas/Cobrado/Fee del mes) + los 2 gráficos. Menú sin "Métricas"; sin "Gestiones en curso"; importes sin el número a la izquierda. `/metricas` redirige a `/admin`. `tsc`+`eslint` verdes. (Único error de consola: "unique key prop" en SidebarStaff, preexistente y ajeno.)
