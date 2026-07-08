@@ -367,9 +367,25 @@ export async function registrarCobro(
   if (!actual) return { ok: false, error: "No tenés permiso." };
 
   const supabase = await createClient();
+  // STORY-914: congelar el monto facturado y el fee del momento del cobro.
+  // Las métricas históricas leen de estos snapshots, así una corrección
+  // posterior de costo_final/cargo_admin no reescribe el pasado.
+  const { data: g } = await supabase
+    .from("gestiones")
+    .select("costo_final, cargo_admin")
+    .eq("id", gestionId)
+    .single();
+  const costoFinal = Number(g?.costo_final ?? 0);
+  const cargoAdmin = Number(g?.cargo_admin ?? 0);
+
   const { error } = await supabase
     .from("gestiones")
-    .update({ cobrado_en: new Date().toISOString(), medio_cobro: medio })
+    .update({
+      cobrado_en: new Date().toISOString(),
+      medio_cobro: medio,
+      cobrado_monto: costoFinal + cargoAdmin,
+      cobrado_fee: cargoAdmin,
+    })
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo registrar el cobro." };
 

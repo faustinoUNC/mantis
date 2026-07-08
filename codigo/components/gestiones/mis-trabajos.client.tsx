@@ -46,6 +46,8 @@ const ETAPAS_TEC: DefEtapa[] = [
   // Historial: gestiones cerradas — el técnico las ve como registro (última sección).
   { id: "finalizado", label: "Finalizado", tipo: "historial", cta: null,
     match: (g) => g.etapa === "finalizado" },
+  { id: "cancelada", label: "Cancelada", tipo: "historial", cta: null,
+    match: (g) => g.etapa === "cancelada" },
   // Catch-all (p. ej. asignación ya respondida a la espera de avanzar): que nada desaparezca.
   { id: "otras", label: "Otras", tipo: "seguimiento", cta: null, match: () => true },
 ];

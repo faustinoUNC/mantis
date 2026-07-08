@@ -87,6 +87,12 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-911](STORY-911.md) | Home del técnico: filtro por etapa (selector + hoja), seguimiento separado, paginación; stepper responsive; etapa Presupuesto mobile; copy "Horarios" | 🚧 en desarrollo |
 | [STORY-912](STORY-912.md) | Consolidar Métricas dentro del Inicio (un dashboard, menos menú); importes sin contador | 🚧 en desarrollo |
 | [STORY-913](STORY-913.md) | El técnico ve sus gestiones finalizadas como historial (etapa más en su home) | 🚧 en desarrollo |
+| [STORY-914](STORY-914.md) | Dashboard de métricas de valor: 8 gráficos, tiempo real y filtros + inmutabilidad de finanzas (calificación ⭐, funnel/cancelación, cuellos, composición, rechazos, cobertura) | 🚧 en desarrollo |
+| [STORY-915](STORY-915.md) | Desempeño del técnico a golpe de vista: desvío de presupuesto (dashboard) + scorecard visual en la asignación (⭐, obras, % rechazo/cancelación, disponibilidad, tooltips); "más barato" descartado por no confiable | 🚧 en desarrollo |
+| [STORY-916](STORY-916.md) | Bug: "Volver" desde el detalle de una gestión iba al Inicio en vez del tablero | 🚧 en desarrollo |
+| [STORY-917](STORY-917.md) | Métricas accionables: gestiones estancadas (días en etapa), cobranza por antigüedad y reincidencia a 90 días (listas linkeadas al detalle, sin migraciones) | 🚧 en desarrollo |
+| [STORY-918](STORY-918.md) | Carga demo realista (80 gestiones en todas las etapas, marcador `[DEMO]`) para probar métricas + reversión total (`scripts/demo-borrar.sh`). Sin cambios en `codigo/` | ✅ sembrado |
+| [STORY-919](STORY-919.md) | Retoques del dashboard de métricas (party mode): fix rechazos asignación + calificación, embudo→barras, reincidencia N+scroll, combo ingresos/volumen, quitar cobertura, gradiente de magnitud, fee demo | 🚧 en desarrollo |
 | [STORY-911](STORY-911.md) | Home del técnico: agrupación por etapa del trabajo + búsqueda + paginación "Mostrar más" + cards mobile | 🚧 en desarrollo |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.

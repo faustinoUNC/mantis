@@ -19,10 +19,11 @@ export default async function AdminInicio() {
       tiles={[
         { label: "Gestiones activas", valor: String(metricas?.activas ?? 0), href: "/tablero" },
         {
-          label: "Urgentes +24 h sin técnico",
-          valor: String(metricas?.urgentesDemoradas ?? 0),
-          alerta: (metricas?.urgentesDemoradas ?? 0) > 0,
+          label: "Urgentes sin asignar",
+          valor: String(metricas?.urgentesSinAsignar ?? 0),
+          alerta: (metricas?.urgentesSinAsignar ?? 0) > 0,
           href: "/tablero",
+          hint: "Gestiones urgentes en Ingresado o Asignación — todavía sin arrancar.",
         },
         {
           label: "Reportes en el inbox",
@@ -36,19 +37,7 @@ export default async function AdminInicio() {
           alerta: solicitudes > 0,
           href: "/tecnicos",
         },
-        // Panorama financiero ACCIONABLE (los acumulados viven en Métricas)
-        {
-          label: "Por cobrar",
-          valor: `$ ${(metricas?.montoPorCobrar ?? 0).toLocaleString("es-AR")}`,
-          alerta: (metricas?.pendientesCobro ?? 0) > 0,
-          href: "/tablero",
-        },
-        {
-          label: "Por liquidar a técnicos",
-          valor: `$ ${(metricas?.montoPorLiquidar ?? 0).toLocaleString("es-AR")}`,
-          alerta: (metricas?.pendientesLiquidacion ?? 0) > 0,
-          href: "/tablero",
-        },
+        // Los importes de caja pendiente viven en Métricas → "Dinero pendiente".
       ]}
       metricas={metricas}
     />

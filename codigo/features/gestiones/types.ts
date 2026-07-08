@@ -6,7 +6,9 @@ export type Etapa =
   | "conformidad"
   | "facturacion_cobro"
   | "liquidacion_tecnico"
-  | "finalizado";
+  | "finalizado"
+  // STORY-914: estado terminal de cancelación (fuera del funnel/stepper).
+  | "cancelada";
 
 export type Urgencia = "normal" | "urgente";
 export type Causa = "desgaste" | "dano" | "mejora";
@@ -106,10 +108,28 @@ export interface GestionDetalle extends GestionResumen {
   presupuestos: Presupuesto[];
   avances: Avance[];
   conformidades: Conformidad[];
+  // STORY-914: calificación del técnico (una por gestión, se carga al finalizar)
+  calificacion: { estrellas: number; comentario: string | null } | null;
+}
+
+// STORY-915: desempeño del técnico para decidir la asignación a golpe de vista.
+// Se calcula agregado across TODAS sus gestiones (admin client) → solo números.
+export interface StatsTecnico {
+  estrellas: number | null; // promedio de calificaciones
+  nCalif: number;
+  desvioPct: number | null; // promedio (costo_final − presup) / presup
+  nDesvio: number;
+  obrasActivas: number; // gestiones activas asignadas (carga actual)
+  obrasRealizadas: number; // gestiones finalizadas (track record; canceladas NO cuentan)
+  pctRechazoAsig: number | null; // % de asignaciones que rechazó
+  nAsig: number; // asignaciones respondidas (acept + rech)
+  pctCancelacion: number | null; // % de sus gestiones TERMINADAS que fueron canceladas
+  nTerminadas: number; // terminadas = finalizadas + canceladas
 }
 
 export interface TecnicoDisponible {
   id: string;
   nombre: string;
   franjas: { dia_semana: number; hora_desde: string; hora_hasta: string }[];
+  stats: StatsTecnico | null;
 }

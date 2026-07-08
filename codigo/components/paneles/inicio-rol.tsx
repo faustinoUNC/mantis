@@ -10,6 +10,7 @@ export interface TileInicio {
   valor: string;
   alerta?: boolean;
   href?: string;
+  hint?: string; // explicación al pasar el mouse
 }
 
 const TZ = "America/Argentina/Buenos_Aires";
@@ -68,7 +69,10 @@ export function InicioRol({
               }`}
             >
               <div className="flex items-center gap-1">
-                <p className="text-[13px] font-medium text-muted">{t.label}</p>
+                <p className="text-[13px] font-medium text-muted" title={t.hint}>
+                  {t.label}
+                  {t.hint && <span className="ml-1 text-muted/50 cursor-help">ⓘ</span>}
+                </p>
                 {t.href && (
                   <span className="ml-auto text-muted/50 group-hover:text-brand transition-colors">
                     <Icono id="chevron" size={14} strokeWidth={2} />

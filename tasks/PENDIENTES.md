@@ -16,7 +16,10 @@
 ## Descartados (no hacer)
 
 - ~~CRON_SECRET del job pg_cron a Vault~~ — Decisión de Fausti (2026-07-06): riesgo bajo, no se hará.
+- ~~Métrica "qué técnico es más barato" (comparar mano de obra entre técnicos)~~ — Descartada (2026-07-08, 2ª party mode, STORY-915). No se puede hacer confiable: el único normalizador de alcance (`presupuestos.plazo_dias`) es auto-reportado y poco fiable, y un catálogo de rubros estandarizados violaría la Regla #0. Fausti: no meter datos inexactos. **En su lugar** va el **desvío de presupuesto** (cada técnico vs. su propio presupuesto), que sí es confiable.
 
 ## Hechos
 
+- [x] **Retoques del dashboard de métricas** (2026-07-08, STORY-919, SIN commitear — Fausti revisa en local) — fix bugs (rechazos de asignación por evento; calificación por embed to-one de PostgREST), 5 bloques sectorizados por alcance (caja "En el período" con el filtro en la cabecera; "ahora" arriba, "histórico" al final), embudo→barras, combo de ingresos con toggle de series + tendencia por serie, gradiente de magnitud, tendencia como tasa absoluta (no %), métrica "Tiempo de ciclo" y "Dinero pendiente", tile "Urgentes sin asignar". Detalle completo en `specs/STORY-919.md`.
+- [x] **Carga demo para probar métricas** (2026-07-08, STORY-918) — 80 gestiones `[DEMO]` en todas las etapas + gestores/técnicos/cartera demo (`ausitesis+demo…`, pass = usuario123). Sembrado con `scripts/demo-seed.sql`. **Revertir todo:** `./scripts/demo-borrar.sh` (base + fotos), o pedirle a Claude que corra `scripts/demo-borrar.sql` (solo base). IDs y conteos en `scripts/demo-manifest.json`. Se puede mover/editar las gestiones demo sin romper el borrado.
 - [x] Correcciones completas de la auditoría 2026-07-06 (STORY-906, commit 950dbf8) — seguridad DB, finanzas, funnel, inbox, realtime, UI, métricas.
