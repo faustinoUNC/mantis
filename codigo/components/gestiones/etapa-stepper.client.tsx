@@ -30,9 +30,44 @@ export function EtapaStepper({ etapa }: { etapa: string }) {
     }
   }, [etapa]);
 
+  const actualLabel = ETAPAS[indice]?.label ?? etapa;
+  const siguiente = ETAPAS[indice + 1]?.label;
+
   return (
     <>
-      <div className="mt-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      {/* Mobile: indicador compacto — todo el funnel de un vistazo sin scroll */}
+      <div className="sm:hidden mt-4">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="font-semibold text-brand-active leading-tight">
+            {actualLabel}
+          </p>
+          <span className="font-mono text-[11px] text-muted shrink-0">
+            Paso {indice + 1} de {ETAPAS.length}
+          </span>
+        </div>
+        <div className="flex gap-1 mt-2" aria-hidden>
+          {ETAPAS.map((e, i) => (
+            <span
+              key={e.id}
+              className={cn(
+                "h-1.5 flex-1 rounded-pill transition-colors duration-300",
+                i < indice && "bg-brand/45",
+                i === indice && "bg-brand",
+                i === indice && avanzo && "animate-latido",
+                i > indice && "bg-border"
+              )}
+            />
+          ))}
+        </div>
+        {siguiente && (
+          <p className="text-[12px] text-muted mt-2">
+            Sigue: <span className="font-medium text-foreground">{siguiente}</span>
+          </p>
+        )}
+      </div>
+
+      {/* Desktop: stepper completo con las 8 etapas */}
+      <div className="hidden sm:block mt-4 overflow-x-auto">
         <ol className="flex items-center gap-0 min-w-max">
           {ETAPAS.map((e, i) => {
             const pasada = i < indice;
@@ -42,7 +77,7 @@ export function EtapaStepper({ etapa }: { etapa: string }) {
                 {i > 0 && (
                   <span
                     className={cn(
-                      "block h-px w-4 sm:w-6",
+                      "block h-px w-6",
                       i <= indice ? "bg-brand" : "bg-border"
                     )}
                     aria-hidden

@@ -9,6 +9,11 @@ La v2 (secciones por etapa, siempre visibles) no lo convenció por dos motivos: 
 - **"Todas"** = todas las secciones (por etapa) apiladas; elegir una etapa = solo esa sección. Paginación "Mostrar más" por sección se mantiene.
 **Origen:** Pedido de Fausti tras la carga de prueba. Con **varias gestiones activas**, el home del técnico (`/tecnico` → `MisTrabajos`) se vuelve un caos en el celular. Un primer intento (v1, chips "Todas/Te esperan/Urgentes/En espera" + búsqueda) fue **rechazado**: los chips no eran categorías excluyentes (Urgentes se pisaba con las otras), la estética de las cards no convencía y **no paginaba**. Se revirtió (main volvió a `27789b4`).
 
+## Cambios v3.1 (más pulido mobile del técnico, misma tanda)
+- **Stepper del detalle responsive** (`etapa-stepper.client.tsx`): en mobile, en vez de las 8 pills en scroll horizontal, un indicador compacto — etapa actual + "Paso N de 8" + barra segmentada + "Sigue: {próxima}". En desktop se mantiene el stepper completo.
+- **Etapa Presupuesto del técnico** (`detalle.client.tsx`): grid de montos 2 columnas en mobile (Materiales/Mano de obra) con Plazo full-width (3 col en desktop); los dos formularios (Inspección opcional / Tu presupuesto) separados con subtítulos + divisor; CTA "Enviar presupuesto" full-width en mobile.
+- **Copy — se saca "agenda"/"disponibilidad":** nav del técnico "Agenda" → **"Horarios"**; página "Agenda semanal" + eyebrow "Mi disponibilidad" → **"Horarios de trabajo"** (sin eyebrow redundante); "franjas" → "horarios" en textos. En el form de asignación (inmobiliaria): "Disponibilidad:" → **"Horarios de trabajo:"**.
+
 ## Objetivo
 
 Clasificación **lógica, intuitiva y mutuamente excluyente** de las gestiones del técnico, cards más prolijas y **paginación**, todo mobile-first (390px, una mano, targets ≥44px).

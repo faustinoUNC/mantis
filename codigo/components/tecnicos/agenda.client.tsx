@@ -35,12 +35,11 @@ export function Agenda({ franjas }: { franjas: Franja[] }) {
 
   return (
     <div className="animate-aparecer max-w-lg">
-      <p className="text-[13px] font-medium text-muted">Mi disponibilidad</p>
-      <h1 className="text-2xl font-semibold tracking-tight mt-0.5 mb-1">
-        Agenda semanal
+      <h1 className="text-2xl font-semibold tracking-tight mb-1">
+        Horarios de trabajo
       </h1>
       <p className="text-sm text-muted mb-5">
-        Cargá tus franjas: el equipo las ve antes de asignarte un trabajo.
+        Cargá tus horarios: el equipo los ve antes de asignarte un trabajo.
       </p>
 
       <Card className="p-4 sm:p-5 mb-5">
@@ -69,7 +68,7 @@ export function Agenda({ franjas }: { franjas: Franja[] }) {
 
       {franjas.length === 0 ? (
         <p className="text-sm text-muted">
-          Todavía no cargaste franjas — agregá la primera arriba.
+          Todavía no cargaste horarios — agregá el primero arriba.
         </p>
       ) : (
         <div className="flex flex-col gap-4">

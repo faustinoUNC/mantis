@@ -217,9 +217,9 @@ function AccionAsignar({
       </Select>
       {tecnico && (
         <div className="text-[13px] text-muted bg-surface-2 rounded-md px-3 py-2">
-          <span className="font-medium text-foreground">Disponibilidad: </span>
+          <span className="font-medium text-foreground">Horarios de trabajo: </span>
           {tecnico.franjas.length === 0
-            ? "sin franjas cargadas"
+            ? "sin horarios cargados"
             : tecnico.franjas
                 .map((f) => `${DIAS[f.dia_semana]} ${f.hora_desde.slice(0, 5)}–${f.hora_hasta.slice(0, 5)}`)
                 .join(" · ")}
@@ -314,13 +314,15 @@ function FormPresupuestoTecnico({ gestion }: { gestion: GestionDetalle }) {
         required
         placeholder="Qué vas a hacer, materiales principales y cómo lo vas a resolver"
       />
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Input label="Materiales ($)" name="materiales" type="number" min="0" step="0.01" required />
         <Input label="Mano de obra ($)" name="mano_obra" type="number" min="0" step="0.01" required />
-        <Input label="Plazo (días)" name="plazo_dias" type="number" min="1" required />
+        <div className="col-span-2 sm:col-span-1">
+          <Input label="Plazo (días)" name="plazo_dias" type="number" min="1" required />
+        </div>
       </div>
       <Input label="Observaciones" name="notas" placeholder="Aclaraciones para el gestor (opcional)" />
-      <Button type="submit" disabled={cargando} className="self-start">
+      <Button type="submit" disabled={cargando} className="w-full sm:w-auto sm:self-start">
         Enviar presupuesto
       </Button>
       {error && <p className="text-sm font-medium text-error">{error}</p>}
@@ -964,9 +966,17 @@ export function DetalleGestion({
               />
             </div>
           ) : (
-            <div className="flex flex-col gap-6">
-              <FormAvance gestion={gestion} />
-              <FormPresupuestoTecnico gestion={gestion} />
+            <div className="flex flex-col gap-5">
+              <div>
+                <p className="text-[13px] font-medium text-muted mb-3">
+                  Inspección <span className="text-muted/50 font-normal">· opcional</span>
+                </p>
+                <FormAvance gestion={gestion} />
+              </div>
+              <div className="border-t border-border pt-5">
+                <p className="text-[13px] font-medium text-muted mb-3">Tu presupuesto</p>
+                <FormPresupuestoTecnico gestion={gestion} />
+              </div>
             </div>
           )
         )}

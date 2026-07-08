@@ -53,7 +53,7 @@ export const NAV_POR_ROL: Record<Rol, ItemNav[]> = {
   ],
   tecnico: [
     { href: "/tecnico", label: "Trabajos", icono: "tecnicos" },
-    { href: "/tecnico/agenda", label: "Agenda", icono: "agenda" },
+    { href: "/tecnico/agenda", label: "Horarios", icono: "agenda" },
     { href: "/tecnico/perfil", label: "Perfil", icono: "perfil" },
   ],
 };
