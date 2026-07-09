@@ -57,3 +57,11 @@ La duración de `en_ejecucion` se calcula client-side (sin cambio de service). L
   - `codigo/components/gestiones/detalle.client.tsx:490` — label "Plazo (días)"→"Plazo de obra (días)".
 - **Micro-decisiones tomadas (a confirmar por Fausti):** (a) label con unidad "Plazo de obra (días)" en vez de "Plazo de Obra" a secas (es input numérico); (b) STORY-921 nueva en vez de bump 920 (trazabilidad de la métrica).
 - **Verificación:** `tsc --noEmit` + `eslint` + `next build` verdes. Falta pasada visual en navegador con la carga demo (validar que "Cumplimiento de plazo" pinta y que ciclo/cuellos bajan al sacar la ejecución).
+
+## Ajustes tras revisión de Fausti (2026-07-09)
+Fausti vio "Cumplimiento de plazo" como "pirámide invertida": todos los técnicos negativos (terminaron antes) y el color por magnitud absoluta pintaba de terracota a los que se adelantaban (confuso). Fixes:
+- **Datos demo variados:** el seed ponía `d6 (ejecución) = plazo * [0.6,1.3]` sin sesgo por técnico → todo levemente negativo y convergido. Se agregó un **sesgo persistente por técnico** en `scripts/demo-seed.sql` (t_dos 1.35 … t_raul 0.75) + jitter por obra, para un espectro real (+35% se pasa … −25% se adelanta). Aplicado también a la **base viva** con un UPDATE de `plazo_dias` sobre las gestiones DEMO (no se tocaron los tiempos reales de ejecución, solo el plazo prometido).
+- **Color con signo** (no magnitud absoluta): se pasó (pct>0) = rampa cálida ámbar→terracota según cuánto; cumplió/se adelantó (pct≤0) = teal calmo. `colorPlazo(pct)`. Adelantarse ya no se pinta como "malo".
+- **Orden descendente:** el que más se pasó, arriba (era ascendente).
+- **Leyenda** bajo el gráfico: "Se pasó del plazo · Cumplió o se adelantó · 0% = justo en fecha". Tooltip reescrito ("Tardó X% más" / "Terminó X% antes" / "Justo en el plazo").
+- Verificación: `tsc`+eslint+`next build` verdes; spread confirmado por SQL (+31,8% tecnicodos … −23,9% Raúl Medina).

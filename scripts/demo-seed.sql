@@ -311,7 +311,14 @@ begin
     d1 := case when v_urg = 'urgente' then pg_temp.d(0.05, 0.3) else pg_temp.d(0.2, 2.5) end;
     d2 := pg_temp.d(0.05, 1);   d3 := pg_temp.d(0.05, 1.5);
     d4 := pg_temp.d(0.3, 5);    d5 := pg_temp.d(0.2, 3);
-    d6 := greatest(0.5, plazo * pg_temp.d(0.6, 1.3));
+    -- STORY-921: la ejecución se desvía del plazo comprometido con un SESGO
+    -- PERSISTENTE por técnico (unos cumplen, otros se pasan), + jitter por obra,
+    -- para que "Cumplimiento de plazo" muestre un espectro real (no todo negativo).
+    d6 := greatest(0.5, plazo * (case v_tec
+      when t_dos then 1.35 when t_pablo then 1.18 when t_jose then 1.08
+      when t_dario then 1.00 when t_andrea then 0.98
+      when t_sergio then 0.88 when t_uno then 0.82 when t_raul then 0.75
+      else 1.00 end) * pg_temp.d(0.85, 1.15));
     d7 := pg_temp.d(0.2, 4);    d8 := pg_temp.d(1, 12);  d9 := pg_temp.d(1, 7);
 
     -- margen = tiempo en la etapa actual (estancadas a mano)
