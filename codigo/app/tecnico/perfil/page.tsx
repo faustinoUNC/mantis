@@ -36,8 +36,8 @@ export default async function PerfilTecnicoPage() {
           <p className="mt-0.5">{perfil.telefono ?? "—"}</p>
         </div>
         <div className="px-4 py-3">
-          <p className="text-[13px] font-medium text-muted">DNI</p>
-          <p className="mt-0.5 font-mono text-[14px]">{perfil.dni ?? "—"}</p>
+          <p className="text-[13px] font-medium text-muted">CUIL</p>
+          <p className="mt-0.5 font-mono text-[14px]">{perfil.cuil ?? "—"}</p>
         </div>
         <div className="px-4 py-3">
           <p className="text-[13px] font-medium text-muted mb-1.5">

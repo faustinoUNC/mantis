@@ -3,14 +3,10 @@
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/features/empleados/types";
 import { createClient } from "@/shared/lib/supabase/server";
-import type { Legajo, Persona, Propiedad, TipoPersona } from "./types";
+import { cuilValido, normalizarCuil } from "@/shared/utils/cuil";
+import type { Legajo, Persona, Propiedad, RefPersona, TipoPersona } from "./types";
 
 // RLS staff-only hace cumplir los permisos en las 4 tablas de cartera.
-
-const COL_DOC: Record<TipoPersona, string> = {
-  propietarios: "cuit",
-  inquilinos: "dni",
-};
 
 // ── Propietarios e inquilinos (misma forma, tablas separadas) ──
 
@@ -18,7 +14,7 @@ export async function listarPersonas(tipo: TipoPersona): Promise<Persona[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from(tipo)
-    .select(`id, nombre, email, telefono, documento:${COL_DOC[tipo]}, activo`)
+    .select("id, nombre, email, telefono, documento:cuil, activo")
     .order("nombre");
   return (data ?? []) as unknown as Persona[];
 }
@@ -28,12 +24,15 @@ export async function guardarPersona(
   datos: { nombre: string; email: string; telefono: string; documento: string },
   id?: string
 ): Promise<ActionResult> {
+  if (datos.documento && !cuilValido(datos.documento)) {
+    return { ok: false, error: "El CUIL/CUIT no es válido (11 dígitos)." };
+  }
   const supabase = await createClient();
   const fila = {
     nombre: datos.nombre,
     email: datos.email,
     telefono: datos.telefono || null,
-    [COL_DOC[tipo]]: datos.documento || null,
+    cuil: datos.documento ? normalizarCuil(datos.documento) : null,
   };
   const { error } = id
     ? await supabase.from(tipo).update(fila).eq("id", id)
@@ -90,22 +89,91 @@ export async function listarPropiedades(): Promise<Propiedad[]> {
   });
 }
 
-export async function guardarPropiedad(
-  datos: { direccion: string; tipo: string; propietario_id: string },
-  id?: string
-): Promise<ActionResult> {
+// ── Alta unificada "Administración" (STORY-922) ──
+// Wizard sobre las tablas existentes — SIN entidad nueva. Inserts secuenciales:
+// todo estado intermedio es válido (propietario sin propiedades, propiedad
+// desocupada), así que un fallo parcial nunca corrompe y no hace falta RPC.
+
+async function resolverPersona(
+  tipo: TipoPersona,
+  ref: RefPersona
+): Promise<{ id: string } | { error: string }> {
+  if ("id" in ref) return { id: ref.id };
+  if (!ref.nueva.nombre || !ref.nueva.email) {
+    return { error: "Completá nombre y email." };
+  }
+  if (ref.nueva.cuil && !cuilValido(ref.nueva.cuil)) {
+    return { error: "El CUIL/CUIT no es válido (11 dígitos)." };
+  }
   const supabase = await createClient();
-  const fila = {
-    direccion: datos.direccion,
-    tipo: datos.tipo || null,
-    propietario_id: datos.propietario_id,
-  };
-  const { error } = id
-    ? await supabase.from("propiedades").update(fila).eq("id", id)
-    : await supabase.from("propiedades").insert(fila);
-  if (error) return { ok: false, error: "No se pudo guardar la propiedad." };
+  const { data, error } = await supabase
+    .from(tipo)
+    .insert({
+      nombre: ref.nueva.nombre,
+      email: ref.nueva.email,
+      telefono: ref.nueva.telefono || null,
+      cuil: ref.nueva.cuil ? normalizarCuil(ref.nueva.cuil) : null,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    return { error: `No se pudo guardar el ${tipo === "propietarios" ? "propietario" : "inquilino"}.` };
+  }
+  return { id: data.id };
+}
+
+export async function crearAdministracion(datos: {
+  propietario: RefPersona;
+  propiedad: { direccion: string; tipo: string };
+  inquilino: { persona: RefPersona; fecha_inicio: string } | null;
+}): Promise<ActionResult<{ propiedadId: string }>> {
+  if (!datos.propiedad.direccion) {
+    return { ok: false, error: "Completá la dirección de la propiedad." };
+  }
+
+  const propietario = await resolverPersona("propietarios", datos.propietario);
+  if ("error" in propietario) return { ok: false, error: propietario.error };
+
+  const supabase = await createClient();
+  const { data: propiedad, error: errorPropiedad } = await supabase
+    .from("propiedades")
+    .insert({
+      direccion: datos.propiedad.direccion,
+      tipo: datos.propiedad.tipo || null,
+      propietario_id: propietario.id,
+    })
+    .select("id")
+    .single();
+  if (errorPropiedad || !propiedad) {
+    return {
+      ok: false,
+      error: "No se pudo crear la propiedad. El propietario quedó guardado en la cartera.",
+    };
+  }
+
+  if (datos.inquilino) {
+    const inquilino = await resolverPersona("inquilinos", datos.inquilino.persona);
+    if ("error" in inquilino) {
+      return {
+        ok: false,
+        error: `${inquilino.error} La propiedad quedó creada como desocupada — podés abrir el legajo desde su detalle.`,
+      };
+    }
+    const { error: errorLegajo } = await supabase.from("legajos").insert({
+      propiedad_id: propiedad.id,
+      inquilino_id: inquilino.id,
+      fecha_inicio: datos.inquilino.fecha_inicio,
+    });
+    if (errorLegajo) {
+      return {
+        ok: false,
+        error: "La propiedad quedó creada, pero no se pudo abrir el legajo — abrilo desde su detalle.",
+      };
+    }
+  }
+
   revalidatePath("/cartera/propiedades");
-  return { ok: true };
+  return { ok: true, data: { propiedadId: propiedad.id } };
 }
 
 export async function cambiarEstadoPropiedad(

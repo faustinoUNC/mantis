@@ -8,14 +8,17 @@ export function urlGoogleMaps(direccion: string): string {
 export function MapaDireccion({
   direccion,
   alto = 220,
+  punto,
 }: {
   direccion: string;
   alto?: number;
+  punto?: { lat: number; lon: number }; // coordenadas exactas (más preciso que buscar el texto)
 }) {
+  const consulta = punto ? `${punto.lat},${punto.lon}` : direccion;
   return (
     <iframe
       title={`Mapa de ${direccion}`}
-      src={`https://maps.google.com/maps?q=${encodeURIComponent(direccion)}&z=16&output=embed`}
+      src={`https://maps.google.com/maps?q=${encodeURIComponent(consulta)}&z=16&output=embed`}
       height={alto}
       loading="lazy"
       referrerPolicy="no-referrer-when-downgrade"

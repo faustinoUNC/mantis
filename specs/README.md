@@ -95,6 +95,8 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-919](STORY-919.md) | Retoques del dashboard de métricas (party mode): fix rechazos asignación + calificación, embudo→barras, reincidencia N+scroll, combo ingresos/volumen, quitar cobertura, gradiente de magnitud, fee demo | 🚧 en desarrollo |
 | [STORY-920](STORY-920.md) | Unificar card de cobro (Pendientes + Dinero pendiente → "Gestiones pendientes de cobro"), nueva card "Prioridad por valor" (fee mayor→menor), quitar pills "ahora" y filtro de especialidad, ensanchar "Composición del trabajo" | 🚧 en desarrollo |
 | [STORY-921](STORY-921.md) | "Métricas"→"Informes"; Cuellos y Tiempo de ciclo sin el tiempo de ejecución (depende del tamaño de obra); nueva métrica "Cumplimiento de plazo" por técnico (real vs plazo comprometido); label "Plazo de obra (días)" | 🚧 en desarrollo |
+| [STORY-922](STORY-922.md) | Alta unificada "Administración": wizard en `/cartera/nueva` (propietario + propiedad obligatorios, inquilino/legajo opcional) sobre las tablas existentes — sin entidad nueva ni migraciones | 🚧 en desarrollo |
+| [STORY-923](STORY-923.md) | CUIL como documento único (reemplaza DNI/CUIT en técnicos, propietarios e inquilinos): renombre de columnas + validación con dígito verificador | 🚧 en desarrollo |
 | [STORY-911](STORY-911.md) | Home del técnico: agrupación por etapa del trabajo + búsqueda + paginación "Mostrar más" + cards mobile | 🚧 en desarrollo |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.

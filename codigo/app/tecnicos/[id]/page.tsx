@@ -36,10 +36,10 @@ export default async function TecnicoDetallePage({
           <p className="text-sm text-muted mt-1">
             {tecnico.email}
             {tecnico.telefono && ` · ${tecnico.telefono}`}
-            {tecnico.dni && (
+            {tecnico.cuil && (
               <>
-                {" · DNI "}
-                <span className="font-mono text-[13px]">{tecnico.dni}</span>
+                {" · CUIL "}
+                <span className="font-mono text-[13px]">{tecnico.cuil}</span>
               </>
             )}
           </p>

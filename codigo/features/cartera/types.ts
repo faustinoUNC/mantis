@@ -3,11 +3,16 @@ export interface Persona {
   nombre: string;
   email: string;
   telefono: string | null;
-  documento: string | null; // cuit (propietarios) o dni (inquilinos)
+  documento: string | null; // cuil (CUIT/CUIL para propietarios, que pueden ser empresa)
   activo: boolean;
 }
 
 export type TipoPersona = "propietarios" | "inquilinos";
+
+// Referencia de persona para el alta de administración: existente o nueva.
+export type RefPersona =
+  | { id: string }
+  | { nueva: { nombre: string; email: string; telefono: string; cuil: string } };
 
 export interface Propiedad {
   id: string;

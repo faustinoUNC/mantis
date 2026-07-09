@@ -5,6 +5,7 @@ import { obtenerUsuarioActual } from "@/features/auth/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
+import { cuilValido, normalizarCuil } from "@/shared/utils/cuil";
 import type {
   EstadoTecnico,
   Franja,
@@ -56,7 +57,7 @@ interface DatosAlta {
   email: string;
   password: string;
   telefono: string;
-  dni: string;
+  cuil: string;
   especialidadIds: string[];
 }
 
@@ -66,7 +67,7 @@ function extraerDatos(form: FormData): DatosAlta {
     email: String(form.get("email") ?? "").trim().toLowerCase(),
     password: String(form.get("password") ?? ""),
     telefono: String(form.get("telefono") ?? "").trim(),
-    dni: String(form.get("dni") ?? "").trim(),
+    cuil: String(form.get("cuil") ?? "").trim(),
     especialidadIds: form.getAll("especialidades").map(String),
   };
 }
@@ -83,8 +84,11 @@ async function altaTecnico(
   if (datos.especialidadIds.length === 0) {
     return { ok: false, error: "Elegí al menos una especialidad." };
   }
-  if (!datos.dni) {
-    return { ok: false, error: "El DNI es obligatorio." };
+  if (!datos.cuil) {
+    return { ok: false, error: "El CUIL es obligatorio." };
+  }
+  if (!cuilValido(datos.cuil)) {
+    return { ok: false, error: "El CUIL no es válido (11 dígitos)." };
   }
   const docDniArchivo = form.get("doc_dni") as File | null;
   if (!docDniArchivo || docDniArchivo.size === 0) {
@@ -132,7 +136,7 @@ async function altaTecnico(
     nombre: datos.nombre,
     email: datos.email,
     telefono: datos.telefono || null,
-    dni: datos.dni,
+    cuil: normalizarCuil(datos.cuil),
     estado,
     doc_dni_path: docDni,
     doc_matricula_path: docMatricula,
@@ -252,7 +256,7 @@ export async function obtenerTecnico(
   const { data: t } = await supabase
     .from("tecnicos")
     .select(
-      "id, nombre, email, telefono, dni, estado, creado_en, motivo_rechazo, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidad_id, especialidades(nombre))"
+      "id, nombre, email, telefono, cuil, estado, creado_en, motivo_rechazo, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidad_id, especialidades(nombre))"
     )
     .eq("id", id)
     .single();
@@ -279,7 +283,7 @@ export async function obtenerTecnico(
     nombre: t.nombre,
     email: t.email,
     telefono: t.telefono,
-    dni: t.dni,
+    cuil: t.cuil,
     estado: t.estado as EstadoTecnico,
     creado_en: t.creado_en,
     motivo_rechazo: t.motivo_rechazo,
@@ -445,7 +449,7 @@ export async function miPerfilTecnico() {
   const { data: t } = await supabase
     .from("tecnicos")
     .select(
-      "nombre, email, telefono, dni, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidades(nombre))"
+      "nombre, email, telefono, cuil, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidades(nombre))"
     )
     .eq("id", user.id)
     .single();
@@ -456,7 +460,7 @@ export async function miPerfilTecnico() {
     nombre: t.nombre,
     email: t.email,
     telefono: t.telefono,
-    dni: t.dni,
+    cuil: t.cuil,
     tiene_dni: Boolean(t.doc_dni_path),
     tiene_matricula: Boolean(t.doc_matricula_path),
     especialidades: ((t.tecnico_especialidades as unknown as TE[]) ?? [])

@@ -72,7 +72,7 @@ export function TecnicoForm({
         <Input label="Correo electrónico" name="email" type="email" required placeholder="tu@correo.com" />
         <InputPassword label="Contraseña" name="password" required minLength={8} placeholder="Mínimo 8 caracteres" />
         <Input label="Teléfono" name="telefono" placeholder="Opcional" />
-        <Input label="DNI" name="dni" required inputMode="numeric" placeholder="Sin puntos, ej. 30123456" />
+        <Input label="CUIL" name="cuil" required inputMode="numeric" placeholder="Sin guiones, ej. 20301234567" />
       </div>
 
       <fieldset>

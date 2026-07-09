@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,8 +13,8 @@ import type { Persona, TipoPersona } from "@/features/cartera/types";
 type Config = { titulo: string; singular: string; docLabel: string };
 
 const CONFIG: Record<TipoPersona, Config> = {
-  propietarios: { titulo: "Propietarios", singular: "propietario", docLabel: "CUIT" },
-  inquilinos: { titulo: "Inquilinos", singular: "inquilino", docLabel: "DNI" },
+  propietarios: { titulo: "Propietarios", singular: "propietario", docLabel: "CUIT / CUIL" },
+  inquilinos: { titulo: "Inquilinos", singular: "inquilino", docLabel: "CUIL" },
 };
 
 function Formulario({
@@ -56,7 +55,7 @@ function Formulario({
       <Input label="Nombre" name="nombre" required defaultValue={persona?.nombre} placeholder="Nombre y apellido" />
       <Input label="Correo electrónico" name="email" type="email" required defaultValue={persona?.email} placeholder="correo@ejemplo.com" />
       <Input label="Teléfono" name="telefono" defaultValue={persona?.telefono ?? ""} placeholder="Opcional" />
-      <Input label={docLabel} name="documento" defaultValue={persona?.documento ?? ""} placeholder="Opcional" />
+      <Input label={docLabel} name="documento" inputMode="numeric" defaultValue={persona?.documento ?? ""} placeholder="11 dígitos, opcional" />
       {error && (
         <p role="alert" className="text-sm font-medium text-error sm:col-span-2 lg:col-span-4">
           {error}

@@ -103,15 +103,15 @@ begin
     (v_laura,  'Laura Benítez',    'ausitesis+demoadministrativolaura@gmail.com', 'gestor_administrativo', ts_alta + interval '40 minutes');
 
   -- ── Técnicos demo (aprobados: fila en tecnicos + usuarios; como el alta real) ──
-  insert into tecnicos (id, nombre, email, telefono, dni, estado, doc_dni_path, doc_matricula_path, creado_en) values
-    (t_raul,   'Raúl Medina',    'ausitesis+demotecnicoraul@gmail.com',   '351-6602211', '22345678', 'aprobado', t_raul   || '/dni.png', t_raul  || '/matricula.png', ts_alta + interval '2 days'),
-    (t_sergio, 'Sergio Álvarez', 'ausitesis+demotecnicosergio@gmail.com', '351-6602212', '25678901', 'aprobado', t_sergio || '/dni.png', t_sergio || '/matricula.png', ts_alta + interval '2 days 3 hours'),
-    (t_pablo,  'Pablo Castro',   'ausitesis+demotecnicopablo@gmail.com',  '351-6602213', '30123456', 'aprobado', t_pablo  || '/dni.png', null, ts_alta + interval '3 days'),
-    (t_andrea, 'Andrea Roldán',  'ausitesis+demotecnicaandrea@gmail.com', '351-6602214', '33456789', 'aprobado', t_andrea || '/dni.png', null, ts_alta + interval '3 days 5 hours'),
-    (t_jose,   'José Luna',      'ausitesis+demotecnicojose@gmail.com',   '351-6602215', '27890123', 'aprobado', t_jose   || '/dni.png', null, ts_alta + interval '4 days'),
-    (t_dario,  'Darío Peralta',  'ausitesis+demotecnicodario@gmail.com',  '351-6602216', '20987654', 'aprobado', t_dario  || '/dni.png', null, ts_alta + interval '4 days 2 hours'),
-    (t_fede,   'Federico Ibáñez','ausitesis+demotecnicofede@gmail.com',   '351-6602217', '36789012', 'pendiente', t_fede  || '/dni.png', null, now() - interval '4 days'),
-    (t_gaston, 'Gastón Vera',    'ausitesis+demotecnicogaston@gmail.com', '351-6602218', '31234567', 'rechazado', t_gaston || '/dni.png', null, now() - interval '20 days');
+  insert into tecnicos (id, nombre, email, telefono, cuil, estado, doc_dni_path, doc_matricula_path, creado_en) values
+    (t_raul,   'Raúl Medina',    'ausitesis+demotecnicoraul@gmail.com',   '351-6602211', '20223456783', 'aprobado', t_raul   || '/dni.png', t_raul  || '/matricula.png', ts_alta + interval '2 days'),
+    (t_sergio, 'Sergio Álvarez', 'ausitesis+demotecnicosergio@gmail.com', '351-6602212', '23256789019', 'aprobado', t_sergio || '/dni.png', t_sergio || '/matricula.png', ts_alta + interval '2 days 3 hours'),
+    (t_pablo,  'Pablo Castro',   'ausitesis+demotecnicopablo@gmail.com',  '351-6602213', '20301234563', 'aprobado', t_pablo  || '/dni.png', null, ts_alta + interval '3 days'),
+    (t_andrea, 'Andrea Roldán',  'ausitesis+demotecnicaandrea@gmail.com', '351-6602214', '27334567899', 'aprobado', t_andrea || '/dni.png', null, ts_alta + interval '3 days 5 hours'),
+    (t_jose,   'José Luna',      'ausitesis+demotecnicojose@gmail.com',   '351-6602215', '20278901239', 'aprobado', t_jose   || '/dni.png', null, ts_alta + interval '4 days'),
+    (t_dario,  'Darío Peralta',  'ausitesis+demotecnicodario@gmail.com',  '351-6602216', '20209876540', 'aprobado', t_dario  || '/dni.png', null, ts_alta + interval '4 days 2 hours'),
+    (t_fede,   'Federico Ibáñez','ausitesis+demotecnicofede@gmail.com',   '351-6602217', '20367890127', 'pendiente', t_fede  || '/dni.png', null, now() - interval '4 days'),
+    (t_gaston, 'Gastón Vera',    'ausitesis+demotecnicogaston@gmail.com', '351-6602218', '20312345677', 'rechazado', t_gaston || '/dni.png', null, now() - interval '20 days');
   update tecnicos set motivo_rechazo = 'La foto del DNI está ilegible; volvé a cargar la documentación.' where id = t_gaston;
 
   insert into usuarios (id, nombre, email, rol, creado_en)
@@ -142,13 +142,13 @@ begin
   from usuarios s where s.id = u.id and u.email like 'ausitesis+demo%' and s.rol <> 'tecnico';
 
   -- ── Cartera demo ──
-  insert into propietarios (nombre, email, telefono, cuit, creado_en) values
-    ('Alberto Sánchez',              'ausitesis+demopropietarioalberto@gmail.com', '351-5551201', '20-18345678-3', ts_alta),
-    ('Mónica Ferreyra',              'ausitesis+demopropietariamonica@gmail.com',  '351-5551202', '27-22456789-4', ts_alta),
-    ('Rodolfo Aguirre',              'ausitesis+demopropietariorodolfo@gmail.com', '351-5551203', '20-14567890-1', ts_alta),
-    ('Silvia Barrionuevo',           'ausitesis+demopropietariasilvia@gmail.com',  '351-5551204', '27-25678901-2', ts_alta),
-    ('Néstor Cabrera',               'ausitesis+demopropietarionestor@gmail.com',  '351-5551205', '20-20789012-5', ts_alta),
-    ('Sucesión de Elena Marchetti',  'ausitesis+demopropietariaelena@gmail.com',   '351-5551206', '23-08890123-9', ts_alta);
+  insert into propietarios (nombre, email, telefono, cuil, creado_en) values
+    ('Alberto Sánchez',              'ausitesis+demopropietarioalberto@gmail.com', '351-5551201', '20183456785', ts_alta),
+    ('Mónica Ferreyra',              'ausitesis+demopropietariamonica@gmail.com',  '351-5551202', '27224567893', ts_alta),
+    ('Rodolfo Aguirre',              'ausitesis+demopropietariorodolfo@gmail.com', '351-5551203', '20145678901', ts_alta),
+    ('Silvia Barrionuevo',           'ausitesis+demopropietariasilvia@gmail.com',  '351-5551204', '27256789014', ts_alta),
+    ('Néstor Cabrera',               'ausitesis+demopropietarionestor@gmail.com',  '351-5551205', '20207890120', ts_alta),
+    ('Sucesión de Elena Marchetti',  'ausitesis+demopropietariaelena@gmail.com',   '351-5551206', '23088901231', ts_alta);
   select array_agg(id order by creado_en, nombre) into po from propietarios where email like 'ausitesis+demo%';
   -- índice fijo por nombre (el array_agg de arriba no garantiza el orden de inserción)
   po[1] := (select id from propietarios where email like '%demopropietarioalberto%');
@@ -179,17 +179,17 @@ begin
     v_po_email[j] := (select p2.email from propietarios p2 join propiedades pp on pp.propietario_id = p2.id where pp.id = pr[j]);
   end loop;
 
-  insert into inquilinos (nombre, email, telefono, dni, creado_en) values
-    ('Lucía Herrera',   'ausitesis+demoinquilinalucia@gmail.com',    '351-7701301', '32456789', ts_alta),
-    ('Javier Sosa',     'ausitesis+demoinquilinojavier@gmail.com',   '351-7701302', '28901234', ts_alta),
-    ('Carolina Bustos', 'ausitesis+demoinquilinacarolina@gmail.com', '351-7701303', '35678901', ts_alta),
-    ('Matías Quiroga',  'ausitesis+demoinquilinomatias@gmail.com',   '351-7701304', '30234567', ts_alta),
-    ('Romina Díaz',     'ausitesis+demoinquilinaromina@gmail.com',   '351-7701305', '33890123', ts_alta),
-    ('Federico Torres', 'ausitesis+demoinquilinofederico@gmail.com', '351-7701306', '29456789', ts_alta),
-    ('Ana Villalba',    'ausitesis+demoinquilinaana@gmail.com',      '351-7701307', '36012345', ts_alta),
-    ('Diego Moyano',    'ausitesis+demoinquilinodiego@gmail.com',    '351-7701308', '27678901', ts_alta),
-    ('Paula Giordano',  'ausitesis+demoinquilinapaula@gmail.com',    '351-7701309', '34234567', ts_alta),
-    ('María Ledesma',   'ausitesis+demoinquilinamaria@gmail.com',    '351-7701310', '26890123', ts_alta);
+  insert into inquilinos (nombre, email, telefono, cuil, creado_en) values
+    ('Lucía Herrera',   'ausitesis+demoinquilinalucia@gmail.com',    '351-7701301', '27324567890', ts_alta),
+    ('Javier Sosa',     'ausitesis+demoinquilinojavier@gmail.com',   '351-7701302', '20289012347', ts_alta),
+    ('Carolina Bustos', 'ausitesis+demoinquilinacarolina@gmail.com', '351-7701303', '27356789011', ts_alta),
+    ('Matías Quiroga',  'ausitesis+demoinquilinomatias@gmail.com',   '351-7701304', '20302345679', ts_alta),
+    ('Romina Díaz',     'ausitesis+demoinquilinaromina@gmail.com',   '351-7701305', '27338901238', ts_alta),
+    ('Federico Torres', 'ausitesis+demoinquilinofederico@gmail.com', '351-7701306', '20294567896', ts_alta),
+    ('Ana Villalba',    'ausitesis+demoinquilinaana@gmail.com',      '351-7701307', '27360123451', ts_alta),
+    ('Diego Moyano',    'ausitesis+demoinquilinodiego@gmail.com',    '351-7701308', '20276789016', ts_alta),
+    ('Paula Giordano',  'ausitesis+demoinquilinapaula@gmail.com',    '351-7701309', '27342345676', ts_alta),
+    ('María Ledesma',   'ausitesis+demoinquilinamaria@gmail.com',    '351-7701310', '27268901235', ts_alta);
   inq[1] := (select id from inquilinos where email like '%demoinquilinalucia%');
   inq[2] := (select id from inquilinos where email like '%demoinquilinojavier%');
   inq[3] := (select id from inquilinos where email like '%demoinquilinacarolina%');
