@@ -508,7 +508,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     }
     return [...acum.entries()]
       .map(([tecnico, { total, n }]) => ({ tecnico, pct: Math.round((total / n) * 10) / 10, n }))
-      .sort((a, b) => a.pct - b.pct);
+      .sort((a, b) => b.pct - a.pct); // el que más se pasó (costó de más), arriba
   }, [filasEsp]);
   const nDesvio = desvio.reduce((s, d) => s + d.n, 0);
   const maxDesvio = Math.max(1, ...desvio.map((d) => Math.abs(d.pct)));
