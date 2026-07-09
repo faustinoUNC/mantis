@@ -125,6 +125,16 @@ function rangoCubos(primeraMs: number, ahora: number, gran: Gran): { key: string
   }
   return out;
 }
+// Recorta la serie de cubos a la ventana que se puede leer sin engañar: saca el
+// último cubo (período EN CURSO, siempre parcial → se desploma en falso) y los
+// cubos vacíos del arranque (antes del primer dato → eje muerto + tendencia
+// hundida por ceros que no son "cayó", sino "todavía no había sistema").
+function ventanaUtil<T extends { key: string }>(cubos: T[], acum: Map<string, unknown>): T[] {
+  const sinCurso = cubos.slice(0, -1);
+  const first = sinCurso.findIndex((c) => acum.has(c.key));
+  return first < 0 ? [] : sinCurso.slice(first);
+}
+
 // Regresión lineal (mínimos cuadrados) sobre el índice. Devuelve la línea
 // ajustada (yhat) y la pendiente m (cambio por cubo). null si hay pocos puntos.
 function tendencia(vals: number[]): { yhat: number[]; m: number } | null {
@@ -456,18 +466,18 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       acum.set(k, { total: cur.total + c.dias, n: cur.n + 1 });
     }
     const primera = Math.min(...cerradas.map((c) => c.fin));
-    const cubos = rangoCubos(desde ?? primera, ahora, gran);
-    const ultimo = cubos.length - 1; // el período en curso es parcial → fuera de la tendencia
+    // Se saca el período EN CURSO (último cubo, siempre parcial → cae en falso) y
+    // los cubos vacíos del arranque (antes del primer dato → ensucian el eje).
+    const cubos = ventanaUtil(rangoCubos(desde ?? primera, ahora, gran), acum);
     const dias = cubos.map((c) => {
       const a = acum.get(c.key);
       return a ? Math.round((a.total / a.n) * 10) / 10 : null;
     });
-    const completos = dias.slice(0, ultimo).filter((d): d is number => d != null);
+    const completos = dias.filter((d): d is number => d != null);
     const tend = tendencia(completos);
     let ti = 0;
-    const data = cubos.map((c, i) => ({ label: c.label, dias: dias[i], tend: i < ultimo && dias[i] != null && tend ? tend.yhat[ti++] : null }));
-    const nonEmpty = dias.filter((d) => d != null).length;
-    return { data, n: cerradas.length, pocos: nonEmpty < MIN_CUBOS_SERIE, diag: tend ? capTendencia(tend.m, gran, completos.length, "dias", false) : null };
+    const data = cubos.map((c, i) => ({ label: c.label, dias: dias[i], tend: dias[i] != null && tend ? tend.yhat[ti++] : null }));
+    return { data, n: cerradas.length, pocos: completos.length < MIN_CUBOS_SERIE, diag: tend ? capTendencia(tend.m, gran, completos.length, "dias", false) : null };
   }, [filasEsp, desde, gran, ahora, metricas.eventos, ejecucionPorGestion]);
 
   // ── Técnicos: Calificación + obras realizadas (todos los técnicos con obra o nota) ──
@@ -540,20 +550,21 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       acum.set(k, cur);
     }
     const primera = Math.min(...cobradas.map((f) => new Date(f.cobradoEn!).getTime()));
-    const cubos = rangoCubos(desde ?? primera, ahora, gran);
-    const ultimo = cubos.length - 1; // el período en curso es parcial → fuera de la tendencia
-    const nComplete = ultimo; // cubos usados en la tendencia
+    // Se saca el período EN CURSO (último cubo, parcial) y los cubos vacíos del
+    // arranque (los ceros de antes del primer cobro hundían la tendencia).
+    const cubos = ventanaUtil(rangoCubos(desde ?? primera, ahora, gran), acum);
+    const nComplete = cubos.length; // cubos usados en la tendencia
     // Tendencia POR serie (no del total): solo se muestra al aislar una serie.
-    const tendTec = tendencia(cubos.slice(0, ultimo).map((c) => acum.get(c.key)?.tecnico ?? 0));
-    const tendFee = tendencia(cubos.slice(0, ultimo).map((c) => acum.get(c.key)?.fee ?? 0));
-    const tendCant = tendencia(cubos.slice(0, ultimo).map((c) => acum.get(c.key)?.cant ?? 0));
+    const tendTec = tendencia(cubos.map((c) => acum.get(c.key)?.tecnico ?? 0));
+    const tendFee = tendencia(cubos.map((c) => acum.get(c.key)?.fee ?? 0));
+    const tendCant = tendencia(cubos.map((c) => acum.get(c.key)?.cant ?? 0));
     const data = cubos.map((c, i) => {
       const a = acum.get(c.key) ?? { tecnico: 0, fee: 0, cant: 0 };
       return {
         label: c.label, tecnico: a.tecnico, fee: a.fee, cant: a.cant,
-        tendTec: i < ultimo && tendTec ? tendTec.yhat[i] : null,
-        tendFee: i < ultimo && tendFee ? tendFee.yhat[i] : null,
-        tendCant: i < ultimo && tendCant ? tendCant.yhat[i] : null,
+        tendTec: tendTec ? tendTec.yhat[i] : null,
+        tendFee: tendFee ? tendFee.yhat[i] : null,
+        tendCant: tendCant ? tendCant.yhat[i] : null,
       };
     });
     const nonEmpty = cubos.filter((c) => acum.has(c.key)).length;
@@ -880,7 +891,10 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
                 <CartesianGrid stroke={GRID} horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v}%`} />
                 <YAxis type="category" dataKey="tecnico" width={96} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => <p className="text-muted">{p[0].value > 0 ? "+" : ""}{p[0].value}% de desvío</p>} />} />
+                <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => {
+                  const v = Number(p[0].value);
+                  return <p className="text-muted">{v > 0 ? `Costó ${v}% más que lo presupuestado` : v < 0 ? `Costó ${Math.abs(v)}% menos que lo presupuestado` : "Costó lo presupuestado"}</p>;
+                }} />} />
                 <Bar dataKey="pct" radius={[0, 4, 4, 0]} maxBarSize={18}>
                   {desvio.map((d) => (<Cell key={d.tecnico} fill={rampaMagnitud(Math.abs(d.pct) / maxDesvio)} />))}
                 </Bar>

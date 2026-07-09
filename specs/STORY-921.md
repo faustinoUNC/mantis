@@ -65,3 +65,9 @@ Fausti vio "Cumplimiento de plazo" como "pirámide invertida": todos los técnic
 - **Orden descendente:** el que más se pasó, arriba (era ascendente).
 - **Leyenda** bajo el gráfico: "Se pasó del plazo · Cumplió o se adelantó · 0% = justo en fecha". Tooltip reescrito ("Tardó X% más" / "Terminó X% antes" / "Justo en el plazo").
 - Verificación: `tsc`+eslint+`next build` verdes; spread confirmado por SQL (+31,8% tecnicodos … −23,9% Raúl Medina).
+
+## Segunda tanda de retoques (2026-07-09, revisión de Fausti)
+- **Tooltip explicativo en "Cumplimiento de presupuesto"** (mismo estilo que plazo): "Costó X% más/menos que lo presupuestado" / "Costó lo presupuestado".
+- **Período en curso ya no se dibuja en las series temporales** (Tiempo de ciclo + Ingresos/Gestiones cobradas). El último cubo es siempre parcial → la línea se desplomaba en falso al final. Ya se excluía de la *tendencia*; ahora también de la *línea*. Nuevo helper `ventanaUtil(cubos, acum)`: recorta el cubo en curso (último) **y** los cubos vacíos del arranque (los ceros de antes del primer dato hundían la tendencia de "Gestiones cobradas" y la hacían arrancar negativa). Aplicado en los memos `ciclo` y `dinero`.
+- **Tooltip de las tiles del Inicio** (`inicio-rol.tsx`): el `title` nativo (delay ~1s, poco fiable) → tooltip CSS propia on-brand (inmediata, `group/tip` + `group-hover/tip:block`) en el ⓘ. Afecta a "Urgentes sin asignar" y cualquier tile con `hint`.
+- Verificación: `tsc`+eslint+`next build` verdes.

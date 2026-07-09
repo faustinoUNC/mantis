@@ -69,9 +69,16 @@ export function InicioRol({
               }`}
             >
               <div className="flex items-center gap-1">
-                <p className="text-[13px] font-medium text-muted" title={t.hint}>
+                <p className="text-[13px] font-medium text-muted flex items-center">
                   {t.label}
-                  {t.hint && <span className="ml-1 text-muted/50 cursor-help">ⓘ</span>}
+                  {t.hint && (
+                    <span className="relative group/tip ml-1 inline-flex">
+                      <span className="text-muted/50 cursor-help">ⓘ</span>
+                      <span className="pointer-events-none absolute left-1/2 bottom-full z-20 mb-1.5 hidden group-hover/tip:block w-max max-w-[220px] -translate-x-1/2 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12px] font-normal leading-snug text-foreground shadow-overlay">
+                        {t.hint}
+                      </span>
+                    </span>
+                  )}
                 </p>
                 {t.href && (
                   <span className="ml-auto text-muted/50 group-hover:text-brand transition-colors">
