@@ -23,8 +23,8 @@ import type { Metricas } from "@/features/metricas/service";
 
 // STORY-914/919 — Dashboard de métricas graficadas, organizado en bloques
 // temáticos (las relacionadas, juntas). Desktop-first (no lo ve el técnico).
-// Filtros client-side (especialidad + período); el período decide la
-// granularidad temporal (semana/mes). Colores del contract: esmeralda=marca,
+// Filtro client-side por período; el período decide la granularidad
+// temporal (semana/mes). Colores del contract: esmeralda=marca,
 // ámbar=urgente, rojo=error + una escala de magnitud propia (verde→terracota)
 // para "empeora", que NO usa el rojo de error.
 
@@ -293,7 +293,6 @@ function MetricCard({
 }
 
 export function PanelMetricas({ metricas }: { metricas: Metricas }) {
-  const [esp, setEsp] = useState("todas");
   const [periodoId, setPeriodoId] = useState("ano");
   const [ahora] = useState(() => Date.now());
   // Series ocultables del gráfico de ingresos (click en la leyenda para aislar).
@@ -307,10 +306,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   const desde = periodo.dias ? ahora - periodo.dias * 24 * 3600 * 1000 : null;
   const gran = periodo.gran;
 
-  const filasEsp = useMemo(
-    () => metricas.filas.filter((f) => esp === "todas" || f.especialidad === esp),
-    [metricas.filas, esp]
-  );
+  const filasEsp = metricas.filas;
   const filas = useMemo(
     () => filasEsp.filter((f) => !desde || new Date(f.creadoEn).getTime() >= desde),
     [filasEsp, desde]
@@ -358,6 +354,25 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         }))
         .sort((a, b) => b.dias - a.dias),
     [filasEsp, ultimaTransicion, ahora]
+  );
+
+  // ── Hoy: Prioridad por valor (fee ya determinado, mayor→menor) ──
+  // El fee (cargo_admin) se ancla al aprobar el presupuesto → aparece de
+  // en_ejecucion en adelante (+ presupuesto con PDF borrador). Ordena por
+  // plata para la casa: qué gestión activa conviene no dejar caer.
+  const porFee = useMemo(
+    () =>
+      filasEsp
+        .filter((f) => f.etapa !== "finalizado" && f.etapa !== "cancelada" && Number(f.cargoAdmin ?? 0) > 0)
+        .map((f) => ({
+          id: f.id,
+          direccion: f.direccion ?? f.descripcion,
+          descripcion: f.descripcion,
+          etapa: ETAPA_LABEL[f.etapa] ?? f.etapa,
+          fee: Number(f.cargoAdmin ?? 0),
+        }))
+        .sort((a, b) => b.fee - a.fee),
+    [filasEsp]
   );
 
   // ── Flujo: Embudo de conversión + cancelación ──
@@ -560,18 +575,13 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   return (
     <section>
       <RefrescoVivo tabla="calificaciones" />
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div className="mb-5">
         <h2 className="text-[15px] font-semibold tracking-tight">Métricas</h2>
-        {/* La especialidad filtra TODO; el período solo la caja "En el período". */}
-        <select value={esp} onChange={(e) => setEsp(e.target.value)} className="text-sm bg-surface border border-border rounded-md px-2.5 py-1.5">
-          <option value="todas">Todas las especialidades</option>
-          {metricas.especialidades.map((e) => (<option key={e} value={e}>{e}</option>))}
-        </select>
       </div>
 
       {/* ══ 1. Para resolver hoy ══ */}
       <Bloque titulo="Para resolver hoy">
-        <MetricCard titulo="Gestiones estancadas" ayuda="Gestiones activas frenadas hace un día o más en su etapa — qué destrabar primero." n={estancadas.n} humildad={false} alcance="ahora">
+        <MetricCard titulo="Gestiones estancadas" ayuda="Gestiones activas frenadas hace un día o más en su etapa — qué destrabar primero." n={estancadas.n} humildad={false}>
           <ul className="divide-y divide-border max-h-72 overflow-y-auto">
             {estancadas.lista.map((g) => (
               <FilaAccionable key={g.id} id={g.id} principal={g.direccion} secundario={`${g.etapa} · ${g.descripcion}`} dato={g.dias === 1 ? "1 día" : `${g.dias} días`} alerta={g.dias >= DIAS_ESTANCADA_AMBAR} color={rampaMagnitud(g.dias / estancadas.max)} />
@@ -579,52 +589,53 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           </ul>
         </MetricCard>
 
-        <MetricCard titulo="Pendientes de cobro" ayuda="Facturas esperando cobro y hace cuánto — cuáles reclamar antes de que envejezcan." n={cobranza.length} humildad={false} alcance="ahora">
+        {/* Cobro unificado: resumen de plata (barra "Por cobrar") + lista de las
+            gestiones en cobro + footer con lo que falta liquidar a técnicos. */}
+        <MetricCard titulo="Gestiones pendientes de cobro" ayuda="Facturas esperando cobro: cuánta plata hay y hace cuánto espera cada una — qué reclamar antes de que envejezca." n={cobranza.length} humildad={false}>
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-sm text-muted">Por cobrar · {pendiente.nCobrar} gestión{pendiente.nCobrar === 1 ? "" : "es"}</span>
+                <span className="text-xl font-semibold tabular-nums">{plata(pendiente.cobrarTotal)}</span>
+              </div>
+              {pendiente.cobrarTotal > 0 && (
+                <>
+                  <div className="flex h-3 rounded-full overflow-hidden mt-2 bg-surface-2">
+                    <div style={{ width: `${(pendiente.cobrarTrabajo / pendiente.cobrarTotal) * 100}%`, background: BRAND }} />
+                    <div style={{ width: `${(pendiente.cobrarFee / pendiente.cobrarTotal) * 100}%`, background: AMBAR }} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 mt-2 text-[12px] text-muted">
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} />A técnicos {plata(pendiente.cobrarTrabajo)}</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: AMBAR }} />Fee de la casa {plata(pendiente.cobrarFee)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+            {cobranza.length > 0 && (
+              <ul className="divide-y divide-border border-t border-border max-h-72 overflow-y-auto">
+                {cobranza.map((c) => (
+                  <FilaAccionable key={c.id} id={c.id} principal={c.direccion} secundario={`${plata(c.monto)} · ${c.descripcion}`} dato={c.dias === 1 ? "1 día" : `${c.dias} días`} alerta={c.dias >= DIAS_COBRO_AMBAR} />
+                ))}
+              </ul>
+            )}
+            {pendiente.nLiquidar > 0 && (
+              <div className="pt-3 border-t border-border flex items-baseline justify-between gap-2">
+                <span className="text-[12px] text-muted">Por liquidar a técnicos · {pendiente.nLiquidar} gestión{pendiente.nLiquidar === 1 ? "" : "es"} <span className="opacity-70">(ya cobradas)</span></span>
+                <span className="text-sm font-medium tabular-nums text-muted">{plata(pendiente.liquidar)}</span>
+              </div>
+            )}
+          </div>
+        </MetricCard>
+      </Bloque>
+
+      {/* ══ 2. Prioridad por valor — dónde está la plata (fee) de la casa ══ */}
+      <Bloque titulo="Prioridad por valor" cols={1}>
+        <MetricCard titulo="Prioridad por valor" ayuda="Gestiones activas con fee ya definido, de mayor a menor — dónde está la plata que la casa va a ganar, para no dejarla caer en el camino." n={porFee.length} humildad={false}>
           <ul className="divide-y divide-border max-h-72 overflow-y-auto">
-            {cobranza.map((c) => (
-              <FilaAccionable key={c.id} id={c.id} principal={c.direccion} secundario={`${plata(c.monto)} · ${c.descripcion}`} dato={c.dias === 1 ? "1 día" : `${c.dias} días`} alerta={c.dias >= DIAS_COBRO_AMBAR} />
+            {porFee.map((g) => (
+              <FilaAccionable key={g.id} id={g.id} principal={g.direccion} secundario={`${g.etapa} · ${g.descripcion}`} dato={plata(g.fee)} alerta={false} color={BRAND} />
             ))}
           </ul>
-        </MetricCard>
-
-        <MetricCard
-          titulo="Dinero pendiente"
-          ayuda="Plata en el circuito ahora: lo que falta cobrar (y cuánto de eso es fee de la casa) y lo que falta pagarles a los técnicos."
-          n={pendiente.nCobrar + pendiente.nLiquidar}
-          humildad={false}
-          alcance="ahora"
-        >
-          {pendiente.nCobrar + pendiente.nLiquidar === 0 ? (
-            <p className="text-sm text-muted py-16 text-center">No hay plata pendiente en el circuito.</p>
-          ) : (
-            <div className="space-y-5 pt-1">
-              <div>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm text-muted">Por cobrar · {pendiente.nCobrar} gestión{pendiente.nCobrar === 1 ? "" : "es"}</span>
-                  <span className="text-xl font-semibold tabular-nums">{plata(pendiente.cobrarTotal)}</span>
-                </div>
-                {pendiente.cobrarTotal > 0 && (
-                  <>
-                    <div className="flex h-3 rounded-full overflow-hidden mt-2 bg-surface-2">
-                      <div style={{ width: `${(pendiente.cobrarTrabajo / pendiente.cobrarTotal) * 100}%`, background: BRAND }} />
-                      <div style={{ width: `${(pendiente.cobrarFee / pendiente.cobrarTotal) * 100}%`, background: AMBAR }} />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-4 mt-2 text-[12px] text-muted">
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} />A técnicos {plata(pendiente.cobrarTrabajo)}</span>
-                      <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: AMBAR }} />Fee de la casa {plata(pendiente.cobrarFee)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="pt-3 border-t border-border">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm text-muted">Por liquidar a técnicos · {pendiente.nLiquidar} gestión{pendiente.nLiquidar === 1 ? "" : "es"}</span>
-                  <span className="text-xl font-semibold tabular-nums">{plata(pendiente.liquidar)}</span>
-                </div>
-                <p className="text-[12px] text-muted mt-1">Ya cobradas, esperando el pago al técnico.</p>
-              </div>
-            </div>
-          )}
         </MetricCard>
       </Bloque>
 
@@ -766,13 +777,13 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       </Bloque>
 
       {/* ══ Perfil del trabajo (según el período) ══ */}
-      <Bloque titulo="Perfil del trabajo">
+      <Bloque titulo="Perfil del trabajo" cols={1}>
         <MetricCard titulo="Composición del trabajo" ayuda="Por qué entra el trabajo y quién lo paga — con qué tipo de gestión se llena la agenda." n={filas.length}>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
             {(["causa", "pagador"] as const).map((clave) => (
               <div key={clave}>
                 <p className="text-[12px] text-muted text-center mb-1 capitalize">{clave}</p>
-                <ResponsiveContainer width="100%" height={160}>
+                <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
                     <Pie data={composicion[clave]} dataKey="value" nameKey="name" innerRadius={34} outerRadius={58} paddingAngle={2}>
                       {composicion[clave].map((_, i) => (<Cell key={i} fill={donutColores[i % donutColores.length]} />))}
