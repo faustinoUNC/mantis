@@ -503,7 +503,10 @@ export async function responderAsignacion(
   });
   if (error) return { ok: false, error: "No se pudo responder la asignación." };
   if (acepta) await emailEstadoGestion(gestionId, "tecnico_asignado");
-  refrescarTablero(gestionId);
+  // Al rechazar, el RPC pone tecnico_id = null y la RLS deja de mostrarle la
+  // gestión al técnico: revalidar el detalle re-renderizaría un 404 debajo
+  // suyo. Solo tableros; el cliente lo lleva a /tecnico.
+  refrescarTablero(acepta ? gestionId : undefined);
   return { ok: true };
 }
 

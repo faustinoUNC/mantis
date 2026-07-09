@@ -4,9 +4,29 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/features/empleados/types";
 import { createClient } from "@/shared/lib/supabase/server";
 import { cuilValido, normalizarCuil } from "@/shared/utils/cuil";
+import { normalizarTelefono } from "@/shared/utils/telefono";
 import type { Legajo, Persona, Propiedad, RefPersona, TipoPersona } from "./types";
 
 // RLS staff-only hace cumplir los permisos en las 4 tablas de cartera.
+
+// Cuenta gestiones no terminales por propiedad o legajo, para bloquear bajas
+// (STORY-924). Admin client (defensa en profundidad estilo datosResumen): la
+// RLS limita al gestor de mantenimiento a SUS gestiones y acá hay que ver las
+// de todos; los ids vienen de lecturas de cartera con el client de sesión.
+async function contarGestionesAbiertas(
+  columna: "propiedad_id" | "legajo_id",
+  ids: string[]
+): Promise<number> {
+  if (ids.length === 0) return 0;
+  const { createAdminClient } = await import("@/shared/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("gestiones")
+    .select("id", { count: "exact", head: true })
+    .in(columna, ids)
+    .not("etapa", "in", "(finalizado,cancelada)");
+  return count ?? 0;
+}
 
 // ── Propietarios e inquilinos (misma forma, tablas separadas) ──
 
@@ -31,7 +51,7 @@ export async function guardarPersona(
   const fila = {
     nombre: datos.nombre,
     email: datos.email,
-    telefono: datos.telefono || null,
+    telefono: normalizarTelefono(datos.telefono) || null,
     cuil: datos.documento ? normalizarCuil(datos.documento) : null,
   };
   const { error } = id
@@ -48,6 +68,50 @@ export async function cambiarEstadoPersona(
   activo: boolean
 ): Promise<ActionResult> {
   const supabase = await createClient();
+
+  // Baja con validación de negocio (STORY-924); reactivar no valida nada.
+  if (!activo) {
+    if (tipo === "inquilinos") {
+      const { data: legajos } = await supabase
+        .from("legajos")
+        .select("id, fecha_fin")
+        .eq("inquilino_id", id);
+      if ((legajos ?? []).some((l) => l.fecha_fin === null)) {
+        return {
+          ok: false,
+          error: "Tiene un legajo vigente — cerralo desde la propiedad antes de desactivarlo.",
+        };
+      }
+      // legajo_id de la gestión es snapshot: un legajo ya cerrado puede
+      // tener una gestión viva, por eso se miran TODOS sus legajos.
+      const abiertas = await contarGestionesAbiertas(
+        "legajo_id",
+        (legajos ?? []).map((l) => l.id)
+      );
+      if (abiertas > 0) {
+        return {
+          ok: false,
+          error: `Tiene ${abiertas} gestión(es) abierta(s) — finalizalas o cancelalas antes de desactivarlo.`,
+        };
+      }
+    } else {
+      const { data: propiedades } = await supabase
+        .from("propiedades")
+        .select("id")
+        .eq("propietario_id", id);
+      const abiertas = await contarGestionesAbiertas(
+        "propiedad_id",
+        (propiedades ?? []).map((p) => p.id)
+      );
+      if (abiertas > 0) {
+        return {
+          ok: false,
+          error: `Tiene ${abiertas} gestión(es) abierta(s) en sus propiedades — finalizalas o cancelalas antes de desactivarlo.`,
+        };
+      }
+    }
+  }
+
   const { error } = await supabase.from(tipo).update({ activo }).eq("id", id);
   if (error) return { ok: false, error: "No se pudo actualizar el estado." };
   revalidatePath(`/cartera/${tipo}`);
@@ -111,7 +175,7 @@ async function resolverPersona(
     .insert({
       nombre: ref.nueva.nombre,
       email: ref.nueva.email,
-      telefono: ref.nueva.telefono || null,
+      telefono: normalizarTelefono(ref.nueva.telefono) || null,
       cuil: ref.nueva.cuil ? normalizarCuil(ref.nueva.cuil) : null,
     })
     .select("id")
@@ -181,6 +245,15 @@ export async function cambiarEstadoPropiedad(
   activa: boolean
 ): Promise<ActionResult> {
   const supabase = await createClient();
+  if (!activa) {
+    const abiertas = await contarGestionesAbiertas("propiedad_id", [id]);
+    if (abiertas > 0) {
+      return {
+        ok: false,
+        error: `La propiedad tiene ${abiertas} gestión(es) abierta(s) — finalizalas o cancelalas antes de desactivarla.`,
+      };
+    }
+  }
   const { error } = await supabase
     .from("propiedades")
     .update({ activa })
@@ -245,6 +318,24 @@ export async function cerrarLegajo(
   fechaFin: string
 ): Promise<ActionResult> {
   const supabase = await createClient();
+
+  // El caller debe poder VER el legajo según RLS antes de contar gestiones
+  // con el admin client (mismo criterio que datosResumen).
+  const { data: visible } = await supabase
+    .from("legajos")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!visible) return { ok: false, error: "No se pudo cerrar el legajo." };
+
+  const abiertas = await contarGestionesAbiertas("legajo_id", [id]);
+  if (abiertas > 0) {
+    return {
+      ok: false,
+      error: `El legajo tiene ${abiertas} gestión(es) abierta(s) — finalizalas o cancelalas antes de cerrarlo.`,
+    };
+  }
+
   const { error } = await supabase
     .from("legajos")
     .update({ fecha_fin: fechaFin })

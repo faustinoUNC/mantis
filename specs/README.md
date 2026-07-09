@@ -97,6 +97,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-921](STORY-921.md) | "Métricas"→"Informes"; Cuellos y Tiempo de ciclo sin el tiempo de ejecución (depende del tamaño de obra); nueva métrica "Cumplimiento de plazo" por técnico (real vs plazo comprometido); label "Plazo de obra (días)" | 🚧 en desarrollo |
 | [STORY-922](STORY-922.md) | Alta unificada "Administración": wizard en `/cartera/nueva` (propietario + propiedad obligatorios, inquilino/legajo opcional) sobre las tablas existentes — sin entidad nueva ni migraciones | ✅ done |
 | [STORY-923](STORY-923.md) | CUIL como documento único (reemplaza DNI/CUIT en técnicos, propietarios e inquilinos): renombre de columnas + validación con dígito verificador | ✅ done |
+| [STORY-924](STORY-924.md) | Bugs: 404 al rechazar asignación (RLS + revalidate), teléfonos solo numéricos (3 forms + services) y bloqueo de bajas de cartera con gestiones abiertas (party mode: inquilino vía legajos, propietario vía propiedades, legajo vía legajo_id) | 🚧 en desarrollo |
 | [STORY-911](STORY-911.md) | Home del técnico: agrupación por etapa del trabajo + búsqueda + paginación "Mostrar más" + cards mobile | 🚧 en desarrollo |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.

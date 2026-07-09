@@ -54,7 +54,7 @@ function Formulario({
     <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">
       <Input label="Nombre" name="nombre" required defaultValue={persona?.nombre} placeholder="Nombre y apellido" />
       <Input label="Correo electrónico" name="email" type="email" required defaultValue={persona?.email} placeholder="correo@ejemplo.com" />
-      <Input label="Teléfono" name="telefono" defaultValue={persona?.telefono ?? ""} placeholder="Opcional" />
+      <Input label="Teléfono" name="telefono" inputMode="numeric" defaultValue={persona?.telefono ?? ""} placeholder="Opcional, solo números" onChange={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ""); }} />
       <Input label={docLabel} name="documento" inputMode="numeric" defaultValue={persona?.documento ?? ""} placeholder="11 dígitos, opcional" />
       {error && (
         <p role="alert" className="text-sm font-medium text-error sm:col-span-2 lg:col-span-4">
@@ -78,6 +78,7 @@ function Formulario({
 function Fila({ tipo, persona }: { tipo: TipoPersona; persona: Persona }) {
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (editando) {
     return (
@@ -109,12 +110,19 @@ function Fila({ tipo, persona }: { tipo: TipoPersona; persona: Persona }) {
           className="min-h-0 h-8 px-2.5 text-sm"
           onClick={async () => {
             setGuardando(true);
-            await cambiarEstadoPersona(tipo, persona.id, !persona.activo);
+            setError(null);
+            const r = await cambiarEstadoPersona(tipo, persona.id, !persona.activo);
+            if (!r.ok) setError(r.error);
             setGuardando(false);
           }}
         >
           {persona.activo ? "Desactivar" : "Reactivar"}
         </Button>
+        {error && (
+          <p role="alert" className="text-[13px] font-medium text-error mt-1 whitespace-normal">
+            {error}
+          </p>
+        )}
       </td>
     </tr>
   );

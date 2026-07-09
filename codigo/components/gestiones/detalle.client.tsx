@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EnvioDocumento } from "@/components/gestiones/envio-documento.client";
 import { EtapaStepper } from "@/components/gestiones/etapa-stepper.client";
@@ -409,15 +410,19 @@ function AccionAsignar({
 function AccionResponderAsignacion({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const [rechazando, setRechazando] = useState(false);
+  const router = useRouter();
 
   if (rechazando) {
     return (
       <form
         className="flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           const motivo = String(new FormData(e.currentTarget).get("motivo"));
-          correr(() => responderAsignacion(gestion.id, false, motivo));
+          // Tras el rechazo esta gestión deja de ser visible para el técnico
+          // (RLS): hay que salir del detalle antes de que se re-renderice.
+          const ok = await correr(() => responderAsignacion(gestion.id, false, motivo));
+          if (ok) router.push("/tecnico");
         }}
       >
         <div className="flex-1 min-w-52">

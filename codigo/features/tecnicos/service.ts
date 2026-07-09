@@ -7,6 +7,7 @@ import type { ActionResult } from "@/features/empleados/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 import { cuilValido, normalizarCuil } from "@/shared/utils/cuil";
+import { normalizarTelefono } from "@/shared/utils/telefono";
 import type {
   EstadoTecnico,
   Franja,
@@ -67,7 +68,7 @@ function extraerDatos(form: FormData): DatosAlta {
     nombre: String(form.get("nombre") ?? "").trim(),
     email: String(form.get("email") ?? "").trim().toLowerCase(),
     password: String(form.get("password") ?? ""),
-    telefono: String(form.get("telefono") ?? "").trim(),
+    telefono: normalizarTelefono(String(form.get("telefono") ?? "")),
     cuil: String(form.get("cuil") ?? "").trim(),
     especialidadIds: form.getAll("especialidades").map(String),
   };
