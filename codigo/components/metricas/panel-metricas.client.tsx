@@ -527,13 +527,13 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     }
     return [...acum.entries()]
       .map(([tecnico, { total, n }]) => ({ tecnico, pct: Math.round((total / n) * 10) / 10, n }))
+      .filter((d) => d.pct > 0) // solo los que se pasaron; cumplir/adelantarse no es accionable
       .sort((a, b) => b.pct - a.pct); // el que más se pasó, arriba
   }, [filasEsp, ejecucionPorGestion]);
   const nDesvioPlazo = desvioPlazo.reduce((s, d) => s + d.n, 0);
-  // Color con signo: se pasó (pct>0) = rampa cálida según cuánto; cumplió/se
-  // adelantó (pct<=0) = teal calmo. NO es magnitud absoluta (adelantarse no es malo).
-  const maxPlazoPos = Math.max(1, ...desvioPlazo.filter((d) => d.pct > 0).map((d) => d.pct));
-  const colorPlazo = (pct: number) => (pct <= 0 ? "rgb(13, 148, 136)" : rampaMagnitud(0.45 + 0.55 * Math.min(1, pct / maxPlazoPos)));
+  // Todos se pasaron (pct>0): rampa cálida según cuánto (ámbar→terracota).
+  const maxPlazoPos = Math.max(1, ...desvioPlazo.map((d) => d.pct));
+  const colorPlazo = (pct: number) => rampaMagnitud(0.5 + 0.5 * Math.min(1, pct / maxPlazoPos));
 
   // ── Dinero: ingresos $ + gestiones cobradas por cubo (dos series, dos tarjetas) ──
   const dinero = useMemo(() => {
@@ -903,30 +903,23 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           )}
         </MetricCard>
 
-        <MetricCard titulo="Cumplimiento de plazo" ayuda="Cuánto se desvía la obra del plazo que el técnico comprometió — quién cumple los tiempos que promete." n={nDesvioPlazo} alcance="historico">
+        <MetricCard titulo="Se pasaron del plazo" ayuda="Técnicos que tardaron más de lo que comprometieron y cuánto — a quién seguirle los tiempos (los que cumplen o se adelantan no se listan)." n={nDesvioPlazo} alcance="historico">
           {desvioPlazo.length === 0 ? (
-            <p className="text-sm text-muted py-16 text-center">Faltan obras con plazo y ejecución medida.</p>
+            <p className="text-sm text-muted py-16 text-center">Ningún técnico se pasó del plazo que comprometió.</p>
           ) : (
             <>
               <ResponsiveContainer width="100%" height={Math.max(160, desvioPlazo.length * 42)}>
                 <BarChart data={desvioPlazo} layout="vertical" margin={{ left: 12, right: 24 }}>
                   <CartesianGrid stroke={GRID} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v}%`} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} tickFormatter={(v: number) => `+${v}%`} />
                   <YAxis type="category" dataKey="tecnico" width={96} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => {
-                    const v = Number(p[0].value);
-                    return <p className="text-muted">{v > 0 ? `Tardó ${v}% más de lo prometido` : v < 0 ? `Terminó ${Math.abs(v)}% antes de lo prometido` : "Justo en el plazo"}</p>;
-                  }} />} />
+                  <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => <p className="text-muted">Tardó {Number(p[0].value)}% más de lo que prometió</p>} />} />
                   <Bar dataKey="pct" radius={[0, 4, 4, 0]} maxBarSize={18}>
                     {desvioPlazo.map((d) => (<Cell key={d.tecnico} fill={colorPlazo(d.pct)} />))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12px] text-muted">
-                <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: MAGNITUD_PEOR }} />Se pasó del plazo</span>
-                <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "rgb(13, 148, 136)" }} />Cumplió o se adelantó</span>
-                <span>· 0 % = justo en fecha</span>
-              </div>
+              <p className="text-[12px] text-muted mt-2">Más intenso = más se pasó del plazo comprometido.</p>
             </>
           )}
         </MetricCard>
