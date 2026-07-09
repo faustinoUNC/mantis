@@ -15,7 +15,7 @@ import { crearGestion } from "@/features/gestiones/service";
 import type { GestionResumen, Urgencia, Causa } from "@/features/gestiones/types";
 import { ETAPAS, LABEL_CAUSA } from "@/features/gestiones/types";
 import { cn } from "@/shared/utils/cn";
-import { coincideTexto } from "@/shared/utils/filtros";
+import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 
 // Columnas accionables por rol (visual; el permiso real vive en avanzar_etapa)
 const COLUMNAS_MANTENIMIENTO = new Set([
@@ -157,6 +157,15 @@ function FormNueva({
   );
 }
 
+const CAMPOS_BUSQUEDA: CampoBusqueda<GestionResumen>[] = [
+  { id: "descripcion", label: "Descripción", de: (g) => [g.descripcion] },
+  { id: "direccion", label: "Dirección", de: (g) => [g.direccion] },
+  { id: "propietario", label: "Propietario", de: (g) => [g.propietario_nombre] },
+  { id: "inquilino", label: "Inquilino", de: (g) => [g.inquilino_nombre] },
+  { id: "especialidad", label: "Especialidad", de: (g) => [g.especialidad] },
+  { id: "tecnico", label: "Técnico", de: (g) => [g.tecnico_nombre] },
+];
+
 export function Tablero({
   gestiones,
   rol,
@@ -170,6 +179,7 @@ export function Tablero({
 }) {
   const [creando, setCreando] = useState(false);
   const [consulta, setConsulta] = useState("");
+  const [campo, setCampo] = useState("todo");
   const [gestor, setGestor] = useState("");
   const [orden, setOrden] = useState<"desc" | "asc">("desc");
   const puedeCrear = rol === "administrador" || rol === "gestor_mantenimiento";
@@ -187,15 +197,7 @@ export function Tablero({
       gestiones
         .filter(
           (g) =>
-            coincideTexto(
-              consulta,
-              g.descripcion,
-              g.direccion,
-              g.especialidad,
-              g.tecnico_nombre,
-              g.propietario_nombre,
-              g.inquilino_nombre
-            ) &&
+            coincideCampo(consulta, campo, CAMPOS_BUSQUEDA, g) &&
             (gestor === "" || g.gestor_nombre === gestor)
         )
         .sort((a, b) =>
@@ -203,7 +205,7 @@ export function Tablero({
             ? b.creado_en.localeCompare(a.creado_en)
             : a.creado_en.localeCompare(b.creado_en)
         ),
-    [gestiones, consulta, gestor, orden]
+    [gestiones, consulta, campo, gestor, orden]
   );
 
   return (
@@ -234,7 +236,9 @@ export function Tablero({
       <FiltrosLista
         consulta={consulta}
         onConsulta={setConsulta}
-        placeholder="Buscar por descripción, dirección, especialidad, técnico, propietario o inquilino…"
+        campos={CAMPOS_BUSQUEDA}
+        campo={campo}
+        onCampo={setCampo}
         extra={
           <>
             <div className="w-52">

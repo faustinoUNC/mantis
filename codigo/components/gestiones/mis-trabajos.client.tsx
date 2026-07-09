@@ -6,11 +6,11 @@ import { createPortal } from "react-dom";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { Icono } from "@/components/ui/iconos";
-import { Input } from "@/components/ui/input";
 import type { GestionResumen } from "@/features/gestiones/types";
 import { cn } from "@/shared/utils/cn";
-import { coincideTexto } from "@/shared/utils/filtros";
+import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 
 const POR_PAGINA = 5;
 
@@ -313,6 +313,12 @@ function FilaEtapa({
 
 // ── Home ──────────────────────────────────────────────────────────────
 
+const CAMPOS_BUSQUEDA: CampoBusqueda<GestionResumen>[] = [
+  { id: "descripcion", label: "Descripción", de: (g) => [g.descripcion] },
+  { id: "direccion", label: "Dirección", de: (g) => [g.direccion] },
+  { id: "especialidad", label: "Especialidad", de: (g) => [g.especialidad] },
+];
+
 export function MisTrabajos({
   gestiones,
   nombre,
@@ -321,16 +327,15 @@ export function MisTrabajos({
   nombre: string;
 }) {
   const [consulta, setConsulta] = useState("");
+  const [campo, setCampo] = useState("todo");
   const [filtro, setFiltro] = useState("todas"); // "todas" o id de etapa
 
   // Incluye finalizadas: el técnico las ve como historial (STORY-913), igual
   // que cualquier otra etapa (sección propia + opción en el selector).
   const buscados = useMemo(
     () =>
-      gestiones.filter((g) =>
-        coincideTexto(consulta, g.descripcion, g.direccion, g.especialidad)
-      ),
-    [gestiones, consulta]
+      gestiones.filter((g) => coincideCampo(consulta, campo, CAMPOS_BUSQUEDA, g)),
+    [gestiones, consulta, campo]
   );
 
   const hayActivas = useMemo(
@@ -400,11 +405,12 @@ export function MisTrabajos({
               total={buscados.length}
               onElegir={setFiltro}
             />
-            <Input
-              label="Buscar"
-              value={consulta}
-              onChange={(e) => setConsulta(e.target.value)}
-              placeholder="Dirección, descripción o especialidad…"
+            <FiltrosLista
+              consulta={consulta}
+              onConsulta={setConsulta}
+              campos={CAMPOS_BUSQUEDA}
+              campo={campo}
+              onCampo={setCampo}
             />
           </div>
 

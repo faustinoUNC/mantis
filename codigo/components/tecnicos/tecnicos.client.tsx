@@ -12,7 +12,7 @@ import type { Especialidad } from "@/features/especialidades/types";
 import { cambiarEstadoTecnico } from "@/features/tecnicos/service";
 import type { EstadoTecnico, TecnicoResumen } from "@/features/tecnicos/types";
 import { usePaginado } from "@/shared/hooks/use-paginado";
-import { coincideTexto } from "@/shared/utils/filtros";
+import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 
 const TONO_ESTADO: Record<EstadoTecnico, "urgente" | "brand" | "error"> = {
   pendiente: "urgente",
@@ -80,6 +80,12 @@ function Fila({ tecnico }: { tecnico: TecnicoResumen }) {
   );
 }
 
+const CAMPOS_BUSQUEDA: CampoBusqueda<TecnicoResumen>[] = [
+  { id: "nombre", label: "Nombre", de: (t) => [t.nombre] },
+  { id: "correo", label: "Correo", de: (t) => [t.email] },
+  { id: "especialidad", label: "Especialidad", de: (t) => [t.especialidades.join(" ")] },
+];
+
 export function Tecnicos({
   tecnicos,
   especialidades,
@@ -89,24 +95,23 @@ export function Tecnicos({
 }) {
   const [creando, setCreando] = useState(false);
   const [consulta, setConsulta] = useState("");
+  const [campo, setCampo] = useState("todo");
   const pendientes = tecnicos.filter((t) => t.estado === "pendiente").length;
 
   // Filtra por búsqueda y ordena pendientes primero.
   const filtrados = useMemo(
     () =>
       tecnicos
-        .filter((t) =>
-          coincideTexto(consulta, t.nombre, t.email, t.especialidades.join(" "))
-        )
+        .filter((t) => coincideCampo(consulta, campo, CAMPOS_BUSQUEDA, t))
         .sort(
           (a, b) =>
             (a.estado === "pendiente" ? -1 : 1) - (b.estado === "pendiente" ? -1 : 1)
         ),
-    [tecnicos, consulta]
+    [tecnicos, consulta, campo]
   );
 
   const { pageItems, setPagina, paginadorProps } = usePaginado(filtrados);
-  useEffect(() => setPagina(1), [consulta, setPagina]);
+  useEffect(() => setPagina(1), [consulta, campo, setPagina]);
 
   return (
     <div className="animate-aparecer">
@@ -140,7 +145,9 @@ export function Tecnicos({
       <FiltrosLista
         consulta={consulta}
         onConsulta={setConsulta}
-        placeholder="Buscar por nombre, correo o especialidad…"
+        campos={CAMPOS_BUSQUEDA}
+        campo={campo}
+        onCampo={setCampo}
       />
 
       <Card className="overflow-x-auto">

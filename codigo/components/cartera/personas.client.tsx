@@ -9,7 +9,8 @@ import {
   guardarPersona,
 } from "@/features/cartera/service";
 import type { Persona, TipoPersona } from "@/features/cartera/types";
-import { coincideTexto } from "@/shared/utils/filtros";
+import { FiltrosLista } from "@/components/ui/filtros-lista.client";
+import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 
 type Config = { titulo: string; singular: string; docLabel: string };
 
@@ -138,10 +139,17 @@ export function PersonasAbm({
 }) {
   const [creando, setCreando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
-  const { titulo, singular } = CONFIG[tipo];
+  const [campo, setCampo] = useState("todo");
+  const { titulo, singular, docLabel } = CONFIG[tipo];
 
+  const camposBusqueda: CampoBusqueda<Persona>[] = [
+    { id: "nombre", label: "Nombre", de: (p) => [p.nombre] },
+    { id: "correo", label: "Correo", de: (p) => [p.email] },
+    { id: "telefono", label: "Teléfono", de: (p) => [p.telefono] },
+    { id: "documento", label: docLabel, de: (p) => [p.documento] },
+  ];
   const filtradas = personas.filter((p) =>
-    coincideTexto(busqueda, p.nombre, p.email, p.telefono, p.documento)
+    coincideCampo(busqueda, campo, camposBusqueda, p)
   );
 
   return (
@@ -162,14 +170,13 @@ export function PersonasAbm({
         </Card>
       )}
 
-      <div className="mb-4 max-w-sm">
-        <Input
-          label="Buscar"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Nombre, correo, teléfono o CUIL…"
-        />
-      </div>
+      <FiltrosLista
+        consulta={busqueda}
+        onConsulta={setBusqueda}
+        campos={camposBusqueda}
+        campo={campo}
+        onCampo={setCampo}
+      />
 
       <Card className="overflow-x-auto">
         <table className="w-full text-[15px]">

@@ -17,7 +17,7 @@ import {
 } from "@/features/empleados/service";
 import type { Empleado } from "@/features/empleados/types";
 import { usePaginado } from "@/shared/hooks/use-paginado";
-import { coincideTexto } from "@/shared/utils/filtros";
+import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 
 // Los técnicos se gestionan SOLO en la sección Técnicos (STORY-901).
 const ROLES = (Object.keys(NOMBRE_ROL) as Rol[]).filter((r) => r !== "tecnico");
@@ -188,19 +188,24 @@ function Fila({ empleado }: { empleado: Empleado }) {
   );
 }
 
+const CAMPOS_BUSQUEDA: CampoBusqueda<Empleado>[] = [
+  { id: "nombre", label: "Nombre", de: (e) => [e.nombre] },
+  { id: "correo", label: "Correo", de: (e) => [e.email] },
+  { id: "rol", label: "Rol", de: (e) => [NOMBRE_ROL[e.rol]] },
+];
+
 export function Empleados({ empleados }: { empleados: Empleado[] }) {
   const [creando, setCreando] = useState(false);
   const [consulta, setConsulta] = useState("");
+  const [campo, setCampo] = useState("todo");
 
   const filtrados = useMemo(
     () =>
-      empleados.filter((e) =>
-        coincideTexto(consulta, e.nombre, e.email, NOMBRE_ROL[e.rol])
-      ),
-    [empleados, consulta]
+      empleados.filter((e) => coincideCampo(consulta, campo, CAMPOS_BUSQUEDA, e)),
+    [empleados, consulta, campo]
   );
   const { pageItems, setPagina, paginadorProps } = usePaginado(filtrados);
-  useEffect(() => setPagina(1), [consulta, setPagina]);
+  useEffect(() => setPagina(1), [consulta, campo, setPagina]);
 
   return (
     <div className="animate-aparecer">
@@ -219,7 +224,9 @@ export function Empleados({ empleados }: { empleados: Empleado[] }) {
       <FiltrosLista
         consulta={consulta}
         onConsulta={setConsulta}
-        placeholder="Buscar por nombre, correo o rol…"
+        campos={CAMPOS_BUSQUEDA}
+        campo={campo}
+        onCampo={setCampo}
       />
 
       <Card className="overflow-x-auto">

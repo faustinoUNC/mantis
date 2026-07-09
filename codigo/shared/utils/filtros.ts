@@ -17,3 +17,22 @@ export function coincideTexto(
   if (!q) return true;
   return campos.some((c) => !!c && normalizar(c).includes(q));
 }
+
+// Campo elegible del selector "Buscar por" (STORY-927): cada pantalla declara
+// los suyos y `de` extrae los valores del ítem donde buscar.
+export type CampoBusqueda<T> = {
+  id: string;
+  label: string;
+  de: (x: T) => (string | null | undefined)[];
+};
+
+// Como coincideTexto, pero acotado al campo elegido ("todo" = todos).
+export function coincideCampo<T>(
+  consulta: string,
+  campo: string,
+  campos: CampoBusqueda<T>[],
+  x: T
+): boolean {
+  const activos = campo === "todo" ? campos : campos.filter((c) => c.id === campo);
+  return coincideTexto(consulta, ...activos.flatMap((c) => c.de(x)));
+}

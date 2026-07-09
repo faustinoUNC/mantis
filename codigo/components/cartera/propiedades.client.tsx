@@ -4,15 +4,22 @@ import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import type { Propiedad } from "@/features/cartera/types";
-import { coincideTexto } from "@/shared/utils/filtros";
+import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
+
+const CAMPOS_BUSQUEDA: CampoBusqueda<Propiedad>[] = [
+  { id: "direccion", label: "Dirección", de: (p) => [p.direccion] },
+  { id: "propietario", label: "Propietario", de: (p) => [p.propietario_nombre] },
+  { id: "inquilino", label: "Inquilino", de: (p) => [p.inquilino_nombre] },
+];
 
 export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
   const [busqueda, setBusqueda] = useState("");
+  const [campo, setCampo] = useState("todo");
 
   const filtradas = propiedades.filter((p) =>
-    coincideTexto(busqueda, p.direccion, p.propietario_nombre, p.inquilino_nombre)
+    coincideCampo(busqueda, campo, CAMPOS_BUSQUEDA, p)
   );
 
   return (
@@ -30,14 +37,13 @@ export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
         </Link>
       </div>
 
-      <div className="mb-4 max-w-sm">
-        <Input
-          label="Buscar"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Dirección, propietario o inquilino…"
-        />
-      </div>
+      <FiltrosLista
+        consulta={busqueda}
+        onConsulta={setBusqueda}
+        campos={CAMPOS_BUSQUEDA}
+        campo={campo}
+        onCampo={setCampo}
+      />
 
       <Card className="overflow-x-auto">
         <table className="w-full text-[15px]">
