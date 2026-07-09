@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { obtenerUsuarioActual } from "@/features/auth/service";
+import { emailResultadoTecnico } from "@/features/email/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
@@ -316,6 +317,8 @@ export async function aprobarTecnico(id: string): Promise<ActionResult> {
     .update({ estado: "aprobado", motivo_rechazo: null })
     .eq("id", id);
 
+  await emailResultadoTecnico(t, "aprobado");
+
   revalidatePath("/tecnicos");
   return { ok: true };
 }
@@ -329,11 +332,15 @@ export async function rechazarTecnico(
   if (!motivo.trim()) return { ok: false, error: "Indicá el motivo." };
 
   const admin = createAdminClient();
-  const { error } = await admin
+  const { data: t, error } = await admin
     .from("tecnicos")
     .update({ estado: "rechazado", motivo_rechazo: motivo.trim() })
-    .eq("id", id);
-  if (error) return { ok: false, error: "No se pudo rechazar." };
+    .eq("id", id)
+    .select("nombre, email")
+    .single();
+  if (error || !t) return { ok: false, error: "No se pudo rechazar." };
+
+  await emailResultadoTecnico(t, "rechazado", motivo.trim());
 
   revalidatePath("/tecnicos");
   return { ok: true };

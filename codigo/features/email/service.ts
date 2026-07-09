@@ -126,6 +126,34 @@ const EMAILS_ESTADO: Record<
   },
 };
 
+// Resultado del enrolamiento, al TÉCNICO (STORY-501 v1.2 — deuda de
+// STORY-303: sin esto solo se enteraba al reintentar el login).
+export async function emailResultadoTecnico(
+  tecnico: { nombre: string; email: string },
+  resultado: "aprobado" | "rechazado",
+  motivo?: string
+): Promise<void> {
+  const contenido =
+    resultado === "aprobado"
+      ? {
+          asunto: "Tu solicitud fue aprobada",
+          titulo: "¡Bienvenido a la red de técnicos!",
+          cuerpo:
+            "La inmobiliaria aprobó tu solicitud. Ya podés ingresar al sistema con el correo y la contraseña que elegiste al registrarte.",
+        }
+      : {
+          asunto: "Novedades sobre tu solicitud",
+          titulo: "Tu solicitud fue rechazada",
+          cuerpo: `La inmobiliaria revisó tu solicitud y no fue aprobada. Motivo: ${motivo || "sin especificar"}.`,
+        };
+  await enviarEmail({
+    para: tecnico.email,
+    destinatario: tecnico.nombre,
+    ...contenido,
+    tipo: `tecnico_${resultado}`,
+  });
+}
+
 // Documentos de finanzas (nota de cobro / comprobante) con PDF adjunto.
 export async function enviarEmailDocumento(datos: {
   para: string;
