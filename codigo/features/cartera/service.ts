@@ -125,7 +125,7 @@ export async function listarPropiedades(): Promise<Propiedad[]> {
   const { data } = await supabase
     .from("propiedades")
     .select(
-      "id, direccion, tipo, propietario_id, activa, propietarios(nombre), legajos(id, fecha_fin)"
+      "id, direccion, tipo, propietario_id, activa, propietarios(nombre), legajos(id, fecha_fin, inquilinos(nombre))"
     )
     .order("direccion");
   type Fila = {
@@ -135,12 +135,17 @@ export async function listarPropiedades(): Promise<Propiedad[]> {
     propietario_id: string;
     activa: boolean;
     propietarios: { nombre: string } | { nombre: string }[] | null;
-    legajos: { id: string; fecha_fin: string | null }[];
+    legajos: {
+      id: string;
+      fecha_fin: string | null;
+      inquilinos: { nombre: string } | null;
+    }[];
   };
   return ((data ?? []) as unknown as Fila[]).map((p) => {
     const prop = Array.isArray(p.propietarios)
       ? p.propietarios[0]
       : p.propietarios;
+    const vigente = p.legajos.find((l) => l.fecha_fin === null);
     return {
       id: p.id,
       direccion: p.direccion,
@@ -148,7 +153,8 @@ export async function listarPropiedades(): Promise<Propiedad[]> {
       propietario_id: p.propietario_id,
       propietario_nombre: prop?.nombre ?? "—",
       activa: p.activa,
-      ocupada: p.legajos.some((l) => l.fecha_fin === null),
+      ocupada: Boolean(vigente),
+      inquilino_nombre: vigente?.inquilinos?.nombre ?? null,
     };
   });
 }

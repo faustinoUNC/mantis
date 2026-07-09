@@ -9,6 +9,7 @@ import {
   guardarPersona,
 } from "@/features/cartera/service";
 import type { Persona, TipoPersona } from "@/features/cartera/types";
+import { coincideTexto } from "@/shared/utils/filtros";
 
 type Config = { titulo: string; singular: string; docLabel: string };
 
@@ -136,7 +137,12 @@ export function PersonasAbm({
   personas: Persona[];
 }) {
   const [creando, setCreando] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   const { titulo, singular } = CONFIG[tipo];
+
+  const filtradas = personas.filter((p) =>
+    coincideTexto(busqueda, p.nombre, p.email, p.telefono, p.documento)
+  );
 
   return (
     <div className="animate-aparecer">
@@ -156,6 +162,15 @@ export function PersonasAbm({
         </Card>
       )}
 
+      <div className="mb-4 max-w-sm">
+        <Input
+          label="Buscar"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Nombre, correo, teléfono o CUIL…"
+        />
+      </div>
+
       <Card className="overflow-x-auto">
         <table className="w-full text-[15px]">
           <thead>
@@ -168,14 +183,16 @@ export function PersonasAbm({
             </tr>
           </thead>
           <tbody>
-            {personas.length === 0 && (
+            {filtradas.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm">
-                  Todavía no hay {titulo.toLowerCase()} cargados.
+                  {busqueda
+                    ? "Sin resultados para esa búsqueda."
+                    : `Todavía no hay ${titulo.toLowerCase()} cargados.`}
                 </td>
               </tr>
             )}
-            {personas.map((p) => (
+            {filtradas.map((p) => (
               <Fila key={p.id} tipo={tipo} persona={p} />
             ))}
           </tbody>

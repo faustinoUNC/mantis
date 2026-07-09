@@ -6,12 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { Propiedad } from "@/features/cartera/types";
+import { coincideTexto } from "@/shared/utils/filtros";
 
 export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
   const [busqueda, setBusqueda] = useState("");
 
   const filtradas = propiedades.filter((p) =>
-    p.direccion.toLowerCase().includes(busqueda.toLowerCase())
+    coincideTexto(busqueda, p.direccion, p.propietario_nombre, p.inquilino_nombre)
   );
 
   return (
@@ -31,10 +32,10 @@ export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
 
       <div className="mb-4 max-w-sm">
         <Input
-          label="Buscar por dirección"
+          label="Buscar"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Escribí para filtrar…"
+          placeholder="Dirección, propietario o inquilino…"
         />
       </div>
 
@@ -71,6 +72,9 @@ export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
                   <Badge tono={p.ocupada ? "brand" : "neutro"}>
                     {p.ocupada ? "Ocupada" : "Libre"}
                   </Badge>
+                  {p.inquilino_nombre && (
+                    <span className="ml-2 text-sm text-muted">{p.inquilino_nombre}</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link

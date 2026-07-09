@@ -22,6 +22,7 @@ export interface Propiedad {
   propietario_nombre: string;
   activa: boolean;
   ocupada: boolean;
+  inquilino_nombre: string | null; // del legajo vigente; null si está libre
 }
 
 export interface Legajo {
