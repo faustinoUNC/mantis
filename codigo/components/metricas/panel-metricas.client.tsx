@@ -590,8 +590,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         </MetricCard>
 
         {/* Cobro unificado: resumen de plata (barra "Por cobrar") + lista de las
-            gestiones en cobro + footer con lo que falta liquidar a técnicos. */}
-        <MetricCard titulo="Gestiones pendientes de cobro" ayuda="Facturas esperando cobro: cuánta plata hay y hace cuánto espera cada una — qué reclamar antes de que envejezca." n={cobranza.length} humildad={false}>
+            gestiones en cobro, ordenadas por antigüedad. */}
+        <MetricCard titulo="Gestiones pendientes de cobro" ayuda="Cuánta plata falta cobrar y hace cuánto espera cada gestión — qué cobrar primero." n={cobranza.length} humildad={false}>
           <div className="space-y-4">
             <div>
               <div className="flex items-baseline justify-between gap-2">
@@ -617,12 +617,6 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
                   <FilaAccionable key={c.id} id={c.id} principal={c.direccion} secundario={`${plata(c.monto)} · ${c.descripcion}`} dato={c.dias === 1 ? "1 día" : `${c.dias} días`} alerta={c.dias >= DIAS_COBRO_AMBAR} />
                 ))}
               </ul>
-            )}
-            {pendiente.nLiquidar > 0 && (
-              <div className="pt-3 border-t border-border flex items-baseline justify-between gap-2">
-                <span className="text-[12px] text-muted">Por liquidar a técnicos · {pendiente.nLiquidar} gestión{pendiente.nLiquidar === 1 ? "" : "es"} <span className="opacity-70">(ya cobradas)</span></span>
-                <span className="text-sm font-medium tabular-nums text-muted">{plata(pendiente.liquidar)}</span>
-              </div>
             )}
           </div>
         </MetricCard>
