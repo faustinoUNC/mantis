@@ -99,6 +99,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-923](STORY-923.md) | CUIL como documento único (reemplaza DNI/CUIT en técnicos, propietarios e inquilinos): renombre de columnas + validación con dígito verificador | ✅ done |
 | [STORY-924](STORY-924.md) | Bugs: 404 al rechazar asignación (RLS + revalidate), teléfonos solo numéricos (3 forms + services) y bloqueo de bajas de cartera con gestiones abiertas (party mode: inquilino vía legajos, propietario vía propiedades, legajo vía legajo_id) | ✅ done |
 | [STORY-925](STORY-925.md) | Buscadores en cartera: propietarios/inquilinos (nombre, correo, teléfono, CUIL) y propiedades también por propietario e inquilino vigente (+ inquilino visible en Ocupación) | ✅ done |
+| [STORY-926](STORY-926.md) | Buscador del tablero: también por propietario e inquilino de la gestión (embed en SELECT_RESUMEN, inquilino del legajo snapshot) | ✅ done |
 | [STORY-911](STORY-911.md) | Home del técnico: agrupación por etapa del trabajo + búsqueda + paginación "Mostrar más" + cards mobile | 🚧 en desarrollo |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.

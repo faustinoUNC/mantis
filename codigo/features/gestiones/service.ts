@@ -33,7 +33,11 @@ function refrescarTablero(id?: string) {
 }
 
 function normalizarFila(g: Record<string, unknown>): GestionResumen {
-  const propiedad = g.propiedades as { direccion: string } | null;
+  const propiedad = g.propiedades as {
+    direccion: string;
+    propietarios?: { nombre: string } | null;
+  } | null;
+  const legajo = g.legajos as { inquilinos: { nombre: string } | null } | null;
   const especialidad = g.especialidades as { nombre: string } | null;
   const gestor = g.gestor as { nombre: string } | null;
   const tecnico = g.tecnico as { nombre: string } | null;
@@ -50,6 +54,8 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     urgencia: g.urgencia as Urgencia,
     especialidad: especialidad?.nombre ?? "—",
     direccion: propiedad?.direccion ?? "—",
+    propietario_nombre: propiedad?.propietarios?.nombre ?? null,
+    inquilino_nombre: legajo?.inquilinos?.nombre ?? null,
     gestor_nombre: gestor?.nombre ?? "—",
     tecnico_nombre: tecnico?.nombre ?? null,
     asignacion_aceptada: (g.asignacion_aceptada as boolean | null) ?? null,
@@ -60,7 +66,7 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
 }
 
 const SELECT_RESUMEN =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre)), legajos(inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // El tablero: RLS decide qué ve cada rol (ownership del gestor incluida).
 export async function tableroGestiones(): Promise<GestionResumen[]> {

@@ -45,6 +45,8 @@ export interface GestionResumen {
   urgencia: Urgencia;
   especialidad: string;
   direccion: string;
+  propietario_nombre: string | null;
+  inquilino_nombre: string | null; // del legajo snapshot; null si nació con la propiedad libre
   gestor_nombre: string;
   tecnico_nombre: string | null;
   asignacion_aceptada: boolean | null;

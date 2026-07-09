@@ -187,7 +187,15 @@ export function Tablero({
       gestiones
         .filter(
           (g) =>
-            coincideTexto(consulta, g.descripcion, g.direccion, g.especialidad, g.tecnico_nombre) &&
+            coincideTexto(
+              consulta,
+              g.descripcion,
+              g.direccion,
+              g.especialidad,
+              g.tecnico_nombre,
+              g.propietario_nombre,
+              g.inquilino_nombre
+            ) &&
             (gestor === "" || g.gestor_nombre === gestor)
         )
         .sort((a, b) =>
@@ -226,7 +234,7 @@ export function Tablero({
       <FiltrosLista
         consulta={consulta}
         onConsulta={setConsulta}
-        placeholder="Buscar por descripción, dirección, especialidad o técnico…"
+        placeholder="Buscar por descripción, dirección, especialidad, técnico, propietario o inquilino…"
         extra={
           <>
             <div className="w-52">
