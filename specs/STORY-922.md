@@ -1,6 +1,6 @@
 # STORY-922 — Alta unificada "Administración" (wizard de cartera) (v1.2)
 
-**Estado:** 🚧 en desarrollo (aprobado por Fausti 2026-07-09: "dale para delante") · **Origen:** Fausti. Regla #0: la solución más simple que cumpla. Contract "Esmeralda técnica".
+**Estado:** ✅ done (commit `b0751b3`, main, 2026-07-09) · **Origen:** Fausti. Regla #0: la solución más simple que cumpla. Contract "Esmeralda técnica".
 
 ## Insight central
 
@@ -46,7 +46,7 @@ Payload: propietario (`{id}` existente **o** datos nuevos), propiedad (`direccio
 8. `tsc` + eslint + `next build` verdes.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementado y verificado E2E en navegador (2026-07-09). Sin commitear (Fausti revisa).
+- **Estado:** ✅ done — commit `b0751b3` en `main` (2026-07-09, pusheado, `next build` verde antes del push → auto-deploy). Comparte `codigo/features/tecnicos/service.ts` con STORY-501 v1.2; se repartió por hunks (un commit por story).
 - **Archivos:**
   - `codigo/components/cartera/alta-administracion.client.tsx` (nuevo) — wizard 4 pasos: stepper clickeable hacia atrás, segmentado existente/nuevo, cards de ocupación, resumen con "Cambiar" por fila.
   - `codigo/app/cartera/nueva/page.tsx` (nuevo) — carga propietarios/inquilinos activos.

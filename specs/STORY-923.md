@@ -1,6 +1,6 @@
 # STORY-923 — CUIL como documento único (técnicos, propietarios, inquilinos) (v1.0)
 
-**Estado:** 🚧 en desarrollo (aprobado por Fausti 2026-07-09: "dale para delante") · **Origen:** Fausti, de paso con STORY-922. Regla #0.
+**Estado:** ✅ done (commit `b0751b3`, main, 2026-07-09) · **Origen:** Fausti, de paso con STORY-922. Regla #0.
 
 ## Insight central
 
@@ -38,7 +38,7 @@ alter table public.propietarios rename column cuit to cuil;
 6. `tsc` + eslint + `next build` verdes.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementado (2026-07-09). Migración aplicada a la base viva. Código sin commitear (Fausti revisa).
+- **Estado:** ✅ done — commit `b0751b3` en `main` (2026-07-09, junto con STORY-922, pusheado, `next build` verde). Migración `unificar_cuil` ya aplicada a la base viva `ejwokycbyjtlxwusbhtt` (fuera de git; los renames no se versionan como archivo de migración).
 - **Archivos:**
   - Migración `unificar_cuil` aplicada en `ejwokycbyjtlxwusbhtt` (3 renames).
   - `codigo/shared/utils/cuil.ts` (nuevo) — `cuilValido` (11 dígitos + verificador mod 11, acepta guiones) + `normalizarCuil`.
