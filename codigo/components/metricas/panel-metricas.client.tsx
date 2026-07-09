@@ -409,13 +409,34 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         acum.set(linea[k].etapa, { total: cur.total + dias, n: cur.n + 1 });
       }
     }
-    return ORDEN_ETAPAS.filter((e) => acum.has(e))
+    // Se excluye "en_ejecucion": su duración es el trabajo físico (depende del
+    // tamaño de la obra, no del circuito) y tapaba los cuellos administrativos.
+    return ORDEN_ETAPAS.filter((e) => e !== "en_ejecucion" && acum.has(e))
       .map((e) => ({ etapa: ETAPA_LABEL[e], dias: Math.round((acum.get(e)!.total / acum.get(e)!.n) * 10) / 10 }))
       .sort((a, b) => b.dias - a.dias);
   }, [filas, idsPeriodo, metricas.eventos]);
   const maxCuello = cuellos[0]?.dias ?? 0;
 
-  // ── Flujo: Tiempo de ciclo (creación → finalización) por cubo temporal ──
+  // ── Duración de la etapa en_ejecucion por gestión (entrada→salida), derivada
+  // de los eventos. Base para excluir el tiempo de obra del ciclo y para el
+  // cumplimiento de plazo. El tiempo físico depende del tamaño de la obra. ──
+  const ejecucionPorGestion = useMemo(() => {
+    const entrada = new Map<string, number>();
+    const salida = new Map<string, number>();
+    for (const e of metricas.eventos) {
+      const t = new Date(e.creadoEn).getTime();
+      if (e.aEtapa === "en_ejecucion" && t < (entrada.get(e.gestionId) ?? Infinity)) entrada.set(e.gestionId, t);
+      if (e.deEtapa === "en_ejecucion" && t > (salida.get(e.gestionId) ?? 0)) salida.set(e.gestionId, t);
+    }
+    const dur = new Map<string, number>();
+    for (const [id, ent] of entrada) {
+      const sal = salida.get(id);
+      if (sal != null && sal > ent) dur.set(id, (sal - ent) / 86400000);
+    }
+    return dur;
+  }, [metricas.eventos]);
+
+  // ── Flujo: Tiempo de ciclo (creación → finalización, sin obra) por cubo ──
   const ciclo = useMemo(() => {
     const finPorGestion = new Map<string, number>();
     for (const e of metricas.eventos) {
@@ -424,9 +445,9 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       if (t > (finPorGestion.get(e.gestionId) ?? 0)) finPorGestion.set(e.gestionId, t);
     }
     const cerradas = filasEsp
-      .map((f) => ({ fin: finPorGestion.get(f.id), creado: new Date(f.creadoEn).getTime() }))
-      .filter((x): x is { fin: number; creado: number } => x.fin != null && (!desde || x.fin >= desde))
-      .map((x) => ({ fin: x.fin, dias: (x.fin - x.creado) / 86400000 }));
+      .map((f) => ({ fin: finPorGestion.get(f.id), creado: new Date(f.creadoEn).getTime(), ejec: ejecucionPorGestion.get(f.id) ?? 0 }))
+      .filter((x): x is { fin: number; creado: number; ejec: number } => x.fin != null && (!desde || x.fin >= desde))
+      .map((x) => ({ fin: x.fin, dias: Math.max(0, (x.fin - x.creado) / 86400000 - x.ejec) }));
     if (cerradas.length === 0) return { data: [], n: 0, pocos: true, diag: null as ReturnType<typeof capTendencia> };
     const acum = new Map<string, { total: number; n: number }>();
     for (const c of cerradas) {
@@ -447,7 +468,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     const data = cubos.map((c, i) => ({ label: c.label, dias: dias[i], tend: i < ultimo && dias[i] != null && tend ? tend.yhat[ti++] : null }));
     const nonEmpty = dias.filter((d) => d != null).length;
     return { data, n: cerradas.length, pocos: nonEmpty < MIN_CUBOS_SERIE, diag: tend ? capTendencia(tend.m, gran, completos.length, "dias", false) : null };
-  }, [filasEsp, desde, gran, ahora, metricas.eventos]);
+  }, [filasEsp, desde, gran, ahora, metricas.eventos, ejecucionPorGestion]);
 
   // ── Técnicos: Calificación + obras realizadas (todos los técnicos con obra o nota) ──
   const ranking = useMemo(() => {
@@ -481,6 +502,25 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   }, [filasEsp]);
   const nDesvio = desvio.reduce((s, d) => s + d.n, 0);
   const maxDesvio = Math.max(1, ...desvio.map((d) => Math.abs(d.pct)));
+
+  // ── Técnicos: Cumplimiento de plazo (desvío de la obra vs plazo comprometido)
+  // por técnico. Gemelo del de presupuesto pero en tiempo: días reales de
+  // ejecución vs plazo_dias del presupuesto aprobado. Positivo = se pasó. ──
+  const desvioPlazo = useMemo(() => {
+    const acum = new Map<string, { total: number; n: number }>();
+    for (const f of filasEsp) {
+      const real = ejecucionPorGestion.get(f.id);
+      if (!f.plazoDias || f.plazoDias <= 0 || real == null || !f.tecnicoNombre) continue;
+      const pct = ((real - f.plazoDias) / f.plazoDias) * 100;
+      const cur = acum.get(f.tecnicoNombre) ?? { total: 0, n: 0 };
+      acum.set(f.tecnicoNombre, { total: cur.total + pct, n: cur.n + 1 });
+    }
+    return [...acum.entries()]
+      .map(([tecnico, { total, n }]) => ({ tecnico, pct: Math.round((total / n) * 10) / 10, n }))
+      .sort((a, b) => a.pct - b.pct);
+  }, [filasEsp, ejecucionPorGestion]);
+  const nDesvioPlazo = desvioPlazo.reduce((s, d) => s + d.n, 0);
+  const maxDesvioPlazo = Math.max(1, ...desvioPlazo.map((d) => Math.abs(d.pct)));
 
   // ── Dinero: ingresos $ + gestiones cobradas por cubo (dos series, dos tarjetas) ──
   const dinero = useMemo(() => {
@@ -576,7 +616,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     <section>
       <RefrescoVivo tabla="calificaciones" />
       <div className="mb-5">
-        <h2 className="text-[15px] font-semibold tracking-tight">Métricas</h2>
+        <h2 className="text-[15px] font-semibold tracking-tight">Informes</h2>
       </div>
 
       {/* ══ 1. Para resolver hoy ══ */}
@@ -671,25 +711,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           </ResponsiveContainer>
         </MetricCard>
 
-        <MetricCard titulo="Cuellos de botella" ayuda="Días promedio en cada etapa — la más lenta es la que frena todo." n={filas.length}>
-          {cuellos.length === 0 ? (
-            <p className="text-sm text-muted py-16 text-center">Faltan transiciones para medir.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={cuellos} layout="vertical" margin={{ left: 12, right: 16 }}>
-                <CartesianGrid stroke={GRID} horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} />
-                <YAxis type="category" dataKey="etapa" width={96} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => <p className="text-muted">{p[0].value} días</p>} />} />
-                <Bar dataKey="dias" radius={[0, 4, 4, 0]} maxBarSize={18}>
-                  {cuellos.map((c) => (<Cell key={c.etapa} fill={rampaMagnitud(c.dias / maxCuello)} />))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </MetricCard>
-
-        <MetricCard titulo="Tiempo de ciclo" ayuda="Días de creación a finalización por período — si el equipo resuelve más rápido o más lento." n={ciclo.n}>
+        <MetricCard titulo="Tiempo de ciclo" ayuda="Días de creación a finalización sin el tiempo de obra — la eficiencia del circuito, no el tamaño del trabajo." n={ciclo.n}>
           {ciclo.pocos ? (
             <p className="text-sm text-muted py-16 text-center">Pocos datos en este período para ver la evolución. Probá un período más amplio.</p>
           ) : (
@@ -706,6 +728,24 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
               </ResponsiveContainer>
               <LeyendaTendencia diag={ciclo.diag} />
             </>
+          )}
+        </MetricCard>
+
+        <MetricCard titulo="Cuellos de botella" ayuda="Días promedio por etapa, sin el tiempo de ejecución — la del circuito más lenta es la que frena todo." n={filas.length}>
+          {cuellos.length === 0 ? (
+            <p className="text-sm text-muted py-16 text-center">Faltan transiciones para medir.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={cuellos} layout="vertical" margin={{ left: 12, right: 16 }}>
+                <CartesianGrid stroke={GRID} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} />
+                <YAxis type="category" dataKey="etapa" width={96} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => <p className="text-muted">{p[0].value} días</p>} />} />
+                <Bar dataKey="dias" radius={[0, 4, 4, 0]} maxBarSize={18}>
+                  {cuellos.map((c) => (<Cell key={c.etapa} fill={rampaMagnitud(c.dias / maxCuello)} />))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </MetricCard>
       </Bloque>
@@ -801,8 +841,11 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         </div>
       </div>
 
-      {/* ══ Histórico — acumulado de todas las gestiones (no sigue el período) ══ */}
-      <Bloque titulo="Histórico · desempeño de técnicos">
+      {/* ══ Histórico — acumulado de todas las gestiones (no sigue el período).
+          Calificación a lo ancho; debajo las dos gemelas de cumplimiento. ══ */}
+      <section className="mb-8">
+        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted mb-3">Histórico · desempeño de técnicos</h3>
+        <div className="grid gap-4 grid-cols-1 mb-4">
         <MetricCard titulo="Calificación de técnicos" ayuda="Promedio de estrellas y obras finalizadas por técnico — quién resuelve mejor y cuánto hizo." n={nCalificadas} unidad="calificaciones" alcance="historico">
           {ranking.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Todavía no hay técnicos con obra registrada.</p>
@@ -823,7 +866,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
             </ul>
           )}
         </MetricCard>
-
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
         <MetricCard titulo="Cumplimiento de presupuesto" ayuda="Cuánto se desvía el costo final de lo presupuestado, por técnico — quién cotiza fino y quién se pasa." n={nDesvio} alcance="historico">
           {desvio.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Faltan gestiones cerradas con presupuesto para medir.</p>
@@ -841,7 +885,26 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
             </ResponsiveContainer>
           )}
         </MetricCard>
-      </Bloque>
+
+        <MetricCard titulo="Cumplimiento de plazo" ayuda="Cuánto se desvía la obra del plazo que el técnico comprometió — quién cumple los tiempos que promete." n={nDesvioPlazo} alcance="historico">
+          {desvioPlazo.length === 0 ? (
+            <p className="text-sm text-muted py-16 text-center">Faltan obras con plazo y ejecución medida.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(160, desvioPlazo.length * 42)}>
+              <BarChart data={desvioPlazo} layout="vertical" margin={{ left: 12, right: 24 }}>
+                <CartesianGrid stroke={GRID} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v}%`} />
+                <YAxis type="category" dataKey="tecnico" width={96} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => <p className="text-muted">{p[0].value > 0 ? "+" : ""}{p[0].value}% de desvío</p>} />} />
+                <Bar dataKey="pct" radius={[0, 4, 4, 0]} maxBarSize={18}>
+                  {desvioPlazo.map((d) => (<Cell key={d.tecnico} fill={rampaMagnitud(Math.abs(d.pct) / maxDesvioPlazo)} />))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </MetricCard>
+        </div>
+      </section>
     </section>
   );
 }

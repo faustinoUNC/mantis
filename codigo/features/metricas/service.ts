@@ -30,6 +30,7 @@ export interface FilaMetrica {
   costoFinal: number | null; // para el desvío de presupuesto
   cargoAdmin: number | null; // STORY-917: monto a cobrar = costo_final + cargo_admin
   presupuestoAprobado: number | null; // total del presupuesto aprobado
+  plazoDias: number | null; // STORY-921: plazo de obra comprometido (del aprobado)
 }
 
 export interface EventoMetrica {
@@ -68,7 +69,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     supabase
       .from("gestiones")
       .select(
-        "id, descripcion, etapa, urgencia, causa, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra), conformidades(estado), calificaciones(estrellas)"
+        "id, descripcion, etapa, urgencia, causa, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
       ),
     // STORY-919: sumamos los rechazos de asignación (viven como evento, no como
     // flag — el flujo real setea asignacion_aceptada=NULL al rechazar).
@@ -97,7 +98,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     propiedades: { direccion: string } | null;
     especialidades: { nombre: string } | null;
     tecnico: { nombre: string } | null;
-    presupuestos: { estado: string; monto_materiales: number; monto_mano_obra: number }[] | null;
+    presupuestos: { estado: string; monto_materiales: number; monto_mano_obra: number; plazo_dias: number | null }[] | null;
     conformidades: { estado: string }[] | null;
     // PostgREST resuelve calificaciones como to-ONE (gestion_id es UNIQUE):
     // devuelve un objeto, no un array. Contemplamos ambas formas.
@@ -133,6 +134,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       costoFinal: g.costo_final,
       cargoAdmin: g.cargo_admin,
       presupuestoAprobado,
+      plazoDias: aprob?.plazo_dias ?? null,
     };
   });
 

@@ -487,7 +487,7 @@ function FormPresupuestoTecnico({ gestion }: { gestion: GestionDetalle }) {
         <Input label="Materiales ($)" name="materiales" type="number" min="0" step="0.01" required />
         <Input label="Mano de obra ($)" name="mano_obra" type="number" min="0" step="0.01" required />
         <div className="col-span-2 sm:col-span-1">
-          <Input label="Plazo (días)" name="plazo_dias" type="number" min="1" required />
+          <Input label="Plazo de obra (días)" name="plazo_dias" type="number" min="1" required />
         </div>
       </div>
       <Input label="Observaciones" name="notas" placeholder="Aclaraciones para el gestor (opcional)" />
