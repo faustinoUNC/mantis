@@ -1,6 +1,6 @@
 # STORY-924 — Bugs: 404 al rechazar asignación, teléfonos solo numéricos y validación de gestiones abiertas en bajas de cartera (v1.0)
 
-**Estado:** 🚧 en desarrollo · **Fecha:** 2026-07-09
+**Estado:** ✅ done · **Fecha:** 2026-07-09
 **Origen:** Fausti — 4 reportes: (1) 404 al ver el detalle de una solicitud de técnico; (2) 404 al rechazar una asignación como técnico; (3) los inputs de teléfono aceptan cualquier carácter; (4) desactivar un inquilino/propietario y cerrar un legajo no validan gestiones abiertas. Los puntos de validación se debatieron en **party mode** (Mary · John · Winston · Sally) por su lógica de negocio, dado el modelo "Administración" (STORY-922).
 
 ## Diagnóstico
@@ -54,6 +54,6 @@ Detalles técnicos del debate:
 6. `tsc` verde, eslint verde, `next build` OK.
 
 ## Dev Agent Record
-- **Commit:** _(pendiente — Fausti revisa en local)_
+- **Commit:** `e5ee20a` (main)
 - **Archivos:** `features/gestiones/service.ts` (rechazo no revalida el detalle) · `components/gestiones/detalle.client.tsx` (router.push a `/tecnico` tras rechazo) · `shared/utils/telefono.ts` (nuevo) · `components/tecnicos/form-tecnico.client.tsx`, `components/cartera/personas.client.tsx`, `components/cartera/alta-administracion.client.tsx` (inputs numéricos) · `features/cartera/service.ts` (normalización + `contarGestionesAbiertas` + validaciones en `cambiarEstadoPersona`/`cerrarLegajo`/`cambiarEstadoPropiedad`) · `features/tecnicos/service.ts` (teléfono normalizado) · `components/cartera/personas.client.tsx` (error visible en la fila).
 - **Verificación:** `tsc` verde · eslint verde · `next build` OK · E2E con Playwright sobre la base real: detalle de solicitud pendiente carga (Federico Ibáñez, sin 404); teléfono tipeado `abc351-660 22.17xy` → `3516602217`; desactivar a María Ledesma bloqueado ("legajo vigente"); desactivar a Silvia Barrionuevo bloqueado ("2 gestión(es) abierta(s) en sus propiedades"); cerrar legajo de Av. Rafael Núñez 4520 bloqueado ("1 gestión(es) abierta(s)"); rechazo de "El calefon no anda" como tecnicouno → aterriza en `/tecnico` sin 404, `tecnico_id` null y evento `asignacion_rechazada` con motivo en el log. ⚠️ Efecto colateral de la prueba: esa gestión quedó de vuelta en Asignación sin técnico — reasignarla si hace falta.
