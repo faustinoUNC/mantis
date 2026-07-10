@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-930](STORY-930.md) | Headers de seguridad HTTP (anti-clickjacking + hardening): X-Frame-Options, nosniff, Referrer-Policy, sin x-powered-by | 🚧 en desarrollo |
 | [STORY-101](STORY-101.md) | Setup del proyecto y design system base | ✅ done |
 | [STORY-102](STORY-102.md) | Login y acceso por rol | ✅ done |
 | [STORY-103](STORY-103.md) | ABM de empleados con asignación de rol | ✅ done |
