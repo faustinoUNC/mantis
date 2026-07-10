@@ -10,8 +10,6 @@ import {
   ComposedChart,
   Line,
   LineChart,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -67,9 +65,7 @@ const ETAPA_LABEL: Record<string, string> = {
   finalizado: "Finalizado",
 };
 const ORDEN_ETAPAS = Object.keys(ETAPA_LABEL);
-const CAUSA_LABEL: Record<string, string> = { desgaste: "Desgaste", dano: "Daño", mejora: "Mejora" };
-const PAGADOR_LABEL: Record<string, string> = { inquilino: "Inquilino", propietario: "Propietario" };
-const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const MESES =["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 type Gran = "semana" | "mes";
 // Presets con nombre de granularidad (estilo iOS) y bucket FIJO por preset, para
@@ -366,7 +362,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     [filasEsp, ultimaTransicion, ahora]
   );
 
-  // ── Hoy: Prioridad por valor (fee ya determinado, mayor→menor) ──
+  // ── Hoy: Orden por valor (fee ya determinado, mayor→menor) ──
   // El fee (cargo_admin) se ancla al aprobar el presupuesto → aparece de
   // en_ejecucion en adelante (+ presupuesto con PDF borrador). Ordena por
   // plata para la casa: qué gestión activa conviene no dejar caer.
@@ -535,18 +531,17 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   const maxPlazoPos = Math.max(1, ...desvioPlazo.map((d) => d.pct));
   const colorPlazo = (pct: number) => rampaMagnitud(0.5 + 0.5 * Math.min(1, pct / maxPlazoPos));
 
-  // ── Dinero: ingresos $ + gestiones cobradas por cubo (dos series, dos tarjetas) ──
+  // ── Dinero: ingresos $ por cubo (fee de la casa + trabajo del técnico) ──
   const dinero = useMemo(() => {
     const cobradas = filasEsp.filter((f) => f.cobradoEn && (!desde || new Date(f.cobradoEn).getTime() >= desde));
-    if (cobradas.length === 0) return { data: [], n: 0, pocos: true, trendCant: false, diagTec: null as ReturnType<typeof capTendencia>, diagFee: null as ReturnType<typeof capTendencia>, diagCant: null as ReturnType<typeof capTendencia> };
-    const acum = new Map<string, { tecnico: number; fee: number; cant: number }>();
+    if (cobradas.length === 0) return { data: [], n: 0, pocos: true, diagTec: null as ReturnType<typeof capTendencia>, diagFee: null as ReturnType<typeof capTendencia> };
+    const acum = new Map<string, { tecnico: number; fee: number }>();
     for (const f of cobradas) {
       const k = claveCubo(new Date(f.cobradoEn!).getTime(), gran);
       const fee = Number(f.cobradoFee ?? 0);
-      const cur = acum.get(k) ?? { tecnico: 0, fee: 0, cant: 0 };
+      const cur = acum.get(k) ?? { tecnico: 0, fee: 0 };
       cur.fee += fee;
       cur.tecnico += Number(f.cobradoMonto ?? 0) - fee;
-      cur.cant += 1;
       acum.set(k, cur);
     }
     const primera = Math.min(...cobradas.map((f) => new Date(f.cobradoEn!).getTime()));
@@ -557,23 +552,19 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     // Tendencia POR serie (no del total): solo se muestra al aislar una serie.
     const tendTec = tendencia(cubos.map((c) => acum.get(c.key)?.tecnico ?? 0));
     const tendFee = tendencia(cubos.map((c) => acum.get(c.key)?.fee ?? 0));
-    const tendCant = tendencia(cubos.map((c) => acum.get(c.key)?.cant ?? 0));
     const data = cubos.map((c, i) => {
-      const a = acum.get(c.key) ?? { tecnico: 0, fee: 0, cant: 0 };
+      const a = acum.get(c.key) ?? { tecnico: 0, fee: 0 };
       return {
-        label: c.label, tecnico: a.tecnico, fee: a.fee, cant: a.cant,
+        label: c.label, tecnico: a.tecnico, fee: a.fee,
         tendTec: tendTec ? tendTec.yhat[i] : null,
         tendFee: tendFee ? tendFee.yhat[i] : null,
-        tendCant: tendCant ? tendCant.yhat[i] : null,
       };
     });
     const nonEmpty = cubos.filter((c) => acum.has(c.key)).length;
     return {
       data, n: cobradas.length, pocos: nonEmpty < MIN_CUBOS_SERIE,
-      trendCant: !!tendCant,
       diagTec: tendTec ? capTendencia(tendTec.m, gran, nComplete, "plata", true) : null,
       diagFee: tendFee ? capTendencia(tendFee.m, gran, nComplete, "plata", true) : null,
-      diagCant: tendCant ? capTendencia(tendCant.m, gran, nComplete, "cant", true) : null,
     };
   }, [filasEsp, desde, gran, ahora]);
 
@@ -596,20 +587,6 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     return { cobrarTrabajo, cobrarFee, cobrarTotal: cobrarTrabajo + cobrarFee, liquidar, nCobrar, nLiquidar };
   }, [filasEsp]);
 
-  // ── Perfil: Composición causa × pagador ──
-  const composicion = useMemo(() => {
-    const causa = new Map<string, number>();
-    const pagador = new Map<string, number>();
-    for (const f of filas) {
-      causa.set(f.causa, (causa.get(f.causa) ?? 0) + 1);
-      if (f.pagador) pagador.set(f.pagador, (pagador.get(f.pagador) ?? 0) + 1);
-    }
-    return {
-      causa: [...causa.entries()].map(([k, value]) => ({ name: CAUSA_LABEL[k] ?? k, value })),
-      pagador: [...pagador.entries()].map(([k, value]) => ({ name: PAGADOR_LABEL[k] ?? k, value })),
-    };
-  }, [filas]);
-
   // ── Flujo: Rechazos desglosados (3 tipos, nunca mezclados) ──
   const rechazos = useMemo(() => {
     const conRechazoAsig = new Set<string>();
@@ -623,8 +600,6 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     ];
   }, [filas, idsPeriodo, metricas.eventos]);
   const totalRechazos = rechazos.reduce((s, r) => s + r.cantidad, 0);
-
-  const donutColores = [BRAND_D, BRAND, "#6ee7b7", INK_MUTED];
 
   return (
     <section>
@@ -676,9 +651,9 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         </MetricCard>
       </Bloque>
 
-      {/* ══ 2. Prioridad por valor — dónde está la plata (fee) de la casa ══ */}
-      <Bloque titulo="Prioridad por valor" cols={1}>
-        <MetricCard titulo="Prioridad por valor" ayuda="Gestiones activas con fee ya definido, de mayor a menor — dónde está la plata que la casa va a ganar, para no dejarla caer en el camino." n={porFee.length} humildad={false}>
+      {/* ══ 2. Orden por valor — dónde está la plata (fee) de la casa ══ */}
+      <Bloque titulo="Orden por valor" cols={1}>
+        <MetricCard titulo="Gestiones ordenadas por fee" ayuda="Gestiones activas con fee ya definido, de mayor a menor — dónde está la plata que la casa va a ganar, para no dejarla caer en el camino." n={porFee.length} humildad={false}>
           <ul className="divide-y divide-border max-h-72 overflow-y-auto">
             {porFee.map((g) => (
               <FilaAccionable key={g.id} id={g.id} principal={g.direccion} secundario={`${g.etapa} · ${g.descripcion}`} dato={plata(g.fee)} alerta={false} color={BRAND} />
@@ -765,7 +740,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       </Bloque>
 
       {/* ══ Dinero (según el período) ══ */}
-      <Bloque titulo="Dinero">
+      <Bloque titulo="Dinero" cols={1}>
         <MetricCard titulo="Ingresos cobrados" ayuda="Lo cobrado por período, separando la ganancia de la casa (fee) del pago al técnico." n={dinero.n}>
           {dinero.pocos ? (
             <p className="text-sm text-muted py-16 text-center">Pocos cobros en este período. Probá un período más amplio.</p>
@@ -803,55 +778,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           )}
         </MetricCard>
 
-        <MetricCard titulo="Gestiones cobradas" ayuda="Cuántas gestiones se cobraron por período — el volumen de trabajo que cierra el circuito." n={dinero.n}>
-          {dinero.pocos ? (
-            <p className="text-sm text-muted py-16 text-center">Pocos cobros en este período. Probá un período más amplio.</p>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={244}>
-                <LineChart data={dinero.data} margin={{ left: 8, right: 8 }}>
-                  <CartesianGrid stroke={GRID} vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={{ stroke: GRID }} content={<TooltipCaja render={(p) => <p className="text-muted">{p.find((r) => r.name === "cant")?.value ?? "—"} gestiones cobradas</p>} />} />
-                  <Line type="monotone" dataKey="cant" stroke={BRAND_D} strokeWidth={2} dot={{ r: 3, fill: BRAND_D }} />
-                  {dinero.trendCant && <Line type="monotone" dataKey="tendCant" stroke={TENDENCIA} strokeWidth={1.5} strokeDasharray="4 4" dot={false} />}
-                </LineChart>
-              </ResponsiveContainer>
-              <LeyendaTendencia diag={dinero.diagCant} />
-            </>
-          )}
-        </MetricCard>
       </Bloque>
 
-      {/* ══ Perfil del trabajo (según el período) ══ */}
-      <Bloque titulo="Perfil del trabajo" cols={1}>
-        <MetricCard titulo="Composición del trabajo" ayuda="Por qué entra el trabajo y quién lo paga — con qué tipo de gestión se llena la agenda." n={filas.length}>
-          <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
-            {(["causa", "pagador"] as const).map((clave) => (
-              <div key={clave}>
-                <p className="text-[12px] text-muted text-center mb-1 capitalize">{clave}</p>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie data={composicion[clave]} dataKey="value" nameKey="name" innerRadius={34} outerRadius={58} paddingAngle={2}>
-                      {composicion[clave].map((_, i) => (<Cell key={i} fill={donutColores[i % donutColores.length]} />))}
-                    </Pie>
-                    <Tooltip content={<TooltipCaja render={(p) => <p className="text-muted">{p[0].name}: {p[0].value}</p>} />} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <ul className="text-[12px] text-muted space-y-0.5 mt-1">
-                  {composicion[clave].map((d, i) => (
-                    <li key={d.name} className="flex items-center gap-1.5">
-                      <span className="inline-block w-2 h-2 rounded-full" style={{ background: donutColores[i % donutColores.length] }} />
-                      {d.name} · {d.value}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </MetricCard>
-      </Bloque>
         </div>
       </div>
 

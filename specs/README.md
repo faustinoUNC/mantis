@@ -102,6 +102,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-926](STORY-926.md) | Buscador del tablero: también por propietario e inquilino de la gestión (embed en SELECT_RESUMEN, inquilino del legajo snapshot) | ✅ done |
 | [STORY-927](STORY-927.md) | Selector "Buscar por" unificado en todos los buscadores (FiltrosLista + coincideCampo; tablero, propiedades, personas, técnicos, empleados, home del técnico) | ✅ done |
 | [STORY-928](STORY-928.md) | Auditoría: buscador unificado + dirección como principal (consistencia con tablero/Inicio) + logs legibles (detalle JSON visible, etapas humanas, labels faltantes, query única) | ✅ done |
+| [STORY-929](STORY-929.md) | Limpieza del dashboard de Informes: sacar "Gestiones cobradas", quitar tortas de "Composición del trabajo" y renombrar "Prioridad por valor"→"Orden por valor" (card "Gestiones ordenadas por fee") | 🚧 en desarrollo |
 | [STORY-911](STORY-911.md) | Home del técnico: agrupación por etapa del trabajo + búsqueda + paginación "Mostrar más" + cards mobile | 🚧 en desarrollo |
 
 **ÉPICA 7 COMPLETA** ✅ (2026-07-05) — nota de cobro con PDF entregada por email; circuito completo hasta Finalizado.
