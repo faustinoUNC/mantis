@@ -1,6 +1,6 @@
 # STORY-932 — Gastos imprevistos del técnico en ejecución (v1.0)
 
-**Estado:** 🚧 implementada y verificada E2E — sin commitear (Fausti revisa) (diseño en party mode 2026-07-11, Mary/John/Winston/Sally; decisiones confirmadas por Fausti: fee fijo, foto de ticket obligatoria) · **Origen:** Fausti. Regla #0: la solución más simple; máximo reciclaje del código existente.
+**Estado:** ✅ done (commit `7c7640f`) (diseño en party mode 2026-07-11, Mary/John/Winston/Sally; decisiones confirmadas por Fausti: fee fijo, foto de ticket obligatoria) · **Origen:** Fausti. Regla #0: la solución más simple; máximo reciclaje del código existente.
 
 ## Objetivo
 
@@ -72,7 +72,7 @@ RLS desde la primera migración, calcada de `presupuestos`: el técnico asignado
 8. `tsc` + eslint + `next build` verdes; métricas sin cambios de código.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementada y verificada E2E (2026-07-11). Sin commitear — Fausti revisa.
+- **Estado:** ✅ done (2026-07-11). Commit `7c7640f` en main, deploy automático en Vercel.
 - **Migración** (`story_932_gastos_imprevistos`, aplicada en remoto): tabla `gastos_imprevistos` (check `monto > 0`, `foto_path` NOT NULL, estado enviado/aprobado/rechazado) + RLS calcada de `presupuestos` (técnico asignado inserta solo en `en_ejecucion`; resuelve admin/gestor owner; lee quien ve la gestión) + alta en publicación realtime + 3 filas en `matriz_notificaciones` (enviado→gestor, resolución→técnico).
 - **Archivos:**
   - `features/gestiones/types.ts` — interface `GastoImprevisto` + `gastos` en `GestionDetalle`.

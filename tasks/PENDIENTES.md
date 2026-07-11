@@ -5,7 +5,6 @@
 
 ## Ahora (esta semana)
 
-- [ ] **Implementar STORY-932 — Gastos imprevistos del técnico** (spec aprobada 2026-07-11, party mode) — tabla espejo de `presupuestos`, técnico propone con foto de ticket obligatoria, gestor aprueba, `costo_final` los absorbe, nota de cobro con desglose. Va primero (independiente).
 - [ ] **Implementar STORY-933 — Adelantos de obra al técnico** (spec aprobada 2026-07-11, party mode) — tabla `adelantos` soft-anulable, registra el administrativo, liquidación = `costo_final − adelantos`, tope contra presupuesto+gastos, cancelación bloqueada con adelantos activos. Después de la 932 (comparten la fórmula del tope).
 - [ ] **Crear token durable de Vercel para CI** — vercel.com → Account Settings → Tokens → Create ("github-actions-mantis", scope ausitesis-9299, expiración larga) → `gh secret set VERCEL_TOKEN --repo faustinoUNC/mantis`. Hoy el secret tiene el token de sesión del CLI, que expira en días; cuando expire, los deploys de Giuliano van a fallar en la Action hasta reemplazarlo.
 - [ ] **Activar leaked password protection** — Dashboard de Supabase → Authentication → Sign In / Providers → toggle "Leaked password protection". 2 minutos.
@@ -23,6 +22,7 @@
 
 ## Hechos
 
+- [x] **Gastos imprevistos del técnico** (2026-07-11, STORY-932, commit 7c7640f) — el técnico propone gastos en ejecución con foto de ticket obligatoria, el gestor los resuelve, la conformidad se bloquea con gastos pendientes y `costo_final`/nota de cobro los absorben con desglose. Verificada E2E.
 - [x] **Deploys automáticos de Giuliano** (2026-07-11, v2) — Vercel Hobby bloquea deploys de commits de autores que no son el dueño, incluso vía Deploy Hook (v1 con hook quedó BLOCKED con commit de Giuliano en la punta; hook y secret borrados). Solución vigente: workflow `.github/workflows/deploy-vercel.yml` deploya con el CLI (`vercel deploy --prod`, secret `VERCEL_TOKEN`) reescribiendo el autor del commit solo en el checkout de CI. Verificado con deploy real. GiulianoVigetti es colaborador write.
 
 - [x] **Retoques del dashboard de métricas** (2026-07-08, STORY-919, SIN commitear — Fausti revisa en local) — fix bugs (rechazos de asignación por evento; calificación por embed to-one de PostgREST), 5 bloques sectorizados por alcance (caja "En el período" con el filtro en la cabecera; "ahora" arriba, "histórico" al final), embudo→barras, combo de ingresos con toggle de series + tendencia por serie, gradiente de magnitud, tendencia como tasa absoluta (no %), métrica "Tiempo de ciclo" y "Dinero pendiente", tile "Urgentes sin asignar". Detalle completo en `specs/STORY-919.md`.

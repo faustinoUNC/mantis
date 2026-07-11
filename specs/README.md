@@ -38,7 +38,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | Story | Título | Estado |
 |---|---|---|
 | [STORY-933](STORY-933.md) | Adelantos de obra al técnico: tabla `adelantos`, liquidación = costo_final − adelantos, tope contra presupuesto+gastos, cancelación bloqueada, comprobante con desglose | 📋 aprobada |
-| [STORY-932](STORY-932.md) | Gastos imprevistos del técnico en ejecución: tabla espejo de `presupuestos` (técnico propone, gestor aprueba), foto de ticket obligatoria, costo_final los absorbe, nota de cobro con desglose | 🚧 en desarrollo |
+| [STORY-932](STORY-932.md) | Gastos imprevistos del técnico en ejecución: tabla espejo de `presupuestos` (técnico propone, gestor aprueba), foto de ticket obligatoria, costo_final los absorbe, nota de cobro con desglose | ✅ done |
 | [STORY-931](STORY-931.md) | Especialidades del técnico en el scorecard de asignación (todas, bajo el nombre) | ✅ done |
 | [STORY-930](STORY-930.md) | Headers de seguridad HTTP (anti-clickjacking + hardening): X-Frame-Options, nosniff, Referrer-Policy, sin x-powered-by | 🚧 en desarrollo |
 | [STORY-101](STORY-101.md) | Setup del proyecto y design system base | ✅ done |
