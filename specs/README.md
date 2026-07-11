@@ -37,7 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
-| [STORY-934](STORY-934.md) | Rendición de materiales al terminar la ejecución (foto de comprobantes + total, obligatorios), gastos imprevistos sin aprobación, liquidación = rendido + mano de obra, fee solo lectura en facturación | 🚧 en desarrollo |
+| [STORY-934](STORY-934.md) | Rendición de materiales al terminar la ejecución (foto de comprobantes + total, obligatorios), gastos imprevistos sin aprobación, liquidación = rendido + mano de obra, fee solo lectura en facturación | ✅ done |
 | [STORY-933](STORY-933.md) | Adelantos de obra al técnico | ❌ descartada (se liquida todo al final contra rendición — STORY-934) |
 | [STORY-932](STORY-932.md) | Gastos imprevistos del técnico en ejecución: tabla espejo de `presupuestos` (técnico propone, gestor aprueba), foto de ticket obligatoria, costo_final los absorbe, nota de cobro con desglose | ✅ done |
 | [STORY-931](STORY-931.md) | Especialidades del técnico en el scorecard de asignación (todas, bajo el nombre) | ✅ done |

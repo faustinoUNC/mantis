@@ -1,6 +1,6 @@
 # STORY-934 — Rendición de materiales, gastos sin aprobación y liquidación = rendido + mano de obra (v1.1)
 
-**Estado:** 🚧 en desarrollo · **Origen:** Fausti, tras revisar STORY-932 en producción (dos tandas de feedback el 2026-07-11). Regla #0: simplicidad; máximo reciclaje. **v1.1**: se descartan los adelantos (STORY-933) y la liquidación pasa a calcularse desde la rendición.
+**Estado:** ✅ done (commit `7f5ac43`) · **Origen:** Fausti, tras revisar STORY-932 en producción (dos tandas de feedback el 2026-07-11). Regla #0: simplicidad; máximo reciclaje. **v1.1**: se descartan los adelantos (STORY-933) y la liquidación pasa a calcularse desde la rendición.
 
 ## Objetivo
 
@@ -67,7 +67,7 @@ El desvío existente (scorecard + card "Cumplimiento de presupuesto") compara `c
 7. `tsc` + eslint + `next build` verdes; métricas de Informes sin cambios.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementada y verificada E2E (2026-07-11). Sin commitear — Fausti revisa.
+- **Estado:** ✅ done (2026-07-11). Commit `7f5ac43` en main, deploy automático en Vercel.
 - **Migración** (`story_934_gastos_sin_aprobacion_rendicion`, aplicada en remoto): fuera `estado`/`motivo_rechazo`/`resuelto_*` y la policy de resolución de `gastos_imprevistos`; fuera las notificaciones de aprobado/rechazado; columnas `materiales_total` + `materiales_foto_path` en `gestiones`.
 - **Archivos:**
   - `features/gestiones/types.ts` — `GastoImprevisto` sin estado; `materiales_total`/`materiales_foto_url` en `GestionDetalle`.

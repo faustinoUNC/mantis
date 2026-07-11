@@ -22,6 +22,7 @@
 
 ## Hechos
 
+- [x] **Rendición de materiales + gastos sin aprobación + fee solo lectura** (2026-07-11, STORY-934, commit 7f5ac43) — para terminar la ejecución el técnico rinde total gastado + foto de todos los comprobantes; liquidación = rendido + mano de obra; desvío de materiales visible en Conformidad; fuera la aprobación por gasto y el input de fee en facturación. Verificada E2E.
 - [x] **Gastos imprevistos del técnico** (2026-07-11, STORY-932, commit 7c7640f) — el técnico propone gastos en ejecución con foto de ticket obligatoria, el gestor los resuelve, la conformidad se bloquea con gastos pendientes y `costo_final`/nota de cobro los absorben con desglose. Verificada E2E.
 - [x] **Deploys automáticos de Giuliano** (2026-07-11, v2) — Vercel Hobby bloquea deploys de commits de autores que no son el dueño, incluso vía Deploy Hook (v1 con hook quedó BLOCKED con commit de Giuliano en la punta; hook y secret borrados). Solución vigente: workflow `.github/workflows/deploy-vercel.yml` deploya con el CLI (`vercel deploy --prod`, secret `VERCEL_TOKEN`) reescribiendo el autor del commit solo en el checkout de CI. Verificado con deploy real. GiulianoVigetti es colaborador write.
 
