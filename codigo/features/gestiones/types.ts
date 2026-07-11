@@ -132,6 +132,7 @@ export interface StatsTecnico {
 export interface TecnicoDisponible {
   id: string;
   nombre: string;
+  especialidades: string[];
   franjas: { dia_semana: number; hora_desde: string; hora_hasta: string }[];
   stats: StatsTecnico | null;
 }

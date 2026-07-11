@@ -290,7 +290,14 @@ function ScorecardTecnico({
           >
             {seleccionado && <span className="size-2 rounded-full bg-brand" />}
           </span>
-          <span className="font-medium truncate">{tecnico.nombre}</span>
+          <div className="min-w-0">
+            <span className="font-medium truncate block">{tecnico.nombre}</span>
+            {tecnico.especialidades.length > 0 && (
+              <span className="text-[11px] text-muted truncate block">
+                {tecnico.especialidades.join(" · ")}
+              </span>
+            )}
+          </div>
         </div>
         <TiraDias franjas={tecnico.franjas} />
       </div>

@@ -326,7 +326,7 @@ export async function tecnicosDisponibles(
   const { data } = await supabase
     .from("tecnicos")
     .select(
-      "id, nombre, estado, tecnico_especialidades!inner(especialidad_id), franjas_disponibilidad(dia_semana, hora_desde, hora_hasta)"
+      "id, nombre, estado, tecnico_especialidades!inner(especialidad_id), todas:tecnico_especialidades(especialidades(nombre)), franjas_disponibilidad(dia_semana, hora_desde, hora_hasta)"
     )
     .eq("estado", "aprobado")
     .eq("tecnico_especialidades.especialidad_id", especialidadId);
@@ -341,6 +341,7 @@ export async function tecnicosDisponibles(
   type Fila = {
     id: string;
     nombre: string;
+    todas: { especialidades: { nombre: string } | null }[];
     franjas_disponibilidad: TecnicoDisponible["franjas"];
   };
   const candidatos = ((data ?? []) as unknown as Fila[]).filter((t) =>
@@ -351,6 +352,9 @@ export async function tecnicosDisponibles(
   return candidatos.map((t) => ({
     id: t.id,
     nombre: t.nombre,
+    especialidades: (t.todas ?? [])
+      .map((te) => te.especialidades?.nombre)
+      .filter((n): n is string => Boolean(n)),
     franjas: t.franjas_disponibilidad ?? [],
     stats: stats.get(t.id) ?? null,
   }));
