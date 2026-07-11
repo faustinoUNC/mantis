@@ -18,6 +18,6 @@ El scorecard de asignación (`ScorecardTecnico` en `detalle.client.tsx`) muestra
 3. `next build` verde.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementado (2026-07-11). Sin commitear (Fausti revisa).
+- **Estado:** ✅ implementado, commiteado y pusheado (2026-07-11, commit `0ebf7e0` en main).
 - **Archivos:** `codigo/features/gestiones/types.ts` (`TecnicoDisponible.especialidades`), `codigo/features/gestiones/service.ts` (embed aliasado `todas:tecnico_especialidades(especialidades(nombre))` en `tecnicosDisponibles` + map), `codigo/components/gestiones/detalle.client.tsx` (línea muted bajo el nombre en `ScorecardTecnico`).
 - **Verificación:** `next build` verde. Embed probado contra la API REST real: el `.eq` sigue filtrando el `!inner` y `todas` devuelve la lista completa (Raúl Medina → Plomería · Gas; tecnicodos → Carpintería · Climatización · Plomería).
