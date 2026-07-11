@@ -5,7 +5,6 @@
 
 ## Ahora (esta semana)
 
-- [ ] **Habilitar deploys de Giuliano (falta solo el hook)** — GiulianoVigetti ya es colaborador (write) y el workflow `.github/workflows/deploy-vercel.yml` ya está. Faltan: (1) crear el Deploy Hook: dashboard de Vercel → proyecto mantis → Settings → Git → Deploy Hooks → nombre `main`, rama `main` → copiar la URL; (2) cargarla como secret: `gh secret set VERCEL_DEPLOY_HOOK --repo faustinoUNC/mantis` (pegar la URL). Contexto: Vercel Hobby bloquea deploys de commits cuyo autor no es el dueño de la cuenta.
 - [ ] **Activar leaked password protection** — Dashboard de Supabase → Authentication → Sign In / Providers → toggle "Leaked password protection". 2 minutos.
 - [ ] **Prueba manual del flujo de presupuesto** — En la app deployada, como gestor: elegir pagador → vista previa → enviar presupuesto → aprobar. Confirmar que el email va al pagador elegido y que el total de la nota coincide con lo aprobado (fixes de STORY-906). 5 minutos.
 
@@ -20,6 +19,8 @@
 - ~~Métrica "qué técnico es más barato" (comparar mano de obra entre técnicos)~~ — Descartada (2026-07-08, 2ª party mode, STORY-915). No se puede hacer confiable: el único normalizador de alcance (`presupuestos.plazo_dias`) es auto-reportado y poco fiable, y un catálogo de rubros estandarizados violaría la Regla #0. Fausti: no meter datos inexactos. **En su lugar** va el **desvío de presupuesto** (cada técnico vs. su propio presupuesto), que sí es confiable.
 
 ## Hechos
+
+- [x] **Deploys automáticos de Giuliano** (2026-07-11) — Vercel Hobby bloquea deploys de commits de autores que no son el dueño de la cuenta. Solución: workflow `.github/workflows/deploy-vercel.yml` (push a main de cualquiera ≠ faustinoUNC → llama al Deploy Hook de Vercel, secret `VERCEL_DEPLOY_HOOK` del repo). Hook creado vía API (ref `main`), verificado end-to-end: deploy READY. GiulianoVigetti es colaborador write. Si se rota el hook, regenerarlo en Vercel → Settings → Git → Deploy Hooks y re-setear el secret.
 
 - [x] **Retoques del dashboard de métricas** (2026-07-08, STORY-919, SIN commitear — Fausti revisa en local) — fix bugs (rechazos de asignación por evento; calificación por embed to-one de PostgREST), 5 bloques sectorizados por alcance (caja "En el período" con el filtro en la cabecera; "ahora" arriba, "histórico" al final), embudo→barras, combo de ingresos con toggle de series + tendencia por serie, gradiente de magnitud, tendencia como tasa absoluta (no %), métrica "Tiempo de ciclo" y "Dinero pendiente", tile "Urgentes sin asignar". Detalle completo en `specs/STORY-919.md`.
 - [x] **Carga demo para probar métricas** (2026-07-08, STORY-918) — 80 gestiones `[DEMO]` en todas las etapas + gestores/técnicos/cartera demo (`ausitesis+demo…`, pass = usuario123). Sembrado con `scripts/demo-seed.sql`. **Revertir todo:** `./scripts/demo-borrar.sh` (base + fotos), o pedirle a Claude que corra `scripts/demo-borrar.sql` (solo base). IDs y conteos en `scripts/demo-manifest.json`. Se puede mover/editar las gestiones demo sin romper el borrado.
