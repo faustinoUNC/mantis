@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 // Redeploy trigger: forzar un nuevo build en Vercel tras un fallo previo.
+// Repo ya público — este build valida que el deploy automático funcione sin el bloqueo anterior.
 
 // STORY-930: headers de seguridad aditivos (anti-clickjacking + hardening).
 // Sin CSP a propósito (riesgo de romper la hidratación de Next). HSTS ya lo pone Vercel.
