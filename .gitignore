@@ -25,3 +25,6 @@ supabase/.branches/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+
+# Documentación privada — NUNCA debe subirse a GitHub ni salir de esta PC
+documentacion/
