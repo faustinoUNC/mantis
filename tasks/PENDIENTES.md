@@ -5,6 +5,7 @@
 
 ## Ahora (esta semana)
 
+- [ ] **Habilitar deploys del compañero (pasos manuales de Fausti)** — El workflow `.github/workflows/deploy-vercel.yml` ya está; faltan: (1) invitarlo como colaborador del repo: `gh api repos/faustinoUNC/mantis/collaborators/<usuario> -X PUT -f permission=push` (o GitHub → Settings → Collaborators); (2) crear el Deploy Hook: dashboard de Vercel → proyecto mantis → Settings → Git → Deploy Hooks → nombre `main`, rama `main` → copiar la URL; (3) cargarla como secret: `gh secret set VERCEL_DEPLOY_HOOK --repo faustinoUNC/mantis` (pegar la URL). Contexto: Vercel Hobby bloquea deploys de commits cuyo autor no es el dueño de la cuenta.
 - [ ] **Activar leaked password protection** — Dashboard de Supabase → Authentication → Sign In / Providers → toggle "Leaked password protection". 2 minutos.
 - [ ] **Prueba manual del flujo de presupuesto** — En la app deployada, como gestor: elegir pagador → vista previa → enviar presupuesto → aprobar. Confirmar que el email va al pagador elegido y que el total de la nota coincide con lo aprobado (fixes de STORY-906). 5 minutos.
 

@@ -1,0 +1,22 @@
+name: Deploy Vercel (colaboradores)
+
+# Vercel Hobby solo deploya commits cuyo autor es el dueño de la cuenta
+# (faustinoUNC). Los pushes a main de cualquier otro colaborador quedan
+# bloqueados por la integración Git, así que acá disparamos el deploy
+# a mano vía Deploy Hook (secret VERCEL_DEPLOY_HOOK).
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  disparar-deploy:
+    # Los pushes de faustinoUNC ya deployan solos por la integración Git;
+    # sin este filtro habría deploys dobles.
+    if: github.actor != 'faustinoUNC'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar al Deploy Hook de Vercel
+        run: curl -sf -X POST "$DEPLOY_HOOK" > /dev/null
+        env:
+          DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
