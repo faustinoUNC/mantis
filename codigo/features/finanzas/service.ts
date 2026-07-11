@@ -57,7 +57,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, pagador_sugerido, costo_final, cargo_admin, liq_monto, liq_factura_ref, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, descripcion, pagador, pagador_sugerido, costo_final, cargo_admin, liq_monto, liq_factura_ref, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en), gastos_imprevistos(descripcion, monto, estado)"
     )
     .eq("id", gestionId)
     .single();
@@ -79,9 +79,15 @@ async function datosDocumento(
       estado: string;
       creado_en: string;
     }[];
+    gastos_imprevistos: { descripcion: string; monto: number; estado: string }[];
   };
   const j = g as unknown as Joined;
   const aprobado = j.presupuestos.find((p) => p.estado === "aprobado");
+  // STORY-932: los gastos aprobados van desglosados en nota y comprobante
+  // (ya están adentro de costo_final — son referencia, como el presupuesto).
+  const gastosAprobados = (j.gastos_imprevistos ?? [])
+    .filter((ga) => ga.estado === "aprobado")
+    .map((ga) => ({ descripcion: ga.descripcion, monto: Number(ga.monto) }));
   // Para el PDF de presupuesto: el vigente (aprobado, o el último enviado)
   const vigente =
     aprobado ??
@@ -158,6 +164,7 @@ async function datosDocumento(
       facturaRef: tipo === "presupuesto" ? null : g.liq_factura_ref,
       plazoDias: tipo === "presupuesto" ? vigente?.plazo_dias ?? null : null,
       cargoAdmin: tipo === "comprobante" ? null : cargoAdmin,
+      gastos: tipo === "presupuesto" ? null : gastosAprobados,
     },
   };
 }

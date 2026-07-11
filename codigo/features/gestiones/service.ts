@@ -143,7 +143,13 @@ export async function obtenerGestion(
     .single();
   if (!g) return null;
 
-  const [{ data: eventos }, { data: presupuestos }, { data: avances }, { data: conformidades }] =
+  const [
+    { data: eventos },
+    { data: presupuestos },
+    { data: avances },
+    { data: conformidades },
+    { data: gastos },
+  ] =
     await Promise.all([
       supabase
         .from("eventos_gestion")
@@ -163,6 +169,11 @@ export async function obtenerGestion(
       supabase
         .from("conformidades")
         .select("id, foto_path, estado, motivo_rechazo, creado_en")
+        .eq("gestion_id", id)
+        .order("creado_en", { ascending: false }),
+      supabase
+        .from("gastos_imprevistos")
+        .select("id, monto, descripcion, foto_path, estado, motivo_rechazo, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
     ]);
@@ -223,6 +234,17 @@ export async function obtenerGestion(
         motivo_rechazo: c.motivo_rechazo,
         foto_url: await fotoConUrl(c.foto_path),
         creado_en: c.creado_en,
+      }))
+    ),
+    gastos: await Promise.all(
+      (gastos ?? []).map(async (ga) => ({
+        id: ga.id,
+        monto: Number(ga.monto),
+        descripcion: ga.descripcion,
+        estado: ga.estado,
+        motivo_rechazo: ga.motivo_rechazo,
+        foto_url: await fotoConUrl(ga.foto_path),
+        creado_en: ga.creado_en,
       }))
     ),
   };
@@ -696,6 +718,97 @@ export async function registrarAvance(
   return { ok: true };
 }
 
+// ── Gastos imprevistos (STORY-932) ──
+// Un gasto imprevisto es un mini-presupuesto: el técnico PROPONE el monto
+// (con foto del ticket obligatoria) y el gestor lo resuelve. El técnico
+// nunca fija dinero — mismo invariante que el presupuesto.
+
+export async function registrarGastoImprevisto(
+  gestionId: string,
+  form: FormData
+): Promise<ActionResult> {
+  const ctx = await exigirTecnicoAsignado(gestionId);
+  if (!ctx) return { ok: false, error: "No tenés permiso." };
+  if (ctx.gestion.etapa !== "en_ejecucion") {
+    return { ok: false, error: "Los gastos se registran durante la ejecución." };
+  }
+
+  const monto = Number(form.get("monto"));
+  const descripcion = String(form.get("descripcion") ?? "").trim();
+  if (!Number.isFinite(monto) || monto <= 0) {
+    return { ok: false, error: "Indicá el monto del gasto." };
+  }
+  if (!descripcion) return { ok: false, error: "Contá qué compraste y por qué." };
+  const foto = await subirFoto(gestionId, "gasto", form.get("foto") as File | null);
+  if (!foto) {
+    return { ok: false, error: "Subí la foto del ticket (JPG/PNG/WebP, máx 8MB) — sin evidencia no hay gasto." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("gastos_imprevistos").insert({
+    gestion_id: gestionId,
+    tecnico_id: ctx.actual.id,
+    monto,
+    descripcion,
+    foto_path: foto,
+  });
+  if (error) return { ok: false, error: "No se pudo registrar el gasto." };
+
+  await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: "gasto_enviado",
+    actor_id: ctx.actual.id,
+    detalle: { monto },
+  });
+
+  refrescarTablero(gestionId);
+  return { ok: true };
+}
+
+export async function resolverGastoImprevisto(
+  gastoId: string,
+  gestionId: string,
+  aprobar: boolean,
+  motivo?: string
+): Promise<ActionResult> {
+  const actual = await obtenerUsuarioActual();
+  if (!actual) return { ok: false, error: "Sin sesión." };
+  if (!aprobar && !motivo?.trim()) {
+    return { ok: false, error: "Indicá el motivo del rechazo." };
+  }
+
+  // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos
+  // veces; la RLS limita a admin/gestor owner (como presupuestos).
+  const supabase = await createClient();
+  const { data: filas, error } = await supabase
+    .from("gastos_imprevistos")
+    .update({
+      estado: aprobar ? "aprobado" : "rechazado",
+      motivo_rechazo: aprobar ? null : motivo?.trim(),
+      resuelto_por: actual.id,
+      resuelto_en: new Date().toISOString(),
+    })
+    .eq("id", gastoId)
+    .eq("gestion_id", gestionId)
+    .eq("estado", "enviado")
+    .select("monto");
+  if (error || !filas?.length) {
+    return { ok: false, error: "No se pudo resolver el gasto (¿ya fue resuelto?)." };
+  }
+
+  await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: aprobar ? "gasto_aprobado" : "gasto_rechazado",
+    actor_id: actual.id,
+    detalle: aprobar
+      ? { monto: Number(filas[0].monto) }
+      : { monto: Number(filas[0].monto), motivo: motivo?.trim() },
+  });
+
+  refrescarTablero(gestionId);
+  return { ok: true };
+}
+
 export async function subirConformidad(
   gestionId: string,
   form: FormData
@@ -736,8 +849,25 @@ export async function resolverConformidad(
     return { ok: false, error: "El costo final no puede ser negativo." };
   }
 
-  // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos veces
   const supabase = await createClient();
+
+  // STORY-932: no se aprueba la obra con gastos imprevistos sin resolver —
+  // bloqueo duro (el costo final debe incluir la decisión sobre cada gasto).
+  if (aprobar) {
+    const { count } = await supabase
+      .from("gastos_imprevistos")
+      .select("id", { count: "exact", head: true })
+      .eq("gestion_id", gestionId)
+      .eq("estado", "enviado");
+    if (count) {
+      return {
+        ok: false,
+        error: `Hay ${count} gasto${count === 1 ? "" : "s"} imprevisto${count === 1 ? "" : "s"} sin resolver — aprobalo${count === 1 ? "" : "s"} o rechazalo${count === 1 ? "" : "s"} antes de cerrar la obra.`,
+      };
+    }
+  }
+
+  // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos veces
   const { data: filas, error } = await supabase
     .from("conformidades")
     .update(

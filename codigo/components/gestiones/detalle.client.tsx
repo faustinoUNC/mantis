@@ -30,12 +30,15 @@ import {
   enviarPresupuesto,
   reasignarGestor,
   registrarAvance,
+  registrarGastoImprevisto,
   resolverConformidad,
+  resolverGastoImprevisto,
   resolverPresupuesto,
   responderAsignacion,
   subirConformidad,
 } from "@/features/gestiones/service";
 import type {
+  GastoImprevisto,
   GestionDetalle,
   Pagador,
   Presupuesto,
@@ -56,6 +59,9 @@ const LABEL_EVENTO: Record<string, string> = {
   presupuesto_enviado_pagador: "Presupuesto enviado por email al pagador",
   conformidad_aprobada: "Conformidad aprobada",
   conformidad_rechazada: "Conformidad rechazada",
+  gasto_enviado: "Gasto imprevisto registrado",
+  gasto_aprobado: "Gasto imprevisto aprobado",
+  gasto_rechazado: "Gasto imprevisto rechazado",
   gestor_reasignado: "Gestor reasignado",
   nota_cobro_enviada: "Nota de cobro enviada",
   cobro_registrado: "Cobro registrado",
@@ -735,6 +741,172 @@ function FormAvance({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
+// ── Gastos imprevistos (STORY-932) — el técnico propone, el gestor resuelve ──
+
+const TONO_GASTO: Record<GastoImprevisto["estado"], "neutro" | "brand" | "error"> = {
+  enviado: "neutro",
+  aprobado: "brand",
+  rechazado: "error",
+};
+const LABEL_GASTO: Record<GastoImprevisto["estado"], string> = {
+  enviado: "Esperando al gestor",
+  aprobado: "Aprobado",
+  rechazado: "Rechazado",
+};
+
+function FichaGasto({
+  gasto,
+  acciones,
+}: {
+  gasto: GastoImprevisto;
+  acciones?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-md border border-border bg-surface-2/50 p-3 flex flex-col gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm leading-relaxed">{gasto.descripcion}</p>
+          {gasto.motivo_rechazo && (
+            <p className="text-[13px] text-error mt-0.5">{gasto.motivo_rechazo}</p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <span className="font-mono text-sm font-semibold">{plata(gasto.monto)}</span>
+          <Badge tono={TONO_GASTO[gasto.estado]}>{LABEL_GASTO[gasto.estado]}</Badge>
+        </div>
+      </div>
+      {gasto.foto_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={gasto.foto_url}
+          alt="Ticket del gasto"
+          className="rounded-md max-h-40 border border-border self-start"
+        />
+      )}
+      {acciones}
+    </div>
+  );
+}
+
+// Vista técnico (mobile): sus gastos con estado + alta con foto del ticket.
+function GastosTecnico({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  const [agregando, setAgregando] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-3 max-w-md">
+      <p className="text-[13px] font-medium text-muted">
+        Gastos imprevistos{" "}
+        <span className="text-muted/50 font-normal">· materiales extra que no estaban en el presupuesto</span>
+      </p>
+      {gestion.gastos.map((ga) => (
+        <FichaGasto key={ga.id} gasto={ga} />
+      ))}
+      {agregando ? (
+        <form
+          className="flex flex-col gap-3 rounded-md border border-border p-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const ok = await correr(() =>
+              registrarGastoImprevisto(gestion.id, new FormData(form))
+            );
+            if (ok) setAgregando(false);
+          }}
+        >
+          <Input
+            label="Monto ($)"
+            name="monto"
+            type="number"
+            min="0.01"
+            step="0.01"
+            required
+          />
+          <Input
+            label="Qué compraste y por qué"
+            name="descripcion"
+            required
+            placeholder="Ej: caño de 40 que apareció roto al abrir la pared"
+          />
+          <InputArchivo label="Foto del ticket (obligatoria)" name="foto" capture="environment" required />
+          <div className="flex gap-2">
+            <Button type="submit" disabled={cargando} className="flex-1 sm:flex-none">
+              Enviar gasto
+            </Button>
+            <Button type="button" variante="fantasma" onClick={() => setAgregando(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <Button variante="secundario" onClick={() => setAgregando(true)} className="self-start">
+          + Agregar gasto imprevisto
+        </Button>
+      )}
+      {error && <p className="text-sm font-medium text-error">{error}</p>}
+    </div>
+  );
+}
+
+// Vista gestor: resolver cada gasto (aprobar / rechazar con motivo).
+function GastosGestor({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  const [rechazando, setRechazando] = useState<string | null>(null);
+  if (gestion.gastos.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-[13px] font-medium text-muted">
+        Gastos imprevistos del técnico{" "}
+        <span className="text-muted/50 font-normal">· lo aprobado entra al costo final</span>
+      </p>
+      {gestion.gastos.map((ga) => (
+        <FichaGasto
+          key={ga.id}
+          gasto={ga}
+          acciones={
+            ga.estado === "enviado" ? (
+              rechazando === ga.id ? (
+                <form
+                  className="flex flex-wrap items-end gap-2 pt-1"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const motivo = String(new FormData(e.currentTarget).get("motivo"));
+                    correr(() => resolverGastoImprevisto(ga.id, gestion.id, false, motivo));
+                  }}
+                >
+                  <div className="flex-1 min-w-44">
+                    <Input label="Motivo del rechazo" name="motivo" required />
+                  </div>
+                  <Button type="submit" disabled={cargando} variante="secundario">
+                    Confirmar
+                  </Button>
+                  <Button type="button" variante="fantasma" onClick={() => setRechazando(null)}>
+                    Cancelar
+                  </Button>
+                </form>
+              ) : (
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    disabled={cargando}
+                    onClick={() => correr(() => resolverGastoImprevisto(ga.id, gestion.id, true))}
+                  >
+                    Aprobar gasto
+                  </Button>
+                  <Button variante="secundario" onClick={() => setRechazando(ga.id)}>
+                    Rechazar
+                  </Button>
+                </div>
+              )
+            ) : undefined
+          }
+        />
+      ))}
+      {error && <p className="text-sm font-medium text-error">{error}</p>}
+    </div>
+  );
+}
+
 function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const ultima = gestion.conformidades[0];
@@ -776,9 +948,13 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   const [rechazando, setRechazando] = useState(false);
   const subida = gestion.conformidades.find((c) => c.estado === "subida");
   const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
+  // STORY-932: el costo sugerido incluye los gastos imprevistos aprobados.
+  const gastosAprobados = gestion.gastos
+    .filter((ga) => ga.estado === "aprobado")
+    .reduce((s, ga) => s + Number(ga.monto), 0);
   const sugerido = aprobado
-    ? Number(aprobado.monto_materiales) + Number(aprobado.monto_mano_obra)
-    : 0;
+    ? Number(aprobado.monto_materiales) + Number(aprobado.monto_mano_obra) + gastosAprobados
+    : gastosAprobados;
 
   if (!subida) {
     return <p className="text-sm text-muted">Esperando que el técnico suba la conformidad.</p>;
@@ -1220,6 +1396,7 @@ export function DetalleGestion({
       <RefrescoVivo tabla="avances" filtro={`gestion_id=eq.${gestion.id}`} />
       <RefrescoVivo tabla="presupuestos" filtro={`gestion_id=eq.${gestion.id}`} />
       <RefrescoVivo tabla="conformidades" filtro={`gestion_id=eq.${gestion.id}`} />
+      <RefrescoVivo tabla="gastos_imprevistos" filtro={`gestion_id=eq.${gestion.id}`} />
 
       <div className="flex items-center justify-between gap-3">
         <Link href={volver} className="text-sm font-medium text-muted hover:text-foreground">
@@ -1298,16 +1475,27 @@ export function DetalleGestion({
         {gestion.etapa === "en_ejecucion" && esTecnicoAsignado && (
           <div className="flex flex-col gap-6">
             <FormAvance gestion={gestion} />
-            <AccionConformidadTecnico gestion={gestion} />
+            <div className="border-t border-border pt-5">
+              <GastosTecnico gestion={gestion} />
+            </div>
+            <div className="border-t border-border pt-5">
+              <AccionConformidadTecnico gestion={gestion} />
+            </div>
           </div>
         )}
         {gestion.etapa === "en_ejecucion" && esGestorOwner && (
-          <p className="text-sm text-muted">
-            El técnico está trabajando — los avances aparecen abajo apenas los registra.
-          </p>
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-muted">
+              El técnico está trabajando — los avances aparecen abajo apenas los registra.
+            </p>
+            <GastosGestor gestion={gestion} />
+          </div>
         )}
         {gestion.etapa === "conformidad" && esGestorOwner && (
-          <AccionConformidadGestor gestion={gestion} />
+          <div className="flex flex-col gap-5">
+            <GastosGestor gestion={gestion} />
+            <AccionConformidadGestor gestion={gestion} />
+          </div>
         )}
         {gestion.etapa === "conformidad" && esTecnicoAsignado && (
           <AccionConformidadTecnico gestion={gestion} />

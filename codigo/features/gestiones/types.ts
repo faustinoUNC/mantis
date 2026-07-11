@@ -87,6 +87,18 @@ export interface Avance {
   creado_en: string;
 }
 
+// STORY-932: gasto imprevisto = mini-presupuesto (el técnico propone en
+// ejecución, el gestor resuelve). Foto de ticket obligatoria.
+export interface GastoImprevisto {
+  id: string;
+  monto: number;
+  descripcion: string;
+  foto_url: string | null;
+  estado: "enviado" | "aprobado" | "rechazado";
+  motivo_rechazo: string | null;
+  creado_en: string;
+}
+
 export interface Conformidad {
   id: string;
   foto_url: string | null;
@@ -110,6 +122,7 @@ export interface GestionDetalle extends GestionResumen {
   presupuestos: Presupuesto[];
   avances: Avance[];
   conformidades: Conformidad[];
+  gastos: GastoImprevisto[];
   // STORY-914: calificación del técnico (una por gestión, se carga al finalizar)
   calificacion: { estrellas: number; comentario: string | null } | null;
 }

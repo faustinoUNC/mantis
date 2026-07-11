@@ -5,6 +5,8 @@
 
 ## Ahora (esta semana)
 
+- [ ] **Implementar STORY-932 — Gastos imprevistos del técnico** (spec aprobada 2026-07-11, party mode) — tabla espejo de `presupuestos`, técnico propone con foto de ticket obligatoria, gestor aprueba, `costo_final` los absorbe, nota de cobro con desglose. Va primero (independiente).
+- [ ] **Implementar STORY-933 — Adelantos de obra al técnico** (spec aprobada 2026-07-11, party mode) — tabla `adelantos` soft-anulable, registra el administrativo, liquidación = `costo_final − adelantos`, tope contra presupuesto+gastos, cancelación bloqueada con adelantos activos. Después de la 932 (comparten la fórmula del tope).
 - [ ] **Crear token durable de Vercel para CI** — vercel.com → Account Settings → Tokens → Create ("github-actions-mantis", scope ausitesis-9299, expiración larga) → `gh secret set VERCEL_TOKEN --repo faustinoUNC/mantis`. Hoy el secret tiene el token de sesión del CLI, que expira en días; cuando expire, los deploys de Giuliano van a fallar en la Action hasta reemplazarlo.
 - [ ] **Activar leaked password protection** — Dashboard de Supabase → Authentication → Sign In / Providers → toggle "Leaked password protection". 2 minutos.
 - [ ] **Prueba manual del flujo de presupuesto** — En la app deployada, como gestor: elegir pagador → vista previa → enviar presupuesto → aprobar. Confirmar que el email va al pagador elegido y que el total de la nota coincide con lo aprobado (fixes de STORY-906). 5 minutos.
