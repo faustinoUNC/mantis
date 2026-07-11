@@ -32,7 +32,6 @@ import {
   registrarAvance,
   registrarGastoImprevisto,
   resolverConformidad,
-  resolverGastoImprevisto,
   resolverPresupuesto,
   responderAsignacion,
   subirConformidad,
@@ -60,8 +59,7 @@ const LABEL_EVENTO: Record<string, string> = {
   conformidad_aprobada: "Conformidad aprobada",
   conformidad_rechazada: "Conformidad rechazada",
   gasto_enviado: "Gasto imprevisto registrado",
-  gasto_aprobado: "Gasto imprevisto aprobado",
-  gasto_rechazado: "Gasto imprevisto rechazado",
+  materiales_rendidos: "Comprobantes de materiales rendidos",
   gestor_reasignado: "Gestor reasignado",
   nota_cobro_enviada: "Nota de cobro enviada",
   cobro_registrado: "Cobro registrado",
@@ -741,54 +739,29 @@ function FormAvance({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
-// ── Gastos imprevistos (STORY-932) — el técnico propone, el gestor resuelve ──
+// ── Gastos imprevistos (STORY-932/934) — evidencia del técnico, sin
+// aprobación: el control vive en el costo final que fija el gestor. ──
 
-const TONO_GASTO: Record<GastoImprevisto["estado"], "neutro" | "brand" | "error"> = {
-  enviado: "neutro",
-  aprobado: "brand",
-  rechazado: "error",
-};
-const LABEL_GASTO: Record<GastoImprevisto["estado"], string> = {
-  enviado: "Esperando al gestor",
-  aprobado: "Aprobado",
-  rechazado: "Rechazado",
-};
-
-function FichaGasto({
-  gasto,
-  acciones,
-}: {
-  gasto: GastoImprevisto;
-  acciones?: React.ReactNode;
-}) {
+function FichaGasto({ gasto }: { gasto: GastoImprevisto }) {
   return (
     <div className="rounded-md border border-border bg-surface-2/50 p-3 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm leading-relaxed">{gasto.descripcion}</p>
-          {gasto.motivo_rechazo && (
-            <p className="text-[13px] text-error mt-0.5">{gasto.motivo_rechazo}</p>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className="font-mono text-sm font-semibold">{plata(gasto.monto)}</span>
-          <Badge tono={TONO_GASTO[gasto.estado]}>{LABEL_GASTO[gasto.estado]}</Badge>
-        </div>
+        <p className="text-sm leading-relaxed min-w-0">{gasto.descripcion}</p>
+        <span className="font-mono text-sm font-semibold shrink-0">{plata(gasto.monto)}</span>
       </div>
       {gasto.foto_url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={gasto.foto_url}
-          alt="Ticket del gasto"
+          alt="Factura del gasto"
           className="rounded-md max-h-40 border border-border self-start"
         />
       )}
-      {acciones}
     </div>
   );
 }
 
-// Vista técnico (mobile): sus gastos con estado + alta con foto del ticket.
+// Vista técnico (mobile): sus gastos + alta con foto de la factura.
 function GastosTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const [agregando, setAgregando] = useState(false);
@@ -828,7 +801,7 @@ function GastosTecnico({ gestion }: { gestion: GestionDetalle }) {
             required
             placeholder="Ej: caño de 40 que apareció roto al abrir la pared"
           />
-          <InputArchivo label="Foto del ticket (obligatoria)" name="foto" capture="environment" required />
+          <InputArchivo label="Foto de la factura (obligatoria)" name="foto" capture="environment" required />
           <div className="flex gap-2">
             <Button type="submit" disabled={cargando} className="flex-1 sm:flex-none">
               Enviar gasto
@@ -848,61 +821,18 @@ function GastosTecnico({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
-// Vista gestor: resolver cada gasto (aprobar / rechazar con motivo).
+// Vista gestor: lista informativa de lo que el técnico fue gastando.
 function GastosGestor({ gestion }: { gestion: GestionDetalle }) {
-  const { error, cargando, correr } = useAccion();
-  const [rechazando, setRechazando] = useState<string | null>(null);
   if (gestion.gastos.length === 0) return null;
-
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[13px] font-medium text-muted">
         Gastos imprevistos del técnico{" "}
-        <span className="text-muted/50 font-normal">· lo aprobado entra al costo final</span>
+        <span className="text-muted/50 font-normal">· informativo — el costo final lo fijás vos en la conformidad</span>
       </p>
       {gestion.gastos.map((ga) => (
-        <FichaGasto
-          key={ga.id}
-          gasto={ga}
-          acciones={
-            ga.estado === "enviado" ? (
-              rechazando === ga.id ? (
-                <form
-                  className="flex flex-wrap items-end gap-2 pt-1"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const motivo = String(new FormData(e.currentTarget).get("motivo"));
-                    correr(() => resolverGastoImprevisto(ga.id, gestion.id, false, motivo));
-                  }}
-                >
-                  <div className="flex-1 min-w-44">
-                    <Input label="Motivo del rechazo" name="motivo" required />
-                  </div>
-                  <Button type="submit" disabled={cargando} variante="secundario">
-                    Confirmar
-                  </Button>
-                  <Button type="button" variante="fantasma" onClick={() => setRechazando(null)}>
-                    Cancelar
-                  </Button>
-                </form>
-              ) : (
-                <div className="flex gap-2 pt-1">
-                  <Button
-                    disabled={cargando}
-                    onClick={() => correr(() => resolverGastoImprevisto(ga.id, gestion.id, true))}
-                  >
-                    Aprobar gasto
-                  </Button>
-                  <Button variante="secundario" onClick={() => setRechazando(ga.id)}>
-                    Rechazar
-                  </Button>
-                </div>
-              )
-            ) : undefined
-          }
-        />
+        <FichaGasto key={ga.id} gasto={ga} />
       ))}
-      {error && <p className="text-sm font-medium text-error">{error}</p>}
     </div>
   );
 }
@@ -911,6 +841,9 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const ultima = gestion.conformidades[0];
   const esperando = ultima?.estado === "subida";
+  // STORY-934: al TERMINAR la obra se rinden los materiales (total + foto de
+  // todos los comprobantes). La resubida de una rechazada no lo vuelve a pedir.
+  const terminando = gestion.etapa === "en_ejecucion";
 
   if (esperando) {
     return <p className="text-sm text-muted">Conformidad subida — esperando revisión del gestor.</p>;
@@ -929,6 +862,28 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
           Rechazada{ultima.motivo_rechazo ? `: ${ultima.motivo_rechazo}` : ""} — subí una nueva.
         </p>
       )}
+      {terminando && (
+        <>
+          <p className="text-[13px] font-medium text-muted">
+            Rendición de materiales{" "}
+            <span className="text-muted/50 font-normal">· con esto se calcula tu liquidación</span>
+          </p>
+          <Input
+            label="Total gastado en materiales ($)"
+            name="materiales_total"
+            type="number"
+            min="0.01"
+            step="0.01"
+            required
+          />
+          <InputArchivo
+            label="Foto de todos los comprobantes (obligatoria)"
+            name="foto_comprobantes"
+            capture="environment"
+            required
+          />
+        </>
+      )}
       <InputArchivo
         label="Foto de la conformidad firmada"
         name="foto"
@@ -936,7 +891,7 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
         required
       />
       <Button type="submit" disabled={cargando} className="self-start">
-        {gestion.etapa === "en_ejecucion" ? "Terminar y subir conformidad →" : "Resubir conformidad"}
+        {terminando ? "Terminar y subir conformidad →" : "Resubir conformidad"}
       </Button>
       {error && <p className="text-sm font-medium text-error">{error}</p>}
     </form>
@@ -948,13 +903,16 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   const [rechazando, setRechazando] = useState(false);
   const subida = gestion.conformidades.find((c) => c.estado === "subida");
   const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
-  // STORY-932: el costo sugerido incluye los gastos imprevistos aprobados.
-  const gastosAprobados = gestion.gastos
-    .filter((ga) => ga.estado === "aprobado")
-    .reduce((s, ga) => s + Number(ga.monto), 0);
-  const sugerido = aprobado
-    ? Number(aprobado.monto_materiales) + Number(aprobado.monto_mano_obra) + gastosAprobados
-    : gastosAprobados;
+  // STORY-934: el costo sugerido sale de la obra REAL — materiales rendidos
+  // por el técnico + la mano de obra presupuestada. Así lo que paga el
+  // pagador y lo que se liquida al técnico son el mismo número (+ el fee).
+  const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
+  const matPresupuestados = aprobado ? Number(aprobado.monto_materiales) : 0;
+  const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
+  const rendido = gestion.materiales_total;
+  const sugerido =
+    rendido != null ? rendido + manoObra : matPresupuestados + manoObra + totalGastos;
+  const desvioMat = rendido != null ? rendido - matPresupuestados : null;
 
   if (!subida) {
     return <p className="text-sm text-muted">Esperando que el técnico suba la conformidad.</p>;
@@ -985,6 +943,44 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Rendición de materiales (STORY-934): lo real vs lo presupuestado */}
+      {rendido != null && (
+        <div className="max-w-md flex flex-col gap-2">
+          <p className="text-[13px] font-medium text-muted">Rendición de materiales del técnico</p>
+          {gestion.materiales_foto_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={gestion.materiales_foto_url}
+              alt="Comprobantes de materiales"
+              className="rounded-md max-h-56 border border-border self-start"
+            />
+          )}
+          <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
+            <div className="flex justify-between">
+              <span className="text-muted">Materiales presupuestados</span>
+              <span className="font-mono">{plata(matPresupuestados)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">Gastado real (rendido)</span>
+              <span className="font-mono font-semibold">{plata(rendido)}</span>
+            </div>
+            {desvioMat != null && matPresupuestados > 0 && (
+              <div className="flex justify-between pt-1 border-t border-border">
+                <span className="text-muted">Desvío de materiales</span>
+                <span
+                  className={`font-mono font-semibold ${
+                    desvioMat > 0 ? "text-urgente-fuerte" : "text-brand"
+                  }`}
+                >
+                  {desvioMat >= 0 ? "+" : "−"}{plata(Math.abs(desvioMat))} (
+                  {desvioMat >= 0 ? "+" : "−"}
+                  {Math.abs(Math.round((desvioMat / matPresupuestados) * 100))}%)
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {subida.foto_url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -1002,7 +998,11 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
         }}
       >
         <Input
-          label="Costo final ($)"
+          label={
+            rendido != null
+              ? "Costo final ($) — sugerido: rendido + mano de obra"
+              : "Costo final ($)"
+          }
           name="costo_final"
           type="number"
           min="0"

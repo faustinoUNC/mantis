@@ -137,7 +137,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_RESUMEN}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, nota_emitida_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_RESUMEN}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, materiales_total, materiales_foto_path, nota_emitida_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -173,7 +173,7 @@ export async function obtenerGestion(
         .order("creado_en", { ascending: false }),
       supabase
         .from("gastos_imprevistos")
-        .select("id, monto, descripcion, foto_path, estado, motivo_rechazo, creado_en")
+        .select("id, monto, descripcion, foto_path, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
     ]);
@@ -185,6 +185,8 @@ export async function obtenerGestion(
     pagador: Pagador | null;
     costo_final: number | null;
     cargo_admin: number | null;
+    materiales_total: number | null;
+    materiales_foto_path: string | null;
     nota_emitida_en: string | null;
     gestor_id: string;
     tecnico_id: string | null;
@@ -208,6 +210,8 @@ export async function obtenerGestion(
     pagador: fila.pagador,
     costo_final: fila.costo_final,
     cargo_admin: fila.cargo_admin,
+    materiales_total: fila.materiales_total == null ? null : Number(fila.materiales_total),
+    materiales_foto_url: await fotoConUrl(fila.materiales_foto_path),
     nota_emitida_en: fila.nota_emitida_en,
     gestor_id: fila.gestor_id,
     tecnico_id: fila.tecnico_id,
@@ -241,8 +245,6 @@ export async function obtenerGestion(
         id: ga.id,
         monto: Number(ga.monto),
         descripcion: ga.descripcion,
-        estado: ga.estado,
-        motivo_rechazo: ga.motivo_rechazo,
         foto_url: await fotoConUrl(ga.foto_path),
         creado_en: ga.creado_en,
       }))
@@ -718,10 +720,10 @@ export async function registrarAvance(
   return { ok: true };
 }
 
-// ── Gastos imprevistos (STORY-932) ──
-// Un gasto imprevisto es un mini-presupuesto: el técnico PROPONE el monto
-// (con foto del ticket obligatoria) y el gestor lo resuelve. El técnico
-// nunca fija dinero — mismo invariante que el presupuesto.
+// ── Gastos imprevistos (STORY-932/934) ──
+// El técnico registra el gasto con foto de la factura obligatoria. Es un
+// hecho informativo, sin aprobación: el control vive en el costo final que
+// fija el gestor al aprobar la conformidad, viendo los gastos.
 
 export async function registrarGastoImprevisto(
   gestionId: string,
@@ -765,68 +767,62 @@ export async function registrarGastoImprevisto(
   return { ok: true };
 }
 
-export async function resolverGastoImprevisto(
-  gastoId: string,
-  gestionId: string,
-  aprobar: boolean,
-  motivo?: string
-): Promise<ActionResult> {
-  const actual = await obtenerUsuarioActual();
-  if (!actual) return { ok: false, error: "Sin sesión." };
-  if (!aprobar && !motivo?.trim()) {
-    return { ok: false, error: "Indicá el motivo del rechazo." };
-  }
-
-  // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos
-  // veces; la RLS limita a admin/gestor owner (como presupuestos).
-  const supabase = await createClient();
-  const { data: filas, error } = await supabase
-    .from("gastos_imprevistos")
-    .update({
-      estado: aprobar ? "aprobado" : "rechazado",
-      motivo_rechazo: aprobar ? null : motivo?.trim(),
-      resuelto_por: actual.id,
-      resuelto_en: new Date().toISOString(),
-    })
-    .eq("id", gastoId)
-    .eq("gestion_id", gestionId)
-    .eq("estado", "enviado")
-    .select("monto");
-  if (error || !filas?.length) {
-    return { ok: false, error: "No se pudo resolver el gasto (¿ya fue resuelto?)." };
-  }
-
-  await supabase.from("eventos_gestion").insert({
-    gestion_id: gestionId,
-    tipo: aprobar ? "gasto_aprobado" : "gasto_rechazado",
-    actor_id: actual.id,
-    detalle: aprobar
-      ? { monto: Number(filas[0].monto) }
-      : { monto: Number(filas[0].monto), motivo: motivo?.trim() },
-  });
-
-  refrescarTablero(gestionId);
-  return { ok: true };
-}
-
 export async function subirConformidad(
   gestionId: string,
   form: FormData
 ): Promise<ActionResult> {
   const ctx = await exigirTecnicoAsignado(gestionId);
   if (!ctx) return { ok: false, error: "No tenés permiso." };
+  const terminando = ctx.gestion.etapa === "en_ejecucion";
+
+  // STORY-934: para TERMINAR la obra el técnico rinde los materiales — total
+  // gastado + foto general de todos los comprobantes (obligatoria). La
+  // resubida de una conformidad rechazada no la vuelve a pedir.
+  let rendicion: { total: number; foto: string } | null = null;
+  if (terminando) {
+    const total = Number(form.get("materiales_total"));
+    if (!Number.isFinite(total) || total <= 0) {
+      return { ok: false, error: "Indicá el total gastado en materiales." };
+    }
+    const fotoComprobantes = await subirFoto(
+      gestionId,
+      "comprobantes",
+      form.get("foto_comprobantes") as File | null
+    );
+    if (!fotoComprobantes) {
+      return { ok: false, error: "Subí la foto con todos los comprobantes de materiales (JPG/PNG/WebP, máx 8MB)." };
+    }
+    rendicion = { total, foto: fotoComprobantes };
+  }
 
   const foto = await subirFoto(gestionId, "conformidad", form.get("foto") as File | null);
   if (!foto) return { ok: false, error: "Subí la foto de la conformidad (JPG/PNG/WebP, máx 8MB)." };
 
   const supabase = await createClient();
+  if (rendicion) {
+    // Admin client: la RLS de gestiones no da UPDATE al técnico, pero
+    // exigirTecnicoAsignado ya validó que es SU gestión (patrón de subirFoto).
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("gestiones")
+      .update({ materiales_total: rendicion.total, materiales_foto_path: rendicion.foto })
+      .eq("id", gestionId);
+    if (error) return { ok: false, error: "No se pudo guardar la rendición de materiales." };
+    await supabase.from("eventos_gestion").insert({
+      gestion_id: gestionId,
+      tipo: "materiales_rendidos",
+      actor_id: ctx.actual.id,
+      detalle: { total: rendicion.total },
+    });
+  }
+
   const { error } = await supabase.from("conformidades").insert({
     gestion_id: gestionId,
     foto_path: foto,
   });
   if (error) return { ok: false, error: "No se pudo subir la conformidad." };
 
-  if (ctx.gestion.etapa === "en_ejecucion") {
+  if (terminando) {
     return avanzarEtapa(gestionId, "conformidad");
   }
   refrescarTablero(gestionId);
@@ -849,25 +845,8 @@ export async function resolverConformidad(
     return { ok: false, error: "El costo final no puede ser negativo." };
   }
 
-  const supabase = await createClient();
-
-  // STORY-932: no se aprueba la obra con gastos imprevistos sin resolver —
-  // bloqueo duro (el costo final debe incluir la decisión sobre cada gasto).
-  if (aprobar) {
-    const { count } = await supabase
-      .from("gastos_imprevistos")
-      .select("id", { count: "exact", head: true })
-      .eq("gestion_id", gestionId)
-      .eq("estado", "enviado");
-    if (count) {
-      return {
-        ok: false,
-        error: `Hay ${count} gasto${count === 1 ? "" : "s"} imprevisto${count === 1 ? "" : "s"} sin resolver — aprobalo${count === 1 ? "" : "s"} o rechazalo${count === 1 ? "" : "s"} antes de cerrar la obra.`,
-      };
-    }
-  }
-
   // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos veces
+  const supabase = await createClient();
   const { data: filas, error } = await supabase
     .from("conformidades")
     .update(

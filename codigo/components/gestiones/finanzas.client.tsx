@@ -27,17 +27,10 @@ export function FinanzasAcciones({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
-  const [cargoAdmin, setCargoAdmin] = useState<number>(
-    Number(gestion.cargo_admin ?? 0)
-  );
-  // Si otro usuario cambió el fee en la base (refresh vivo), reflejarlo:
-  // sin esto se emite la nota con un valor stale y se pisa el de la DB.
-  // Ajuste durante el render — patrón oficial, sin useEffect.
-  const [cargoPrevio, setCargoPrevio] = useState(gestion.cargo_admin);
-  if (cargoPrevio !== gestion.cargo_admin) {
-    setCargoPrevio(gestion.cargo_admin);
-    setCargoAdmin(Number(gestion.cargo_admin ?? 0));
-  }
+  // STORY-934: el fee quedó ANCLADO al aprobar el presupuesto — acá es solo
+  // lectura (el pagador aprobó conociendo ese total; no se corrige a último
+  // momento).
+  const cargoAdmin = Number(gestion.cargo_admin ?? 0);
 
   async function correr(
     clave: string,
@@ -55,28 +48,17 @@ export function FinanzasAcciones({
     const trabajo = Number(gestion.costo_final ?? 0);
     return (
       <div className="flex flex-col gap-5">
-        {/* Composición de la nota: trabajo + gestión administrativa */}
-        <div className="max-w-md flex flex-col gap-3">
-          <Input
-            label="Gestión administrativa ($) — definido en el presupuesto, corregible acá"
-            type="number"
-            min="0"
-            step="0.01"
-            value={cargoAdmin || ""}
-            placeholder="0"
-            onChange={(e) => setCargoAdmin(Number(e.target.value) || 0)}
-          />
+        {/* Composición de la nota: trabajo + fee anclado en el presupuesto */}
+        <div className="max-w-md">
           <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
             <div className="flex justify-between">
               <span className="text-muted">Trabajo realizado</span>
               <span className="font-mono">{plata(trabajo)}</span>
             </div>
-            {cargoAdmin > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted">Gestión administrativa</span>
-                <span className="font-mono">{plata(cargoAdmin)}</span>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <span className="text-muted">Gestión administrativa (anclada en el presupuesto)</span>
+              <span className="font-mono">{plata(cargoAdmin)}</span>
+            </div>
             <div className="flex justify-between pt-1 border-t border-border font-semibold">
               <span>Total a facturar al {gestion.pagador ?? "pagador"}</span>
               <span className="font-mono">{plata(trabajo + cargoAdmin)}</span>
@@ -88,8 +70,8 @@ export function FinanzasAcciones({
           etiqueta="nota de cobro"
           destinatarioEtiqueta={gestion.pagador ?? "pagador"}
           yaEnviado={Boolean(gestion.nota_emitida_en)}
-          generar={() => descargarDocumento(gestion.id, "nota", { cargoAdmin })}
-          enviar={() => emitirNotaCobro(gestion.id, cargoAdmin)}
+          generar={() => descargarDocumento(gestion.id, "nota")}
+          enviar={() => emitirNotaCobro(gestion.id)}
         />
 
         <form
@@ -120,37 +102,63 @@ export function FinanzasAcciones({
   }
 
   if (gestion.etapa === "liquidacion_tecnico") {
+    // STORY-934: al técnico se le liquida lo que rindió en materiales + su
+    // mano de obra presupuestada. Fallback: costo_final (gestiones viejas
+    // sin rendición).
+    const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
+    const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
+    const rendido = gestion.materiales_total;
+    const liqSugerida =
+      rendido != null ? rendido + manoObra : Number(gestion.costo_final ?? 0);
     return (
-      <form
-        className="flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const f = new FormData(e.currentTarget);
-          correr("liq", () =>
-            registrarLiquidacion(gestion.id, {
-              monto: Number(f.get("monto")),
-              factura_ref: String(f.get("factura_ref") ?? ""),
-            })
-          );
-        }}
-      >
-        <Input
-          label="Monto liquidado ($)"
-          name="monto"
-          type="number"
-          min="0"
-          step="0.01"
-          required
-          defaultValue={gestion.costo_final ?? undefined}
-        />
-        <div className="min-w-52">
-          <Input label="Ref. factura C del técnico" name="factura_ref" placeholder="Ej.: 0001-00001234" />
-        </div>
-        <Button type="submit" disabled={cargando !== null}>
-          {cargando === "liq" ? "Registrando…" : "Liquidar y finalizar →"}
-        </Button>
-        {error && <p className="text-sm font-medium text-error w-full">{error}</p>}
-      </form>
+      <div className="flex flex-col gap-4">
+        {rendido != null && (
+          <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
+            <div className="flex justify-between">
+              <span className="text-muted">Materiales rendidos</span>
+              <span className="font-mono">{plata(rendido)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">Mano de obra (presupuesto aprobado)</span>
+              <span className="font-mono">{plata(manoObra)}</span>
+            </div>
+            <div className="flex justify-between pt-1 border-t border-border font-semibold">
+              <span>A liquidar al técnico</span>
+              <span className="font-mono">{plata(rendido + manoObra)}</span>
+            </div>
+          </div>
+        )}
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            correr("liq", () =>
+              registrarLiquidacion(gestion.id, {
+                monto: Number(f.get("monto")),
+                factura_ref: String(f.get("factura_ref") ?? ""),
+              })
+            );
+          }}
+        >
+          <Input
+            label="Monto liquidado ($)"
+            name="monto"
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            defaultValue={liqSugerida || undefined}
+          />
+          <div className="min-w-52">
+            <Input label="Ref. factura C del técnico" name="factura_ref" placeholder="Ej.: 0001-00001234" />
+          </div>
+          <Button type="submit" disabled={cargando !== null}>
+            {cargando === "liq" ? "Registrando…" : "Liquidar y finalizar →"}
+          </Button>
+          {error && <p className="text-sm font-medium text-error w-full">{error}</p>}
+        </form>
+      </div>
     );
   }
 

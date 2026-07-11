@@ -5,7 +5,6 @@
 
 ## Ahora (esta semana)
 
-- [ ] **Implementar STORY-933 — Adelantos de obra al técnico** (spec aprobada 2026-07-11, party mode) — tabla `adelantos` soft-anulable, registra el administrativo, liquidación = `costo_final − adelantos`, tope contra presupuesto+gastos, cancelación bloqueada con adelantos activos. Después de la 932 (comparten la fórmula del tope).
 - [ ] **Crear token durable de Vercel para CI** — vercel.com → Account Settings → Tokens → Create ("github-actions-mantis", scope ausitesis-9299, expiración larga) → `gh secret set VERCEL_TOKEN --repo faustinoUNC/mantis`. Hoy el secret tiene el token de sesión del CLI, que expira en días; cuando expire, los deploys de Giuliano van a fallar en la Action hasta reemplazarlo.
 - [ ] **Activar leaked password protection** — Dashboard de Supabase → Authentication → Sign In / Providers → toggle "Leaked password protection". 2 minutos.
 - [ ] **Prueba manual del flujo de presupuesto** — En la app deployada, como gestor: elegir pagador → vista previa → enviar presupuesto → aprobar. Confirmar que el email va al pagador elegido y que el total de la nota coincide con lo aprobado (fixes de STORY-906). 5 minutos.
@@ -17,6 +16,7 @@
 
 ## Descartados (no hacer)
 
+- ~~Adelantos de obra al técnico (STORY-933)~~ — Descartada por Fausti (2026-07-11) el mismo día de aprobarse, antes de implementar: "no nos complicamos" con plata adelantada. En su lugar: rendición de comprobantes + total gastado al terminar la ejecución, y liquidación = materiales rendidos + mano de obra (STORY-934).
 - ~~CRON_SECRET del job pg_cron a Vault~~ — Decisión de Fausti (2026-07-06): riesgo bajo, no se hará.
 - ~~Métrica "qué técnico es más barato" (comparar mano de obra entre técnicos)~~ — Descartada (2026-07-08, 2ª party mode, STORY-915). No se puede hacer confiable: el único normalizador de alcance (`presupuestos.plazo_dias`) es auto-reportado y poco fiable, y un catálogo de rubros estandarizados violaría la Regla #0. Fausti: no meter datos inexactos. **En su lugar** va el **desvío de presupuesto** (cada técnico vs. su propio presupuesto), que sí es confiable.
 

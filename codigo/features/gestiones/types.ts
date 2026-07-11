@@ -87,15 +87,14 @@ export interface Avance {
   creado_en: string;
 }
 
-// STORY-932: gasto imprevisto = mini-presupuesto (el técnico propone en
-// ejecución, el gestor resuelve). Foto de ticket obligatoria.
+// STORY-932/934: gasto imprevisto que registra el técnico en ejecución, con
+// foto de la factura obligatoria. Es un hecho informativo (sin aprobación):
+// el control vive en el costo final que fija el gestor en la conformidad.
 export interface GastoImprevisto {
   id: string;
   monto: number;
   descripcion: string;
   foto_url: string | null;
-  estado: "enviado" | "aprobado" | "rechazado";
-  motivo_rechazo: string | null;
   creado_en: string;
 }
 
@@ -113,6 +112,9 @@ export interface GestionDetalle extends GestionResumen {
   pagador: Pagador | null;
   costo_final: number | null;
   cargo_admin: number | null;
+  // STORY-934: rendición de materiales del técnico al terminar la ejecución
+  materiales_total: number | null;
+  materiales_foto_url: string | null;
   nota_emitida_en: string | null;
   gestor_id: string;
   tecnico_id: string | null;

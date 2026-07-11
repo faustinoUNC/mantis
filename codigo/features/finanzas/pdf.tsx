@@ -42,8 +42,8 @@ export interface DatosDocumento {
   facturaRef?: string | null;
   plazoDias?: number | null;
   cargoAdmin?: number | null;
-  // STORY-932: gastos imprevistos aprobados (ya incluidos en costo_final)
-  gastos?: { descripcion: string; monto: number }[] | null;
+  // STORY-934: la línea de materiales trae la rendición real del técnico
+  materialesRendidos?: boolean;
 }
 
 function monto(n: number) {
@@ -105,7 +105,14 @@ function Documento({ datos }: { datos: DatosDocumento }) {
           {datos.presupuesto && (
             <>
               <View style={s.filaTabla}>
-                <Text>Materiales{datos.tipo === "presupuesto" ? "" : " (presupuesto aprobado)"}</Text>
+                <Text>
+                  Materiales
+                  {datos.tipo === "presupuesto"
+                    ? ""
+                    : datos.materialesRendidos
+                      ? " (rendidos por el técnico)"
+                      : " (presupuesto aprobado)"}
+                </Text>
                 <Text>{monto(datos.presupuesto.materiales)}</Text>
               </View>
               <View style={s.filaTabla}>
@@ -114,12 +121,6 @@ function Documento({ datos }: { datos: DatosDocumento }) {
               </View>
             </>
           )}
-          {(datos.gastos ?? []).map((ga, i) => (
-            <View key={i} style={s.filaTabla}>
-              <Text>Gasto imprevisto — {ga.descripcion}</Text>
-              <Text>{monto(ga.monto)}</Text>
-            </View>
-          ))}
           {datos.cargoAdmin != null && datos.cargoAdmin > 0 && (
             <View style={s.filaTabla}>
               <Text>Gestión administrativa</Text>

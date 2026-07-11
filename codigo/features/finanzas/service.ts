@@ -57,7 +57,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, pagador_sugerido, costo_final, cargo_admin, liq_monto, liq_factura_ref, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en), gastos_imprevistos(descripcion, monto, estado)"
+      "id, descripcion, pagador, pagador_sugerido, costo_final, cargo_admin, materiales_total, liq_monto, liq_factura_ref, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -79,15 +79,12 @@ async function datosDocumento(
       estado: string;
       creado_en: string;
     }[];
-    gastos_imprevistos: { descripcion: string; monto: number; estado: string }[];
   };
   const j = g as unknown as Joined;
   const aprobado = j.presupuestos.find((p) => p.estado === "aprobado");
-  // STORY-932: los gastos aprobados van desglosados en nota y comprobante
-  // (ya están adentro de costo_final — son referencia, como el presupuesto).
-  const gastosAprobados = (j.gastos_imprevistos ?? [])
-    .filter((ga) => ga.estado === "aprobado")
-    .map((ga) => ({ descripcion: ga.descripcion, monto: Number(ga.monto) }));
+  // STORY-934: en nota y comprobante la línea de materiales usa la RENDICIÓN
+  // real del técnico (fallback: lo presupuestado, para gestiones viejas).
+  const materialesRendidos = g.materiales_total != null;
   // Para el PDF de presupuesto: el vigente (aprobado, o el último enviado)
   const vigente =
     aprobado ??
@@ -156,7 +153,10 @@ async function datosDocumento(
       tecnicoNombre: j.tecnico?.nombre ?? null,
       presupuesto: (tipo === "presupuesto" ? vigente : aprobado)
         ? {
-            materiales: Number((tipo === "presupuesto" ? vigente : aprobado)!.monto_materiales),
+            materiales:
+              tipo === "presupuesto"
+                ? Number(vigente!.monto_materiales)
+                : Number(g.materiales_total ?? aprobado!.monto_materiales),
             manoObra: Number((tipo === "presupuesto" ? vigente : aprobado)!.monto_mano_obra),
           }
         : null,
@@ -164,7 +164,7 @@ async function datosDocumento(
       facturaRef: tipo === "presupuesto" ? null : g.liq_factura_ref,
       plazoDias: tipo === "presupuesto" ? vigente?.plazo_dias ?? null : null,
       cargoAdmin: tipo === "comprobante" ? null : cargoAdmin,
-      gastos: tipo === "presupuesto" ? null : gastosAprobados,
+      materialesRendidos: tipo !== "presupuesto" && materialesRendidos,
     },
   };
 }
@@ -193,17 +193,12 @@ async function guardarCargoAdmin(gestionId: string, cargoAdmin?: number) {
   await admin.from("gestiones").update({ cargo_admin: cargoAdmin }).eq("id", gestionId);
 }
 
-export async function emitirNotaCobro(
-  gestionId: string,
-  cargoAdmin?: number
-): Promise<ActionResult> {
+// STORY-934: la nota usa SIEMPRE el fee anclado en la aprobación del
+// presupuesto — en facturación ya no se corrige (doctrina "fee fijo").
+export async function emitirNotaCobro(gestionId: string): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
-  if (cargoInvalido(cargoAdmin)) {
-    return { ok: false, error: "El cargo administrativo no puede ser negativo." };
-  }
 
-  await guardarCargoAdmin(gestionId, cargoAdmin);
   const doc = await datosDocumento(gestionId, "nota");
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
   if (!doc.datos.total) return { ok: false, error: "La gestión no tiene costo final." };
@@ -251,19 +246,12 @@ export interface DocumentoGenerado {
 
 export async function descargarDocumento(
   gestionId: string,
-  tipo: "nota" | "comprobante",
-  opciones?: { cargoAdmin?: number }
+  tipo: "nota" | "comprobante"
 ): Promise<ActionResult<DocumentoGenerado>> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
-  if (cargoInvalido(opciones?.cargoAdmin)) {
-    return { ok: false, error: "El cargo administrativo no puede ser negativo." };
-  }
 
-  // Vista previa: el fee tipeado entra al PDF como override, sin persistir
-  const doc = await datosDocumento(gestionId, tipo, {
-    cargoAdmin: tipo === "nota" ? opciones?.cargoAdmin : undefined,
-  });
+  const doc = await datosDocumento(gestionId, tipo);
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
 
   const base64 = await generarPDF(doc.datos);

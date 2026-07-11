@@ -1,6 +1,6 @@
 # STORY-933 — Adelantos de obra al técnico (v1.0)
 
-**Estado:** 📋 aprobada — pendiente de implementación (diseño en party mode 2026-07-11, Mary/John/Winston/Sally; decisiones confirmadas por Fausti: cancelación bloqueada con adelantos) · **Origen:** Fausti. Regla #0: la solución más simple; máximo reciclaje. Depende de STORY-932 solo en la fórmula del tope (si se implementa antes, el tope usa solo el presupuesto aprobado).
+**Estado:** ❌ DESCARTADA (Fausti, 2026-07-11 — mismo día que se aprobó, antes de implementar). "No va complicarse con pagarle al técnico un adelanto de obra — no nos compliquemos": en su lugar, el técnico rinde comprobantes + total gastado al terminar la ejecución y **se le liquida todo junto: materiales rendidos + su mano de obra** (ver STORY-934). Esta spec queda como documentación del diseño descartado para no re-proponerlo.
 
 ## Objetivo
 
