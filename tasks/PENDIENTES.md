@@ -5,6 +5,7 @@
 
 ## Ahora (esta semana)
 
+- [ ] **Crear token durable de Vercel para CI** — vercel.com → Account Settings → Tokens → Create ("github-actions-mantis", scope ausitesis-9299, expiración larga) → `gh secret set VERCEL_TOKEN --repo faustinoUNC/mantis`. Hoy el secret tiene el token de sesión del CLI, que expira en días; cuando expire, los deploys de Giuliano van a fallar en la Action hasta reemplazarlo.
 - [ ] **Activar leaked password protection** — Dashboard de Supabase → Authentication → Sign In / Providers → toggle "Leaked password protection". 2 minutos.
 - [ ] **Prueba manual del flujo de presupuesto** — En la app deployada, como gestor: elegir pagador → vista previa → enviar presupuesto → aprobar. Confirmar que el email va al pagador elegido y que el total de la nota coincide con lo aprobado (fixes de STORY-906). 5 minutos.
 
@@ -20,7 +21,7 @@
 
 ## Hechos
 
-- [x] **Deploys automáticos de Giuliano** (2026-07-11) — Vercel Hobby bloquea deploys de commits de autores que no son el dueño de la cuenta. Solución: workflow `.github/workflows/deploy-vercel.yml` (push a main de cualquiera ≠ faustinoUNC → llama al Deploy Hook de Vercel, secret `VERCEL_DEPLOY_HOOK` del repo). Hook creado vía API (ref `main`), verificado end-to-end: deploy READY. GiulianoVigetti es colaborador write. Si se rota el hook, regenerarlo en Vercel → Settings → Git → Deploy Hooks y re-setear el secret.
+- [x] **Deploys automáticos de Giuliano** (2026-07-11, v2) — Vercel Hobby bloquea deploys de commits de autores que no son el dueño, incluso vía Deploy Hook (v1 con hook quedó BLOCKED con commit de Giuliano en la punta; hook y secret borrados). Solución vigente: workflow `.github/workflows/deploy-vercel.yml` deploya con el CLI (`vercel deploy --prod`, secret `VERCEL_TOKEN`) reescribiendo el autor del commit solo en el checkout de CI. Verificado con deploy real. GiulianoVigetti es colaborador write.
 
 - [x] **Retoques del dashboard de métricas** (2026-07-08, STORY-919, SIN commitear — Fausti revisa en local) — fix bugs (rechazos de asignación por evento; calificación por embed to-one de PostgREST), 5 bloques sectorizados por alcance (caja "En el período" con el filtro en la cabecera; "ahora" arriba, "histórico" al final), embudo→barras, combo de ingresos con toggle de series + tendencia por serie, gradiente de magnitud, tendencia como tasa absoluta (no %), métrica "Tiempo de ciclo" y "Dinero pendiente", tile "Urgentes sin asignar". Detalle completo en `specs/STORY-919.md`.
 - [x] **Carga demo para probar métricas** (2026-07-08, STORY-918) — 80 gestiones `[DEMO]` en todas las etapas + gestores/técnicos/cartera demo (`ausitesis+demo…`, pass = usuario123). Sembrado con `scripts/demo-seed.sql`. **Revertir todo:** `./scripts/demo-borrar.sh` (base + fotos), o pedirle a Claude que corra `scripts/demo-borrar.sql` (solo base). IDs y conteos en `scripts/demo-manifest.json`. Se puede mover/editar las gestiones demo sin romper el borrado.
