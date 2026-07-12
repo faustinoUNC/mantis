@@ -1,4 +1,4 @@
-# STORY-936 — Terminar la obra: avance obligatorio y gastos que justifican el exceso (v1.0)
+# STORY-936 — Terminar la obra: avance obligatorio y gastos que justifican el exceso (v1.1)
 
 **Estado:** ✅ done (commit `473a677`) · **Origen:** Fausti (2026-07-11). Decisiones confirmadas: (1) al menos una nota de avance para poder terminar; (2) los gastos imprevistos siguen cargándose libres durante la ejecución, pero pasan a ser la **justificación obligatoria del exceso de materiales** en la rendición. Regla #0: sin migraciones, todo validación sobre lo existente.
 
@@ -25,6 +25,10 @@ Cerrar dos huecos del flujo del técnico al terminar la ejecución:
 - **UI**: el input "Total gastado en materiales" pasa a controlado; si lo tipeado excede `presupuestado + Σ gastos`, leyenda en vivo ("Estás rindiendo $X de más — cargá gastos imprevistos por el excedente") y botón de terminar deshabilitado. El form de gastos ya está en la misma pantalla, arriba.
 - **Guard**: si la gestión no tiene presupuesto aprobado (caso legacy/raro), la validación de exceso se saltea (no hay contra qué comparar). La de avance corre igual.
 - Los gastos **no cambian de mecánica**: carga libre en `en_ejecucion`, foto obligatoria, informativos para el gestor (sin aprobación). Solo ganan este rol de justificación al cierre. Doctrina STORY-924: bloqueo, no advertencia.
+
+### B.2 Retoque v1.1 — aclarar el solapamiento de fotos (decisión de Fausti)
+
+La foto por gasto y la foto general de la rendición cumplen roles distintos (ítem puntual en caliente vs. respaldo del total rendido) y se mantienen ambas. Única simplificación: cuando la gestión tiene gastos imprevistos cargados, el label de la rendición pasa a "Foto de todos los comprobantes, **incluidos los de gastos imprevistos** (obligatoria)" para que el técnico no dude si van o no. Sin cambios de lógica.
 
 ### C. Sin cambios de datos ni de otros flujos
 

@@ -913,7 +913,11 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
             onChange={(e) => setTotalRendido(Number(e.target.value) || 0)}
           />
           <InputArchivo
-            label="Foto de todos los comprobantes (obligatoria)"
+            label={
+              gestion.gastos.length > 0
+                ? "Foto de todos los comprobantes, incluidos los de gastos imprevistos (obligatoria)"
+                : "Foto de todos los comprobantes (obligatoria)"
+            }
             name="foto_comprobantes"
             capture="environment"
             required
