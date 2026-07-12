@@ -1,6 +1,6 @@
 # STORY-937 — Desvío de presupuesto medido sobre materiales, ponderado por plata (v1.0)
 
-**Estado:** ✅ implementada y verificada (2026-07-12, sin commitear — Fausti revisa) · **Origen:** Fausti (2026-07-12), tras auditar el cálculo. Decisiones: (1) la métrica refleja **solo materiales** — la mano de obra quedó fija por diseño (STORY-934) y hoy diluye el porcentaje; (2) el promedio pasa a ser **ponderado por plata** (Σ reales / Σ presupuestados − 1), así una obra chica con +50% no pesa lo mismo que una grande con +2% y el número responde "si le doy $X de materiales, ¿cuánto cuesta de verdad?".
+**Estado:** ✅ done (commit `6719252`) · **Origen:** Fausti (2026-07-12), tras auditar el cálculo. Decisiones: (1) la métrica refleja **solo materiales** — la mano de obra quedó fija por diseño (STORY-934) y hoy diluye el porcentaje; (2) el promedio pasa a ser **ponderado por plata** (Σ reales / Σ presupuestados − 1), así una obra chica con +50% no pesa lo mismo que una grande con +2% y el número responde "si le doy $X de materiales, ¿cuánto cuesta de verdad?".
 
 ## Objetivo
 
@@ -36,7 +36,7 @@ Que el "Desvío" del scorecard de asignación y el "Cumplimiento de presupuesto"
 4. `tsc` + eslint + `next build` verdes.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementada y verificada (2026-07-12). Sin commitear — pendiente de revisión de Fausti. Sin migración.
+- **Estado:** ✅ done (2026-07-12). Commit `6719252` en main, deploy automático en Vercel. Sin migración.
 - **Archivos:**
   - `features/gestiones/service.ts` — `estadisticasTecnicos`: `materiales_total` en la query; `desvioPct` = Σ reales / Σ presupuestados − 1 (reales = rendición, fallback `costo_final − mano de obra`; saltea sin aprobado, materiales ≤ 0 o derivado negativo).
   - `features/gestiones/types.ts` — comentario de `StatsTecnico.desvioPct`.
