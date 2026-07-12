@@ -37,7 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
-| [STORY-935](STORY-935.md) | Validaciones de flujo + archivo: no crear gestión sin técnico de la especialidad; email del presupuesto obligatorio antes de aprobar (`presupuesto_enviado_en`); saludo por nombre en el resumen de obras; archivar finalizadas + vista "Archivo" con división por roles | ✅ implementada (sin commitear) |
+| [STORY-935](STORY-935.md) | Validaciones de flujo + archivo: no crear gestión sin técnico de la especialidad; email del presupuesto obligatorio antes de aprobar (`presupuesto_enviado_en`); saludo por nombre en el resumen de obras; archivar finalizadas + vista "Archivo" con división por roles | ✅ done |
 | [STORY-934](STORY-934.md) | Rendición de materiales al terminar la ejecución (foto de comprobantes + total, obligatorios), gastos imprevistos sin aprobación, liquidación = rendido + mano de obra, fee solo lectura en facturación | ✅ done |
 | [STORY-933](STORY-933.md) | Adelantos de obra al técnico | ❌ descartada (se liquida todo al final contra rendición — STORY-934) |
 | [STORY-932](STORY-932.md) | Gastos imprevistos del técnico en ejecución: tabla espejo de `presupuestos` (técnico propone, gestor aprueba), foto de ticket obligatoria, costo_final los absorbe, nota de cobro con desglose | ✅ done |

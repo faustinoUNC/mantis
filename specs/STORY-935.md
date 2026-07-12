@@ -1,6 +1,6 @@
 # STORY-935 — Validaciones de flujo + saludo en emails + archivo de finalizadas (v1.1)
 
-**Estado:** ✅ implementada y verificada E2E (2026-07-11, sin commitear — Fausti revisa) · **Origen:** Fausti (2026-07-11, cuatro pedidos puntuales). Regla #0: máximo reciclaje de lo existente, sin abstracciones nuevas.
+**Estado:** ✅ done (commit `ddebabd`) · **Origen:** Fausti (2026-07-11, cuatro pedidos puntuales). Regla #0: máximo reciclaje de lo existente, sin abstracciones nuevas.
 
 ## Objetivo
 
@@ -58,7 +58,7 @@ Detectado durante la verificación: `Each child in a list should have a unique "
 8. `tsc` + eslint + `next build` verdes.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementada y verificada E2E (2026-07-11). Sin commitear — pendiente de revisión de Fausti.
+- **Estado:** ✅ done (2026-07-11). Commit `ddebabd` en main, deploy automático en Vercel.
 - **Migración** (`story_935_presupuesto_enviado_y_archivo`, aplicada en remoto): `gestiones.presupuesto_enviado_en timestamptz` + `gestiones.archivada_en timestamptz`. Sin cambios de RLS (el update de archivado pasa por las políticas existentes: admin/gestor owner/administrativo sí, técnico no).
 - **Archivos:**
   - `features/gestiones/service.ts` — guard de especialidad en `crearGestion` (reusa `tecnicosDisponibles`, cubre tablero e inbox); bloqueo server-side en `resolverPresupuesto` (aprobar exige `presupuesto_enviado_en`); `tableroGestiones` filtra archivadas; `gestionesArchivadas()` y `archivarGestion(id, bool)` nuevas (+ eventos `archivada`/`desarchivada`); columnas nuevas en `obtenerGestion`.
