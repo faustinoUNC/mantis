@@ -27,8 +27,8 @@ export function validarPersona(
   if (modo === "existente") {
     return id ? null : `Elegí un ${quien} de la lista.`;
   }
-  if (!nueva.nombre.trim() || !nueva.email.trim()) {
-    return `Completá nombre y email del ${quien}.`;
+  if (!nueva.nombre.trim() || !nueva.email.trim() || !nueva.telefono.trim()) {
+    return `Completá nombre, email y teléfono del ${quien}.`;
   }
   const errCuil = nueva.cuil.trim() ? errorCuil(nueva.cuil, "CUIL/CUIT") : null;
   if (errCuil) {
@@ -84,7 +84,7 @@ export function CamposPersona({
     <div className="grid gap-4 sm:grid-cols-2 animate-aparecer">
       <Input label="Nombre" required value={valores.nombre} onChange={(e) => onCambio({ ...valores, nombre: e.target.value })} placeholder="Nombre y apellido" />
       <Input label="Correo electrónico" type="email" required value={valores.email} onChange={(e) => onCambio({ ...valores, email: e.target.value })} placeholder="correo@ejemplo.com" />
-      <Input label="Teléfono" inputMode="numeric" value={valores.telefono} onChange={(e) => onCambio({ ...valores, telefono: e.target.value.replace(/\D/g, "") })} placeholder="Opcional, solo números" />
+      <Input label="Teléfono" required inputMode="numeric" value={valores.telefono} onChange={(e) => onCambio({ ...valores, telefono: e.target.value.replace(/\D/g, "") })} placeholder="Solo números" />
       <Input label={docLabel} inputMode="numeric" value={valores.cuil} onChange={(e) => onCambio({ ...valores, cuil: e.target.value })} placeholder="Ej. 20301234563, opcional" />
     </div>
   );

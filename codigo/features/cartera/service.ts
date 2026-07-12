@@ -45,6 +45,10 @@ export async function guardarPersona(
   datos: { nombre: string; email: string; telefono: string; documento: string },
   id?: string
 ): Promise<ActionResult> {
+  const telefono = normalizarTelefono(datos.telefono);
+  if (!telefono) {
+    return { ok: false, error: "El teléfono es obligatorio." };
+  }
   const errCuil = datos.documento ? errorCuil(datos.documento, "CUIL/CUIT") : null;
   if (errCuil) {
     return { ok: false, error: errCuil };
@@ -53,7 +57,7 @@ export async function guardarPersona(
   const fila = {
     nombre: datos.nombre,
     email: datos.email.trim().toLowerCase(),
-    telefono: normalizarTelefono(datos.telefono) || null,
+    telefono,
     cuil: datos.documento ? normalizarCuil(datos.documento) : null,
   };
   const dup = await duplicadoPersona(supabase, tipo, fila, id);
@@ -180,6 +184,10 @@ async function resolverPersona(
   if (!ref.nueva.nombre || !ref.nueva.email) {
     return { error: "Completá nombre y email." };
   }
+  const telefono = normalizarTelefono(ref.nueva.telefono);
+  if (!telefono) {
+    return { error: "El teléfono es obligatorio." };
+  }
   const errCuil = ref.nueva.cuil ? errorCuil(ref.nueva.cuil, "CUIL/CUIT") : null;
   if (errCuil) {
     return { error: errCuil };
@@ -188,7 +196,7 @@ async function resolverPersona(
   const fila = {
     nombre: ref.nueva.nombre,
     email: ref.nueva.email.trim().toLowerCase(),
-    telefono: normalizarTelefono(ref.nueva.telefono) || null,
+    telefono,
     cuil: ref.nueva.cuil ? normalizarCuil(ref.nueva.cuil) : null,
   };
   const dup = await duplicadoPersona(supabase, tipo, fila);
