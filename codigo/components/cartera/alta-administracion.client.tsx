@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -343,7 +344,13 @@ export function AltaAdministracion({
 
   return (
     <div className="animate-aparecer max-w-3xl">
-      <div className="mb-5">
+      <Link
+        href="/cartera/propiedades"
+        className="text-sm font-medium text-muted hover:text-foreground"
+      >
+        ← Volver
+      </Link>
+      <div className="mb-5 mt-3">
         <p className="text-[13px] font-medium text-muted">Cartera</p>
         <h1 className="text-2xl font-semibold tracking-tight mt-0.5">Nueva administración</h1>
         <p className="text-sm text-muted mt-1">
