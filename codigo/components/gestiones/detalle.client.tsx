@@ -318,7 +318,7 @@ function ScorecardTecnico({
         <ChipStat
           label="Desvío"
           valor={desvio.valor}
-          ayuda="Cuánto se desvió el costo final de lo que presupuestó. ~0% cumple; positivo = se pasó."
+          ayuda="Suma de los materiales que rindió al terminar sus obras vs. los que había presupuestado (en $). Ej.: +20% = cada $100 presupuestados salieron $120. La mano de obra no entra (es fija)."
           tono={desvio.tono}
         />
         <ChipStat

@@ -138,7 +138,9 @@ export interface GestionDetalle extends GestionResumen {
 export interface StatsTecnico {
   estrellas: number | null; // promedio de calificaciones
   nCalif: number;
-  desvioPct: number | null; // promedio (costo_final − presup) / presup
+  // STORY-937: materiales reales vs presupuestados, ponderado por plata
+  // (Σ reales / Σ presup − 1). La mano de obra es fija y no entra.
+  desvioPct: number | null;
   nDesvio: number;
   obrasActivas: number; // gestiones activas asignadas (carga actual)
   obrasRealizadas: number; // gestiones finalizadas (track record; canceladas NO cuentan)

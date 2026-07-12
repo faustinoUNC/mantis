@@ -471,7 +471,7 @@ async function estadisticasTecnicos(
     admin
       .from("gestiones")
       .select(
-        "tecnico_id, etapa, asignacion_aceptada, costo_final, presupuestos(estado, monto_materiales, monto_mano_obra)"
+        "tecnico_id, etapa, asignacion_aceptada, costo_final, materiales_total, presupuestos(estado, monto_materiales, monto_mano_obra)"
       )
       .in("tecnico_id", ids),
   ]);
@@ -481,6 +481,7 @@ async function estadisticasTecnicos(
     etapa: string;
     asignacion_aceptada: boolean | null;
     costo_final: number | null;
+    materiales_total: number | null;
     presupuestos: { estado: string; monto_materiales: number; monto_mano_obra: number }[] | null;
   };
   const terminales = new Set(["finalizado", "cancelada"]);
@@ -495,14 +496,25 @@ async function estadisticasTecnicos(
     const rechazadas = gs.filter((g) => g.asignacion_aceptada === false);
     const terminadas = gs.filter((g) => terminales.has(g.etapa));
 
-    const desvios: number[] = [];
+    // STORY-937: desvío SOLO de materiales (la mano de obra es fija por
+    // diseño), ponderado por plata: Σ reales / Σ presupuestados − 1.
+    // Reales = rendición; fallback para viejas: costo_final − mano de obra.
+    let matReales = 0;
+    let matPresupuestados = 0;
+    let nDesvio = 0;
     for (const g of gs) {
-      if (g.costo_final == null) continue;
       const aprob = (g.presupuestos ?? []).find((p) => p.estado === "aprobado");
-      if (!aprob) continue;
-      const base = Number(aprob.monto_materiales) + Number(aprob.monto_mano_obra);
-      if (base <= 0) continue;
-      desvios.push((Number(g.costo_final) - base) / base);
+      if (!aprob || Number(aprob.monto_materiales) <= 0) continue;
+      const real =
+        g.materiales_total != null
+          ? Number(g.materiales_total)
+          : g.costo_final != null
+            ? Number(g.costo_final) - Number(aprob.monto_mano_obra)
+            : null;
+      if (real == null || real < 0) continue;
+      matReales += real;
+      matPresupuestados += Number(aprob.monto_materiales);
+      nDesvio += 1;
     }
 
     const prom = (arr: number[]) =>
@@ -511,8 +523,10 @@ async function estadisticasTecnicos(
     salida.set(id, {
       estrellas: prom(estrellasArr),
       nCalif: estrellasArr.length,
-      desvioPct: desvios.length ? Math.round((prom(desvios) ?? 0) * 1000) / 10 : null,
-      nDesvio: desvios.length,
+      desvioPct: nDesvio
+        ? Math.round((matReales / matPresupuestados - 1) * 1000) / 10
+        : null,
+      nDesvio,
       obrasActivas: gs.filter((g) => !terminales.has(g.etapa)).length,
       // Realizadas = solo finalizadas (una cancelada no es un trabajo hecho).
       obrasRealizadas: gs.filter((g) => g.etapa === "finalizado").length,

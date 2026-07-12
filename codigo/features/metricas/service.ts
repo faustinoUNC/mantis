@@ -27,10 +27,14 @@ export interface FilaMetrica {
   presupuestos: string[]; // estados (enviado|aprobado|rechazado)
   conformidades: string[]; // estados (subida|aprobada|rechazada)
   estrellas: number | null; // calificación de esta gestión, si la hay
-  costoFinal: number | null; // para el desvío de presupuesto
+  costoFinal: number | null;
   cargoAdmin: number | null; // STORY-917: monto a cobrar = costo_final + cargo_admin
   presupuestoAprobado: number | null; // total del presupuesto aprobado
   plazoDias: number | null; // STORY-921: plazo de obra comprometido (del aprobado)
+  // STORY-937: desvío de presupuesto medido SOLO sobre materiales
+  materialesTotal: number | null; // rendición del técnico (STORY-934)
+  matPresupuestada: number | null; // monto_materiales del aprobado
+  moPresupuestada: number | null; // monto_mano_obra del aprobado (para el fallback)
 }
 
 export interface EventoMetrica {
@@ -69,7 +73,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     supabase
       .from("gestiones")
       .select(
-        "id, descripcion, etapa, urgencia, causa, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
+        "id, descripcion, etapa, urgencia, causa, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
       ),
     // STORY-919: sumamos los rechazos de asignación (viven como evento, no como
     // flag — el flujo real setea asignacion_aceptada=NULL al rechazar).
@@ -90,6 +94,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     propiedad_id: string;
     costo_final: number | null;
     cargo_admin: number | null;
+    materiales_total: number | null;
     cobrado_monto: number | null;
     cobrado_fee: number | null;
     cobrado_en: string | null;
@@ -135,6 +140,9 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       cargoAdmin: g.cargo_admin,
       presupuestoAprobado,
       plazoDias: aprob?.plazo_dias ?? null,
+      materialesTotal: g.materiales_total == null ? null : Number(g.materiales_total),
+      matPresupuestada: aprob ? Number(aprob.monto_materiales) : null,
+      moPresupuestada: aprob ? Number(aprob.monto_mano_obra) : null,
     };
   });
 

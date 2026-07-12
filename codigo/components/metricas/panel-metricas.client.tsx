@@ -494,16 +494,33 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   const nCalificadas = ranking.reduce((s, r) => s + r.n, 0);
 
   // ── Técnicos: Cumplimiento de presupuesto (desvío) por técnico ──
+  // STORY-937: SOLO materiales (la mano de obra es fija por diseño) y
+  // ponderado por plata: Σ reales / Σ presupuestados − 1. Reales = rendición;
+  // fallback para gestiones sin rendición: costo_final − mano de obra.
   const desvio = useMemo(() => {
-    const acum = new Map<string, { total: number; n: number }>();
+    const acum = new Map<string, { reales: number; presup: number; n: number }>();
     for (const f of filasEsp) {
-      if (f.costoFinal == null || !f.presupuestoAprobado || f.presupuestoAprobado <= 0 || !f.tecnicoNombre) continue;
-      const pct = ((f.costoFinal - f.presupuestoAprobado) / f.presupuestoAprobado) * 100;
-      const cur = acum.get(f.tecnicoNombre) ?? { total: 0, n: 0 };
-      acum.set(f.tecnicoNombre, { total: cur.total + pct, n: cur.n + 1 });
+      if (!f.matPresupuestada || f.matPresupuestada <= 0 || !f.tecnicoNombre) continue;
+      const reales =
+        f.materialesTotal != null
+          ? f.materialesTotal
+          : f.costoFinal != null
+            ? f.costoFinal - (f.moPresupuestada ?? 0)
+            : null;
+      if (reales == null || reales < 0) continue;
+      const cur = acum.get(f.tecnicoNombre) ?? { reales: 0, presup: 0, n: 0 };
+      acum.set(f.tecnicoNombre, {
+        reales: cur.reales + reales,
+        presup: cur.presup + f.matPresupuestada,
+        n: cur.n + 1,
+      });
     }
     return [...acum.entries()]
-      .map(([tecnico, { total, n }]) => ({ tecnico, pct: Math.round((total / n) * 10) / 10, n }))
+      .map(([tecnico, { reales, presup, n }]) => ({
+        tecnico,
+        pct: Math.round((reales / presup - 1) * 1000) / 10,
+        n,
+      }))
       .sort((a, b) => b.pct - a.pct); // el que más se pasó (costó de más), arriba
   }, [filasEsp]);
   const nDesvio = desvio.reduce((s, d) => s + d.n, 0);
@@ -810,7 +827,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         </MetricCard>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-        <MetricCard titulo="Cumplimiento de presupuesto" ayuda="Cuánto se desvía el costo final de lo presupuestado, por técnico — quién cotiza fino y quién se pasa." n={nDesvio} alcance="historico">
+        <MetricCard titulo="Cumplimiento de presupuesto" ayuda="Por técnico: suma de los materiales que rindió al terminar cada obra vs. los que había presupuestado, en $ sobre todas sus obras. Ej.: +20% = cada $100 presupuestados terminaron costando $120. La mano de obra no entra (es fija) y las obras grandes pesan más que las chicas." n={nDesvio} alcance="historico">
           {desvio.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Faltan gestiones cerradas con presupuesto para medir.</p>
           ) : (
