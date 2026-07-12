@@ -872,6 +872,52 @@ export async function subirConformidad(
     if (!Number.isFinite(total) || total <= 0) {
       return { ok: false, error: "Indicá el total gastado en materiales." };
     }
+
+    // STORY-936: sin al menos una nota de avance el gestor estuvo ciego
+    // toda la obra — no se termina sin contar qué se hizo.
+    const supabaseCheck = await createClient();
+    const [{ data: avances }, { data: gastos }, { data: aprobado }] =
+      await Promise.all([
+        supabaseCheck
+          .from("avances")
+          .select("id")
+          .eq("gestion_id", gestionId)
+          .eq("tipo", "avance")
+          .limit(1),
+        supabaseCheck
+          .from("gastos_imprevistos")
+          .select("monto")
+          .eq("gestion_id", gestionId),
+        supabaseCheck
+          .from("presupuestos")
+          .select("monto_materiales")
+          .eq("gestion_id", gestionId)
+          .eq("estado", "aprobado")
+          .maybeSingle(),
+      ]);
+    if (!avances?.length) {
+      return {
+        ok: false,
+        error: "Registrá al menos una nota de avance antes de terminar la obra.",
+      };
+    }
+
+    // STORY-936: cada peso rendido por encima de los materiales presupuestados
+    // se justifica con gastos imprevistos (ticket con foto). Sin presupuesto
+    // aprobado (legacy) no hay contra qué comparar.
+    if (aprobado) {
+      const presupuestado = Number(aprobado.monto_materiales);
+      const totalGastos = (gastos ?? []).reduce((s, g) => s + Number(g.monto), 0);
+      const exceso = total - presupuestado;
+      if (exceso > totalGastos + 0.009) {
+        const plata = (n: number) =>
+          `$ ${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
+        return {
+          ok: false,
+          error: `Estás rindiendo ${plata(total)} con ${plata(presupuestado)} presupuestados en materiales: hay ${plata(exceso)} de exceso y solo ${plata(totalGastos)} en gastos imprevistos cargados. Cargá gastos (con ticket) por el excedente antes de terminar.`,
+        };
+      }
+    }
     const fotoComprobantes = await subirFoto(
       gestionId,
       "comprobantes",

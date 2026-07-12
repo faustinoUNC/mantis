@@ -866,6 +866,19 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
   // todos los comprobantes). La resubida de una rechazada no lo vuelve a pedir.
   const terminando = gestion.etapa === "en_ejecucion";
 
+  // STORY-936: para terminar hace falta al menos una nota de avance, y si lo
+  // rendido supera los materiales presupuestados, el exceso debe estar
+  // cubierto por gastos imprevistos (el server valida lo mismo).
+  const sinAvance =
+    terminando && !gestion.avances.some((a) => a.tipo === "avance");
+  const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
+  const matPresupuestados = aprobado ? Number(aprobado.monto_materiales) : null;
+  const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
+  const [totalRendido, setTotalRendido] = useState(0);
+  const exceso =
+    terminando && matPresupuestados != null ? totalRendido - matPresupuestados : 0;
+  const excesoSinCubrir = exceso > totalGastos + 0.009;
+
   if (esperando) {
     return <p className="text-sm text-muted">Conformidad subida — esperando revisión del gestor.</p>;
   }
@@ -896,6 +909,8 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
             min="0.01"
             step="0.01"
             required
+            value={totalRendido || ""}
+            onChange={(e) => setTotalRendido(Number(e.target.value) || 0)}
           />
           <InputArchivo
             label="Foto de todos los comprobantes (obligatoria)"
@@ -911,7 +926,23 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
         capture="environment"
         required
       />
-      <Button type="submit" disabled={cargando} className="self-start">
+      {sinAvance && (
+        <p className="text-sm text-muted bg-surface-2/50 border border-border rounded-md px-3 py-2">
+          Registrá al menos una nota de avance (arriba) antes de terminar la obra.
+        </p>
+      )}
+      {!sinAvance && excesoSinCubrir && totalRendido > 0 && (
+        <p className="text-sm text-error bg-error-soft border border-error-soft-border rounded-md px-3 py-2">
+          Estás rindiendo {plata(exceso)} más que los materiales presupuestados
+          ({plata(matPresupuestados ?? 0)}). Cargá gastos imprevistos por el
+          excedente (llevás {plata(totalGastos)}) para poder terminar.
+        </p>
+      )}
+      <Button
+        type="submit"
+        disabled={cargando || sinAvance || excesoSinCubrir}
+        className="self-start"
+      >
         {terminando ? "Terminar y subir conformidad →" : "Resubir conformidad"}
       </Button>
       {error && <p className="text-sm font-medium text-error">{error}</p>}
