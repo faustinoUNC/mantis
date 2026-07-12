@@ -30,6 +30,9 @@ export interface Legajo {
   propiedad_id: string;
   inquilino_id: string;
   inquilino_nombre: string;
+  // Datos completos del inquilino, para editarlos desde la propiedad
+  // (STORY-941 — reemplaza al ABM suelto).
+  inquilino: Persona | null;
   fecha_inicio: string;
   fecha_fin: string | null;
 }

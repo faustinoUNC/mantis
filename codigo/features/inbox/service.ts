@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { obtenerUsuarioActual } from "@/features/auth/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { crearGestion } from "@/features/gestiones/service";
-import type { Causa, Urgencia } from "@/features/gestiones/types";
+import type { Urgencia } from "@/features/gestiones/types";
 import { createClient } from "@/shared/lib/supabase/server";
 
 export interface Reporte {
@@ -88,7 +88,6 @@ export async function crearDesdeReporte(
     propiedad_id: string;
     especialidad_id: string;
     urgencia: Urgencia;
-    causa: Causa;
   }
 ): Promise<ActionResult<{ gestionId: string }>> {
   const actual = await exigirStaffMantenimiento();

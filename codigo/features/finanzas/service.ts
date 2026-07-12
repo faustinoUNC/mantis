@@ -57,7 +57,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, pagador_sugerido, costo_final, cargo_admin, materiales_total, liq_monto, liq_factura_ref, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, descripcion, pagador, costo_final, cargo_admin, materiales_total, liq_monto, liq_factura_ref, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -97,9 +97,10 @@ async function datosDocumento(
   let destinatarioRotulo = "Destinatario";
   let emailDestinatario: string | null = null;
 
-  // Nota y presupuesto van al PAGADOR (elegido en pantalla, confirmado,
-  // o sugerido si aún no)
-  const pagador = overrides?.pagador ?? g.pagador ?? g.pagador_sugerido;
+  // Nota y presupuesto van al PAGADOR elegido en pantalla o confirmado.
+  // STORY-943: ya no hay "sugerido" — sin elección explícita no hay
+  // destinatario (los flujos lo validan antes de llegar acá).
+  const pagador = overrides?.pagador ?? g.pagador ?? null;
   if (tipo === "comprobante") {
     destinatarioNombre = j.tecnico?.nombre ?? "—";
     destinatarioRotulo = "Técnico";
@@ -108,7 +109,7 @@ async function datosDocumento(
     destinatarioNombre = j.propiedades?.propietarios?.nombre ?? "—";
     destinatarioRotulo = "Propietario";
     emailDestinatario = j.propiedades?.propietarios?.email ?? null;
-  } else if (g.legajo_id) {
+  } else if (pagador === "inquilino" && g.legajo_id) {
     const { data: legajo } = await admin
       .from("legajos")
       .select("inquilinos(nombre, email)")
@@ -168,7 +169,6 @@ async function datosDocumento(
       total,
       facturaRef: tipo === "presupuesto" ? null : g.liq_factura_ref,
       plazoDias: tipo === "presupuesto" ? vigente?.plazo_dias ?? null : null,
-      cargoAdmin: tipo === "comprobante" ? null : cargoAdmin,
       materialesRendidos: tipo !== "presupuesto" && materialesRendidos,
     },
   };
@@ -188,6 +188,26 @@ async function registrarEvento(
 
 function cargoInvalido(cargoAdmin?: number) {
   return cargoAdmin != null && (!Number.isFinite(cargoAdmin) || cargoAdmin < 0);
+}
+
+// STORY-943: el pagador del presupuesto se elige explícitamente (no hay más
+// sugerido) y "inquilino" solo vale si la gestión tiene legajo.
+async function errorPagador(
+  gestionId: string,
+  pagador?: Pagador
+): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data: g } = await admin
+    .from("gestiones")
+    .select("pagador, legajo_id")
+    .eq("id", gestionId)
+    .single();
+  const efectivo = pagador ?? g?.pagador ?? null;
+  if (!efectivo) return "Elegí quién paga la obra.";
+  if (efectivo === "inquilino" && !g?.legajo_id) {
+    return "La propiedad no tiene inquilino — el pago solo puede ser del propietario.";
+  }
+  return null;
 }
 
 // Solo las acciones REALES (enviar/emitir) persisten el fee — la vista
@@ -284,6 +304,8 @@ export async function descargarPresupuestoPDF(
   if (cargoInvalido(opciones?.cargoAdmin)) {
     return { ok: false, error: "El cargo administrativo no puede ser negativo." };
   }
+  const errPagador = await errorPagador(gestionId, opciones?.pagador);
+  if (errPagador) return { ok: false, error: errPagador };
 
   // Vista previa pura: fee y pagador tipeados viajan como override
   const doc = await datosDocumento(gestionId, "presupuesto", opciones);
@@ -315,6 +337,8 @@ export async function enviarPresupuestoEmail(
   if (cargoInvalido(cargoAdmin)) {
     return { ok: false, error: "El cargo administrativo no puede ser negativo." };
   }
+  const errPagador = await errorPagador(gestionId, pagador);
+  if (errPagador) return { ok: false, error: errPagador };
 
   // Enviar SÍ persiste: el pagador elegido y el fee quedan anclados a lo
   // que realmente se mandó (el email debe ir a quien se ve en pantalla)

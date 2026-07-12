@@ -25,10 +25,7 @@ export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
   return (
     <div className="animate-aparecer">
       <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-[13px] font-medium text-muted">Cartera</p>
-          <h1 className="text-2xl font-semibold tracking-tight mt-0.5">Propiedades</h1>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">Administraciones</h1>
         <Link
           href="/cartera/nueva"
           className="inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-md font-medium text-[0.9375rem] bg-brand text-white hover:bg-brand-hover transition-colors"

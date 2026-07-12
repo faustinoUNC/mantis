@@ -60,7 +60,7 @@ const ETAPA_LABEL: Record<string, string> = {
   presupuesto: "Presupuesto",
   en_ejecucion: "En ejecución",
   conformidad: "Conformidad",
-  facturacion_cobro: "Facturación",
+  facturacion_cobro: "Cobro",
   liquidacion_tecnico: "Liquidación",
   finalizado: "Finalizado",
 };

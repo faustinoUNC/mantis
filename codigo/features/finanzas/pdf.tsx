@@ -41,7 +41,6 @@ export interface DatosDocumento {
   total: number;
   facturaRef?: string | null;
   plazoDias?: number | null;
-  cargoAdmin?: number | null;
   // STORY-934: la línea de materiales trae la rendición real del técnico
   materialesRendidos?: boolean;
 }
@@ -110,31 +109,26 @@ function Documento({ datos }: { datos: DatosDocumento }) {
           )}
         </View>
 
+        {/* STORY-942: el desglose solo lo ve el TÉCNICO en su comprobante.
+            Presupuesto y nota van al pagador con UN solo número (el total,
+            fee incluido) — la comisión no se expone. */}
         <View style={s.caja}>
-          {datos.presupuesto && (
+          {datos.tipo === "comprobante" && datos.presupuesto && (
             <>
               <View style={s.filaTabla}>
                 <Text>
                   Materiales
-                  {datos.tipo === "presupuesto"
-                    ? ""
-                    : datos.materialesRendidos
-                      ? " (rendidos por el técnico)"
-                      : " (presupuesto aprobado)"}
+                  {datos.materialesRendidos
+                    ? " (rendidos por el técnico)"
+                    : " (presupuesto aprobado)"}
                 </Text>
                 <Text>{monto(datos.presupuesto.materiales)}</Text>
               </View>
               <View style={s.filaTabla}>
-                <Text>Mano de obra{datos.tipo === "presupuesto" ? "" : " (presupuesto aprobado)"}</Text>
+                <Text>Mano de obra (presupuesto aprobado)</Text>
                 <Text>{monto(datos.presupuesto.manoObra)}</Text>
               </View>
             </>
-          )}
-          {datos.cargoAdmin != null && datos.cargoAdmin > 0 && (
-            <View style={s.filaTabla}>
-              <Text>Gestión administrativa</Text>
-              <Text>{monto(datos.cargoAdmin)}</Text>
-            </View>
           )}
           <View style={s.total}>
             <Text style={s.totalTexto}>

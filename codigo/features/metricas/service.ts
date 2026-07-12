@@ -13,7 +13,6 @@ export interface FilaMetrica {
   descripcion: string; // STORY-917: para las listas accionables
   etapa: string;
   especialidad: string;
-  causa: string; // desgaste | dano | mejora
   pagador: string | null; // inquilino | propietario
   tecnicoId: string | null;
   tecnicoNombre: string | null;
@@ -73,7 +72,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     supabase
       .from("gestiones")
       .select(
-        "id, descripcion, etapa, urgencia, causa, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
+        "id, descripcion, etapa, urgencia, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
       ),
     // STORY-919: sumamos los rechazos de asignación (viven como evento, no como
     // flag — el flujo real setea asignacion_aceptada=NULL al rechazar).
@@ -88,7 +87,6 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     descripcion: string;
     etapa: string;
     urgencia: string;
-    causa: string;
     pagador: string | null;
     tecnico_id: string | null;
     propiedad_id: string;
@@ -122,7 +120,6 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       descripcion: g.descripcion,
       etapa: g.etapa,
       especialidad: g.especialidades?.nombre ?? "Otros",
-      causa: g.causa,
       pagador: g.pagador,
       tecnicoId: g.tecnico_id,
       tecnicoNombre: g.tecnico?.nombre ?? null,

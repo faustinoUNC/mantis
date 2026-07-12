@@ -12,8 +12,8 @@ import type { Rol } from "@/features/auth/types";
 import type { Especialidad } from "@/features/especialidades/types";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { crearGestion } from "@/features/gestiones/service";
-import type { GestionResumen, Urgencia, Causa } from "@/features/gestiones/types";
-import { ETAPAS, LABEL_CAUSA } from "@/features/gestiones/types";
+import type { GestionResumen, Urgencia } from "@/features/gestiones/types";
+import { ETAPAS } from "@/features/gestiones/types";
 import { cn } from "@/shared/utils/cn";
 import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 
@@ -104,7 +104,6 @@ function FormNueva({
       propiedad_id: String(form.get("propiedad_id")),
       especialidad_id: String(form.get("especialidad_id")),
       urgencia: String(form.get("urgencia")) as Urgencia,
-      causa: String(form.get("causa")) as Causa,
     });
     setEnviando(false);
     if (!r.ok) return setError(r.error);
@@ -131,19 +130,10 @@ function FormNueva({
             </option>
           ))}
         </Select>
-        <div className="grid grid-cols-2 gap-3">
-          <Select label="Urgencia" name="urgencia" defaultValue="normal">
-            <option value="normal">Normal</option>
-            <option value="urgente">Urgente</option>
-          </Select>
-          <Select label="Causa" name="causa" defaultValue="desgaste">
-            {(Object.keys(LABEL_CAUSA) as Causa[]).map((c) => (
-              <option key={c} value={c}>
-                {LABEL_CAUSA[c]}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <Select label="Urgencia" name="urgencia" defaultValue="normal">
+          <option value="normal">Normal</option>
+          <option value="urgente">Urgente</option>
+        </Select>
         {error && (
           <p role="alert" className="text-sm font-medium text-error sm:col-span-2">
             {error}

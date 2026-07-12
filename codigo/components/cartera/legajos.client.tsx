@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import {
   abrirLegajo,
   cerrarLegajo,
@@ -13,6 +12,14 @@ import {
   enviarResumenObras,
 } from "@/features/cartera/service";
 import type { Legajo, Persona } from "@/features/cartera/types";
+import {
+  FormEditarPersona,
+  PERSONA_VACIA,
+  refPersona,
+  SelectorPersona,
+  validarPersona,
+  type Modo,
+} from "./persona-campos.client";
 
 function fechaCorta(f: string) {
   return new Date(`${f}T00:00:00`).toLocaleDateString("es-AR");
@@ -84,19 +91,29 @@ export function Legajos({
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [cerrando, setCerrando] = useState(false);
+  const [editandoInquilino, setEditandoInquilino] = useState(false);
+
+  // El inquilino puede ser uno de la cartera o uno nuevo cargado acá mismo
+  // (STORY-941 — no hay ABM suelto de inquilinos).
+  const [modo, setModo] = useState<Modo>(inquilinosActivos.length ? "existente" : "nuevo");
+  const [inquilinoId, setInquilinoId] = useState(inquilinosActivos[0]?.id ?? "");
+  const [nuevo, setNuevo] = useState(PERSONA_VACIA);
 
   async function onAbrir(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const eValidacion = validarPersona(modo, inquilinoId, nuevo, "inquilino");
+    if (eValidacion) return setError(eValidacion);
     setError(null);
     setEnviando(true);
     const form = new FormData(e.currentTarget);
     const r = await abrirLegajo({
       propiedad_id: propiedadId,
-      inquilino_id: String(form.get("inquilino_id")),
+      inquilino: refPersona(modo, inquilinoId, nuevo),
       fecha_inicio: String(form.get("fecha_inicio")),
     });
     setEnviando(false);
     if (!r.ok) setError(r.error);
+    else setNuevo(PERSONA_VACIA);
   }
 
   async function onCerrar(e: React.FormEvent<HTMLFormElement>) {
@@ -121,57 +138,81 @@ export function Legajos({
 
       {vigente ? (
         <Card className="p-5 border-brand-soft-border bg-brand-soft/40">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <Badge tono="brand">Vigente</Badge>
-              <p className="font-medium mt-2">{vigente.inquilino_nombre}</p>
-              <p className="text-sm text-muted mt-0.5">
-                Desde el <span className="font-mono text-[13px]">{fechaCorta(vigente.fecha_inicio)}</span>
-              </p>
+          {editandoInquilino && vigente.inquilino ? (
+            <FormEditarPersona
+              tipo="inquilinos"
+              persona={vigente.inquilino}
+              docLabel="CUIL"
+              onListo={() => setEditandoInquilino(false)}
+            />
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <Badge tono="brand">Vigente</Badge>
+                <p className="font-medium mt-2">{vigente.inquilino_nombre}</p>
+                <p className="text-sm text-muted mt-0.5">
+                  {vigente.inquilino?.email}
+                  {vigente.inquilino?.telefono ? ` · ${vigente.inquilino.telefono}` : ""}
+                </p>
+                <p className="text-sm text-muted mt-0.5">
+                  Desde el <span className="font-mono text-[13px]">{fechaCorta(vigente.fecha_inicio)}</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {vigente.inquilino && (
+                  <Button
+                    variante="fantasma"
+                    className="min-h-0 h-8 px-2.5 text-sm"
+                    onClick={() => setEditandoInquilino(true)}
+                  >
+                    Editar datos
+                  </Button>
+                )}
+                <ResumenObras legajoId={vigente.id} />
+              </div>
+              {cerrando ? (
+                <form onSubmit={onCerrar} className="flex items-end gap-3">
+                  <Input label="Fecha de fin" name="fecha_fin" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+                  <Button type="submit" disabled={enviando}>
+                    {enviando ? "Cerrando…" : "Confirmar cierre"}
+                  </Button>
+                  <Button type="button" variante="fantasma" onClick={() => setCerrando(false)}>
+                    Cancelar
+                  </Button>
+                </form>
+              ) : (
+                <Button variante="secundario" onClick={() => setCerrando(true)}>
+                  Cerrar legajo
+                </Button>
+              )}
             </div>
-            <ResumenObras legajoId={vigente.id} />
-            {cerrando ? (
-              <form onSubmit={onCerrar} className="flex items-end gap-3">
-                <Input label="Fecha de fin" name="fecha_fin" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
-                <Button type="submit" disabled={enviando}>
-                  {enviando ? "Cerrando…" : "Confirmar cierre"}
-                </Button>
-                <Button type="button" variante="fantasma" onClick={() => setCerrando(false)}>
-                  Cancelar
-                </Button>
-              </form>
-            ) : (
-              <Button variante="secundario" onClick={() => setCerrando(true)}>
-                Cerrar legajo
-              </Button>
-            )}
-          </div>
+          )}
         </Card>
       ) : (
         <Card className="p-5">
           <p className="text-sm text-muted mb-4">
-            Propiedad libre — abrí un legajo cuando entre un inquilino.
+            Propiedad libre — abrí un legajo cuando entre un inquilino. Si no
+            está en la cartera, cargalo acá mismo.
           </p>
-          <form onSubmit={onAbrir} className="flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-52">
-              <Select label="Inquilino" name="inquilino_id" required>
-                {inquilinosActivos.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.nombre}
-                  </option>
-                ))}
-              </Select>
+          <form onSubmit={onAbrir} className="flex flex-col gap-4">
+            <SelectorPersona
+              personas={inquilinosActivos}
+              quien="inquilino"
+              docLabel="CUIL"
+              modo={modo}
+              onModo={setModo}
+              id={inquilinoId}
+              onId={setInquilinoId}
+              nueva={nuevo}
+              onNueva={setNuevo}
+            />
+            <div className="flex flex-wrap items-end gap-3">
+              <Input label="Fecha de inicio" name="fecha_inicio" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+              <Button type="submit" disabled={enviando}>
+                {enviando ? "Abriendo…" : "Abrir legajo"}
+              </Button>
             </div>
-            <Input label="Fecha de inicio" name="fecha_inicio" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
-            <Button type="submit" disabled={enviando || inquilinosActivos.length === 0}>
-              {enviando ? "Abriendo…" : "Abrir legajo"}
-            </Button>
           </form>
-          {inquilinosActivos.length === 0 && (
-            <p className="text-sm text-muted mt-3">
-              Primero cargá un inquilino en la cartera.
-            </p>
-          )}
         </Card>
       )}
 

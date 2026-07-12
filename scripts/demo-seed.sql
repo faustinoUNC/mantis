@@ -46,7 +46,7 @@ declare
   inq uuid[10];
   -- por gestión
   i int; g uuid; v_p int; v_esp uuid; v_esp_nom text; v_gestor uuid; v_fin uuid;
-  v_urg text; v_causa text; v_pag_sug text; v_pag text; v_desc text; v_tec uuid;
+  v_urg text; v_pag_sug text; v_pag text; v_desc text; v_tec uuid;
   v_tec2 uuid; v_tec_nom text; v_pool uuid[];
   mat numeric; mano numeric; ptotal numeric; cargo numeric; cfinal numeric;
   plazo int; liqm numeric; fref text; medio text; est int;
@@ -256,10 +256,9 @@ begin
     v_gestor := case when random() < 0.4 then v_uno when random() < 0.5 then v_val else v_marcos end;
     v_fin := case when random() < 0.8 then v_laura else v_admin end;
     v_urg := case when random() < 0.2 then 'urgente' else 'normal' end;
-    v_causa := case
-      when lg[v_p] is null then (case when random() < 0.7 then 'desgaste' else 'mejora' end)
-      when random() < 0.55 then 'desgaste' when random() < 0.67 then 'dano' else 'mejora' end;
-    v_pag_sug := case v_causa when 'dano' then 'inquilino' else 'propietario' end;
+    -- STORY-943: sin causa — el "sugerido" solo sirve para sortear el pagador
+    v_pag_sug := case when lg[v_p] is null then 'propietario'
+                      when random() < 0.35 then 'inquilino' else 'propietario' end;
     v_pag := case when lg[v_p] is null then 'propietario'
                   when random() < 0.15 then (case v_pag_sug when 'inquilino' then 'propietario' else 'inquilino' end)
                   else v_pag_sug end;
@@ -362,11 +361,11 @@ begin
 
     -- ── fila en gestiones (estado final coherente con la etapa) ──
     insert into gestiones (descripcion, etapa, especialidad_id, propiedad_id, legajo_id,
-      urgencia, causa, pagador_sugerido, pagador, gestor_id, tecnico_id, asignacion_aceptada,
+      urgencia, pagador, gestor_id, tecnico_id, asignacion_aceptada,
       costo_final, cargo_admin, nota_emitida_en, cobrado_en, medio_cobro, cobrado_monto, cobrado_fee,
       liq_monto, liq_factura_ref, liq_pagada_en, creado_en)
     values (v_desc, etapa_obj::etapa_gestion, v_esp, pr[v_p], lg[v_p],
-      v_urg::urgencia_gestion, v_causa::causa_gestion, v_pag_sug::pagador_gestion,
+      v_urg::urgencia_gestion,
       case when etapa_obj in ('en_ejecucion','conformidad','facturacion_cobro','liquidacion_tecnico','finalizado') or i = 36 then v_pag::pagador_gestion else null end,
       v_gestor,
       case when etapa_obj in ('ingresado') or i in (31, 33, 44, 45, 50) or (i = 43) then null

@@ -44,7 +44,7 @@ import type {
   Presupuesto,
   TecnicoDisponible,
 } from "@/features/gestiones/types";
-import { ETAPAS, LABEL_CAUSA } from "@/features/gestiones/types";
+import { ETAPAS } from "@/features/gestiones/types";
 
 const LABEL_EVENTO: Record<string, string> = {
   creada: "Gestión creada",
@@ -164,11 +164,12 @@ function DatosGestion({ gestion }: { gestion: GestionDetalle }) {
         )}
         <Dato label="Gestor">{gestion.gestor_nombre}</Dato>
         <Dato label="Técnico">{gestion.tecnico_nombre ?? "Sin asignar"}</Dato>
-        <Dato label="Causa">{LABEL_CAUSA[gestion.causa]}</Dato>
+        {/* STORY-943: "Paga" recién existe cuando la inmobiliaria lo decidió
+            en Presupuesto (con la inspección del técnico a la vista) */}
         <Dato label="Paga">
           {gestion.pagador
             ? gestion.pagador === "propietario" ? "Propietario" : "Inquilino"
-            : `${gestion.pagador_sugerido === "propietario" ? "Propietario" : "Inquilino"} (sugerido)`}
+            : <span className="text-muted font-normal">Se define al presupuestar</span>}
         </Dato>
         <Dato label={gestion.costo_final != null ? "Costo final" : "Creada"}>
           {gestion.costo_final != null ? (
@@ -497,11 +498,22 @@ function AccionResponderAsignacion({ gestion }: { gestion: GestionDetalle }) {
 function FormPresupuestoTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const pendiente = gestion.presupuestos.some((p) => p.estado === "enviado");
+  // STORY-943: sin inspección registrada no hay presupuesto — el gestor
+  // decide quién paga en base a lo que el técnico encontró.
+  const hayInspeccion = gestion.avances.some((a) => a.tipo === "inspeccion");
   // El último presupuesto (vienen ordenados desc): si fue rechazado, el
   // técnico tiene que ver el motivo antes de armar el nuevo
   const ultimo = gestion.presupuestos[0];
   if (pendiente) {
     return <p className="text-sm text-muted">Presupuesto enviado — esperando al gestor.</p>;
+  }
+  if (!hayInspeccion) {
+    return (
+      <p className="text-sm text-muted">
+        Registrá primero la inspección (arriba) — contá qué encontraste y, si
+        podés, subí una foto. El presupuesto se habilita con eso.
+      </p>
+    );
   }
   return (
     <form
@@ -599,9 +611,11 @@ function FichaPresupuesto({ presupuesto }: { presupuesto: Presupuesto }) {
 
 function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
-  const [pagador, setPagador] = useState<Pagador>(
-    gestion.pagador ?? gestion.pagador_sugerido
-  );
+  // STORY-943: sin sugerido — el gestor elige explícitamente en base a la
+  // inspección. "" = todavía no decidió (bloquea enviar y aprobar).
+  const [pagador, setPagador] = useState<Pagador | "">(gestion.pagador ?? "");
+  // Sin inquilino en la propiedad, la opción ni se ofrece
+  const hayInquilino = Boolean(gestion.inquilino_nombre);
   const [rechazando, setRechazando] = useState(false);
   const [cargoAdmin, setCargoAdmin] = useState<number>(
     Number(gestion.cargo_admin ?? 0)
@@ -688,7 +702,7 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
           )}
           <div className="flex justify-between pt-1 border-t border-border font-semibold">
             {/* Mismo pagador que el Select de abajo: una sola verdad en pantalla */}
-            <span>Total al {pagador}</span>
+            <span>Total al {pagador || "pagador"}</span>
             <span className="font-mono">
               {plata(Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra) + cargoAdmin)}
             </span>
@@ -696,14 +710,20 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
         </div>
       </div>
 
-      <EnvioDocumento
-        etiqueta="presupuesto"
-        destinatarioEtiqueta={pagador}
-        generar={() => descargarPresupuestoPDF(gestion.id, { cargoAdmin, pagador })}
-        enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdmin, pagador)}
-        yaEnviado={Boolean(gestion.presupuesto_enviado_en)}
-        onEnviado={() => setMailEnviado(true)}
-      />
+      {pagador ? (
+        <EnvioDocumento
+          etiqueta="presupuesto"
+          destinatarioEtiqueta={pagador}
+          generar={() => descargarPresupuestoPDF(gestion.id, { cargoAdmin, pagador })}
+          enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdmin, pagador)}
+          yaEnviado={Boolean(gestion.presupuesto_enviado_en)}
+          onEnviado={() => setMailEnviado(true)}
+        />
+      ) : (
+        <p className="text-sm text-muted">
+          Elegí quién paga la obra (abajo) para generar y enviar el presupuesto.
+        </p>
+      )}
 
       {rechazando ? (
         <form
@@ -727,19 +747,22 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
       ) : (
         <div className="flex flex-wrap items-end gap-3 pt-3 border-t border-border">
           <Select
-            label={`Paga (sugerido: ${gestion.pagador_sugerido})`}
+            label="Paga"
             value={pagador}
-            onChange={(e) => setPagador(e.target.value as Pagador)}
+            onChange={(e) => setPagador(e.target.value as Pagador | "")}
           >
+            <option value="" disabled>
+              Elegí quién paga…
+            </option>
             <option value="propietario">Propietario</option>
-            <option value="inquilino">Inquilino</option>
+            {hayInquilino && <option value="inquilino">Inquilino</option>}
           </Select>
           <Button
-            disabled={cargando || !mailEnviado}
+            disabled={cargando || !mailEnviado || !pagador}
             onClick={() =>
               correr(() =>
                 resolverPresupuesto(enviado.id, gestion.id, true, {
-                  pagador,
+                  pagador: pagador || undefined,
                   cargo_admin: cargoAdmin,
                 })
               )
@@ -750,12 +773,17 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
           <Button variante="secundario" onClick={() => setRechazando(true)}>
             Rechazar
           </Button>
-          {!mailEnviado && (
+          {!pagador ? (
+            <p className="w-full text-[12px] text-muted">
+              Definí quién paga según lo que encontró el técnico en la
+              inspección — sin eso no se envía ni se aprueba.
+            </p>
+          ) : !mailEnviado ? (
             <p className="w-full text-[12px] text-muted">
               Para aprobar, primero enviá el presupuesto al {pagador} por email
               — aprueba lo que recibió.
             </p>
-          )}
+          ) : null}
         </div>
       )}
       {error && <p className="text-sm font-medium text-error">{error}</p>}
@@ -1097,7 +1125,7 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
           required
         />
         <Button type="submit" disabled={cargando}>
-          Aprobar → Facturación
+          Aprobar → Cobro
         </Button>
         <Button type="button" variante="secundario" onClick={() => setRechazando(true)}>
           Rechazar
@@ -1571,7 +1599,7 @@ export function DetalleGestion({
             <div className="flex flex-col gap-5">
               <div>
                 <p className="text-[13px] font-medium text-muted mb-3">
-                  Inspección <span className="text-muted/50 font-normal">· opcional</span>
+                  Inspección <span className="text-muted/50 font-normal">· obligatoria antes de presupuestar</span>
                 </p>
                 <FormAvance gestion={gestion} />
               </div>
@@ -1633,11 +1661,11 @@ export function DetalleGestion({
             Gestión cancelada — el motivo quedó registrado en la actividad.
           </p>
         )}
-        {/* Gestor administrativo antes de Facturación: sin acciones todavía */}
+        {/* Gestor administrativo antes de Cobro: sin acciones todavía */}
         {esAdministrativo && !esGestorOwner && !esTecnicoAsignado &&
           !["facturacion_cobro", "liquidacion_tecnico", "finalizado"].includes(gestion.etapa) && (
             <p className="text-sm text-muted">
-              Sin acciones para tu rol en esta etapa — interviene en Facturación, cuando se apruebe la conformidad.
+              Sin acciones para tu rol en esta etapa — interviene en Cobro, cuando se apruebe la conformidad.
             </p>
           )}
         {!esGestorOwner && !esTecnicoAsignado && !esAdministrativo && (

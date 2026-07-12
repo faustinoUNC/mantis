@@ -9,8 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { Especialidad } from "@/features/especialidades/types";
-import type { Causa, Urgencia } from "@/features/gestiones/types";
-import { LABEL_CAUSA } from "@/features/gestiones/types";
+import type { Urgencia } from "@/features/gestiones/types";
 import {
   crearDesdeReporte,
   descartarReporte,
@@ -54,7 +53,6 @@ function ReporteCard({
       propiedad_id: String(f.get("propiedad_id")),
       especialidad_id: String(f.get("especialidad_id")),
       urgencia: String(f.get("urgencia")) as Urgencia,
-      causa: String(f.get("causa")) as Causa,
     });
     setCargando(null);
     if (!r.ok) return setError(r.error);
@@ -130,13 +128,6 @@ function ReporteCard({
           <Select label="Urgencia" name="urgencia" defaultValue="normal">
             <option value="normal">Normal</option>
             <option value="urgente">Urgente</option>
-          </Select>
-          <Select label="Causa" name="causa" defaultValue="desgaste">
-            {(Object.keys(LABEL_CAUSA) as Causa[]).map((c) => (
-              <option key={c} value={c}>
-                {LABEL_CAUSA[c]}
-              </option>
-            ))}
           </Select>
           <div className="flex gap-2 sm:col-span-2">
             <Button type="submit" disabled={cargando !== null}>

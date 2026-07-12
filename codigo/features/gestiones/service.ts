@@ -7,7 +7,6 @@ import type { ActionResult } from "@/features/empleados/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 import type {
-  Causa,
   Etapa,
   GestionDetalle,
   GestionResumen,
@@ -16,7 +15,6 @@ import type {
   TecnicoDisponible,
   Urgencia,
 } from "./types";
-import { PAGADOR_POR_CAUSA } from "./types";
 
 const BUCKET = "gestiones";
 const MIME_FOTOS: Record<string, string> = {
@@ -164,7 +162,6 @@ export async function crearGestion(datos: {
   propiedad_id: string;
   especialidad_id: string;
   urgencia: Urgencia;
-  causa: Causa;
 }): Promise<ActionResult<{ gestionId: string }>> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
@@ -193,7 +190,6 @@ export async function crearGestion(datos: {
     .insert({
       ...datos,
       legajo_id: legajo?.id ?? null,
-      pagador_sugerido: PAGADOR_POR_CAUSA[datos.causa],
       gestor_id: actual.id,
     })
     .select("id")
@@ -228,7 +224,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_DETALLE}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, materiales_total, materiales_foto_path, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, materiales_total, materiales_foto_path, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -271,8 +267,6 @@ export async function obtenerGestion(
 
   const base = normalizarFila(g as unknown as Record<string, unknown>);
   const fila = g as unknown as {
-    causa: Causa;
-    pagador_sugerido: Pagador;
     pagador: Pagador | null;
     costo_final: number | null;
     cargo_admin: number | null;
@@ -299,8 +293,6 @@ export async function obtenerGestion(
     ...base,
     calificacion: calif ?? null,
     contacto_cliente: resolverContacto(g as unknown as Record<string, unknown>),
-    causa: fila.causa,
-    pagador_sugerido: fila.pagador_sugerido,
     pagador: fila.pagador,
     costo_final: fila.costo_final,
     cargo_admin: fila.cargo_admin,
@@ -682,6 +674,22 @@ export async function enviarPresupuesto(
   }
 
   const supabase = await createClient();
+
+  // STORY-943: sin inspección registrada no hay presupuesto — el gestor
+  // decide quién paga en base a lo que el técnico encontró (la UI ya lo
+  // bloquea; esto cubre refresh y carreras).
+  const { count: inspecciones } = await supabase
+    .from("avances")
+    .select("id", { count: "exact", head: true })
+    .eq("gestion_id", gestionId)
+    .eq("tipo", "inspeccion");
+  if (!inspecciones) {
+    return {
+      ok: false,
+      error: "Registrá primero la inspección — el presupuesto sale de lo que encontraste.",
+    };
+  }
+
   const { error } = await supabase.from("presupuestos").insert({
     gestion_id: gestionId,
     monto_materiales: datos.monto_materiales,
@@ -735,16 +743,24 @@ export async function resolverPresupuesto(
 
   // STORY-935: el pagador aprueba lo que recibió — sin email enviado no hay
   // aprobación (la UI deshabilita el botón; esto cubre refresh y carreras).
+  // STORY-943: y el pagador elegido tiene que existir — "inquilino" solo si
+  // la gestión tiene legajo.
   if (aprobar) {
     const { data: g } = await supabase
       .from("gestiones")
-      .select("presupuesto_enviado_en")
+      .select("presupuesto_enviado_en, legajo_id")
       .eq("id", gestionId)
       .single();
     if (!g?.presupuesto_enviado_en) {
       return {
         ok: false,
         error: "Enviá el presupuesto al pagador por email antes de aprobar.",
+      };
+    }
+    if (opciones.pagador === "inquilino" && !g.legajo_id) {
+      return {
+        ok: false,
+        error: "La propiedad no tiene inquilino — el pago solo puede ser del propietario.",
       };
     }
   }

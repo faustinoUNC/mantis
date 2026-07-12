@@ -1,9 +1,12 @@
 # Pendientes — MANTIS 2
 
 > Única fuente de verdad de los pendientes del proyecto. Al completar uno,
-> moverlo a "Hechos" con la fecha. Última actualización: 2026-07-06.
+> moverlo a "Hechos" con la fecha. Última actualización: 2026-07-12.
 
 ## Ahora (esta semana)
+
+- [ ] **STORY-943 fase 2 (post-deploy): drop definitivo de `causa`/`pagador_sugerido`** — Después de que el deploy con STORY-943 esté vivo en Vercel, correr la migración `alter table gestiones drop column causa, drop column pagador_sugerido; drop type causa_gestion;`. La fase 1 (`pagador_sugerido` nullable) ya está aplicada para que el código viejo conviva hasta el deploy.
+- [ ] **Revisar y commitear STORY-941/939/940** — Implementadas y verificadas E2E (2026-07-12), sin commitear. Renombrados Cobro/Administración + alta unificada, documentos sin comisión expuesta, presupuestación sin Causa con inspección obligatoria.
 
 - [ ] **Crear token durable de Vercel para CI** — vercel.com → Account Settings → Tokens → Create ("github-actions-mantis", scope ausitesis-9299, expiración larga) → `gh secret set VERCEL_TOKEN --repo faustinoUNC/mantis`. Hoy el secret tiene el token de sesión del CLI, que expira en días; cuando expire, los deploys de Giuliano van a fallar en la Action hasta reemplazarlo.
 - [ ] **Activar leaked password protection** — Dashboard de Supabase → Authentication → Sign In / Providers → toggle "Leaked password protection". 2 minutos.

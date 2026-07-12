@@ -10,45 +10,24 @@ import {
 } from "@/components/ui/buscador-direccion.client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { MapaDireccion } from "@/components/ui/mapa";
 import { crearAdministracion } from "@/features/cartera/service";
-import type { Persona, RefPersona } from "@/features/cartera/types";
-import { errorCuil } from "@/shared/utils/cuil";
+import type { Persona } from "@/features/cartera/types";
 import { cn } from "@/shared/utils/cn";
+import {
+  PERSONA_VACIA,
+  refPersona,
+  SelectorPersona,
+  validarPersona,
+  type Modo,
+} from "./persona-campos.client";
 
 // Alta unificada (STORY-922): una Administración = propiedad + propietario
 // (obligatorios) + inquilino con legajo (opcional). Wizard de 4 pasos chicos.
+// Las piezas de persona (selector existente/nuevo, campos) viven en
+// persona-campos.client (compartidas con el detalle de la propiedad).
 
 const PASOS = ["Propietario", "Propiedad", "Ocupación", "Confirmar"];
-
-type DatosPersona = { nombre: string; email: string; telefono: string; cuil: string };
-type Modo = "existente" | "nuevo";
-
-const PERSONA_VACIA: DatosPersona = { nombre: "", email: "", telefono: "", cuil: "" };
-
-function validarPersona(
-  modo: Modo,
-  id: string,
-  nueva: DatosPersona,
-  quien: string
-): string | null {
-  if (modo === "existente") {
-    return id ? null : `Elegí un ${quien} de la lista.`;
-  }
-  if (!nueva.nombre.trim() || !nueva.email.trim()) {
-    return `Completá nombre y email del ${quien}.`;
-  }
-  const errCuil = nueva.cuil.trim() ? errorCuil(nueva.cuil, "CUIL/CUIT") : null;
-  if (errCuil) {
-    return errCuil;
-  }
-  return null;
-}
-
-function refPersona(modo: Modo, id: string, nueva: DatosPersona): RefPersona {
-  return modo === "existente" ? { id } : { nueva };
-}
 
 function Stepper({ paso, onIr }: { paso: number; onIr: (p: number) => void }) {
   return (
@@ -98,105 +77,6 @@ function Stepper({ paso, onIr }: { paso: number; onIr: (p: number) => void }) {
         );
       })}
     </ol>
-  );
-}
-
-function Segmentado({
-  opciones,
-  valor,
-  onCambio,
-}: {
-  opciones: { valor: Modo; label: string }[];
-  valor: Modo;
-  onCambio: (m: Modo) => void;
-}) {
-  return (
-    <div className="inline-flex rounded-lg border border-border p-1 gap-1 bg-surface-2/50">
-      {opciones.map((o) => (
-        <button
-          key={o.valor}
-          type="button"
-          onClick={() => onCambio(o.valor)}
-          className={cn(
-            "px-3.5 py-2 rounded-md text-sm font-medium transition-colors min-h-tap",
-            valor === o.valor
-              ? "bg-surface text-foreground border border-brand-soft-border shadow-none"
-              : "text-muted hover:text-foreground"
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function CamposPersona({
-  valores,
-  onCambio,
-  docLabel,
-}: {
-  valores: DatosPersona;
-  onCambio: (v: DatosPersona) => void;
-  docLabel: string;
-}) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 animate-aparecer">
-      <Input label="Nombre" required value={valores.nombre} onChange={(e) => onCambio({ ...valores, nombre: e.target.value })} placeholder="Nombre y apellido" />
-      <Input label="Correo electrónico" type="email" required value={valores.email} onChange={(e) => onCambio({ ...valores, email: e.target.value })} placeholder="correo@ejemplo.com" />
-      <Input label="Teléfono" inputMode="numeric" value={valores.telefono} onChange={(e) => onCambio({ ...valores, telefono: e.target.value.replace(/\D/g, "") })} placeholder="Opcional, solo números" />
-      <Input label={docLabel} inputMode="numeric" value={valores.cuil} onChange={(e) => onCambio({ ...valores, cuil: e.target.value })} placeholder="Ej. 20301234563, opcional" />
-    </div>
-  );
-}
-
-function SelectorPersona({
-  personas,
-  quien,
-  docLabel,
-  modo,
-  onModo,
-  id,
-  onId,
-  nueva,
-  onNueva,
-}: {
-  personas: Persona[];
-  quien: string;
-  docLabel: string;
-  modo: Modo;
-  onModo: (m: Modo) => void;
-  id: string;
-  onId: (id: string) => void;
-  nueva: DatosPersona;
-  onNueva: (v: DatosPersona) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-4">
-      {personas.length > 0 && (
-        <Segmentado
-          valor={modo}
-          onCambio={onModo}
-          opciones={[
-            { valor: "existente", label: "Ya está en la cartera" },
-            { valor: "nuevo", label: `Cargar ${quien} nuevo` },
-          ]}
-        />
-      )}
-      {modo === "existente" && personas.length > 0 ? (
-        <div className="max-w-sm animate-aparecer">
-          <Select label={quien[0].toUpperCase() + quien.slice(1)} value={id} onChange={(e) => onId(e.target.value)}>
-            {personas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </Select>
-        </div>
-      ) : (
-        <CamposPersona valores={nueva} onCambio={onNueva} docLabel={docLabel} />
-      )}
-    </div>
   );
 }
 
@@ -351,7 +231,7 @@ export function AltaAdministracion({
         ← Volver
       </Link>
       <div className="mb-5 mt-3">
-        <p className="text-[13px] font-medium text-muted">Cartera</p>
+        <p className="text-[13px] font-medium text-muted">Administración</p>
         <h1 className="text-2xl font-semibold tracking-tight mt-0.5">Nueva administración</h1>
         <p className="text-sm text-muted mt-1">
           La propiedad y su propietario en un solo paso — y el inquilino, si lo hay.

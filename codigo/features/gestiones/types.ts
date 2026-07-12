@@ -11,7 +11,8 @@ export type Etapa =
   | "cancelada";
 
 export type Urgencia = "normal" | "urgente";
-export type Causa = "desgaste" | "dano" | "mejora";
+// STORY-943: la "Causa" se eliminó — la responsabilidad de pago la decide la
+// inmobiliaria en la etapa Presupuesto, con la inspección del técnico a la vista.
 export type Pagador = "inquilino" | "propietario";
 
 export const ETAPAS: { id: Etapa; label: string }[] = [
@@ -20,23 +21,10 @@ export const ETAPAS: { id: Etapa; label: string }[] = [
   { id: "presupuesto", label: "Presupuesto" },
   { id: "en_ejecucion", label: "En ejecución" },
   { id: "conformidad", label: "Conformidad" },
-  { id: "facturacion_cobro", label: "Facturación y cobro" },
+  { id: "facturacion_cobro", label: "Cobro" },
   { id: "liquidacion_tecnico", label: "Liquidación técnico" },
   { id: "finalizado", label: "Finalizado" },
 ];
-
-export const LABEL_CAUSA: Record<Causa, string> = {
-  desgaste: "Desgaste / antigüedad",
-  dano: "Daño por uso",
-  mejora: "Mejora",
-};
-
-// Regla CCyC (supletoria): desgaste → propietario; daño culpable → inquilino.
-export const PAGADOR_POR_CAUSA: Record<Causa, Pagador> = {
-  desgaste: "propietario",
-  dano: "inquilino",
-  mejora: "propietario",
-};
 
 export interface GestionResumen {
   id: string;
@@ -116,8 +104,7 @@ export interface ContactoCliente {
 }
 
 export interface GestionDetalle extends GestionResumen {
-  causa: Causa;
-  pagador_sugerido: Pagador;
+  // null hasta que el gestor lo decide al aprobar/enviar el presupuesto
   pagador: Pagador | null;
   costo_final: number | null;
   cargo_admin: number | null;

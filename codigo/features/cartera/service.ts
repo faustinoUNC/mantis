@@ -59,7 +59,9 @@ export async function guardarPersona(
     ? await supabase.from(tipo).update(fila).eq("id", id)
     : await supabase.from(tipo).insert(fila);
   if (error) return { ok: false, error: "No se pudo guardar." };
-  revalidatePath(`/cartera/${tipo}`);
+  // Las personas se editan desde la propiedad (STORY-941): refrescar lista y detalles.
+  revalidatePath("/cartera/propiedades");
+  revalidatePath("/cartera/propiedades/[id]", "page");
   return { ok: true };
 }
 
@@ -115,7 +117,7 @@ export async function cambiarEstadoPersona(
 
   const { error } = await supabase.from(tipo).update({ activo }).eq("id", id);
   if (error) return { ok: false, error: "No se pudo actualizar el estado." };
-  revalidatePath(`/cartera/${tipo}`);
+  revalidatePath("/cartera/propiedades");
   return { ok: true };
 }
 
@@ -275,10 +277,33 @@ export async function obtenerPropiedad(id: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("propiedades")
-    .select("id, direccion, tipo, activa, propietarios(id, nombre, email)")
+    .select(
+      "id, direccion, tipo, activa, propietarios(id, nombre, email, telefono, documento:cuil, activo)"
+    )
     .eq("id", id)
     .single();
   return data;
+}
+
+// Cambiar el propietario de una propiedad existente (STORY-941 — caso venta):
+// uno ya cargado o uno nuevo, misma forma que el wizard de alta.
+export async function cambiarPropietario(
+  propiedadId: string,
+  ref: RefPersona
+): Promise<ActionResult> {
+  const propietario = await resolverPersona("propietarios", ref);
+  if ("error" in propietario) return { ok: false, error: propietario.error };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("propiedades")
+    .update({ propietario_id: propietario.id })
+    .eq("id", propiedadId);
+  if (error) return { ok: false, error: "No se pudo cambiar el propietario." };
+
+  revalidatePath("/cartera/propiedades");
+  revalidatePath(`/cartera/propiedades/${propiedadId}`);
+  return { ok: true };
 }
 
 // ── Legajos ──
@@ -289,25 +314,37 @@ export async function legajosDePropiedad(
   const supabase = await createClient();
   const { data } = await supabase
     .from("legajos")
-    .select("id, propiedad_id, inquilino_id, fecha_inicio, fecha_fin, inquilinos(nombre)")
+    .select(
+      "id, propiedad_id, inquilino_id, fecha_inicio, fecha_fin, inquilinos(id, nombre, email, telefono, documento:cuil, activo)"
+    )
     .eq("propiedad_id", propiedadId)
     .order("fecha_inicio", { ascending: false });
-  type Fila = Omit<Legajo, "inquilino_nombre"> & {
-    inquilinos: { nombre: string } | null;
+  type Fila = Omit<Legajo, "inquilino_nombre" | "inquilino"> & {
+    inquilinos: Persona | null;
   };
   return ((data ?? []) as unknown as Fila[]).map((l) => ({
     ...l,
+    inquilino: l.inquilinos ?? null,
     inquilino_nombre: l.inquilinos?.nombre ?? "—",
   }));
 }
 
+// El inquilino puede ser uno ya cargado o uno nuevo (STORY-941): al cambiar
+// el ocupante de una propiedad existente, el alta se hace acá mismo.
 export async function abrirLegajo(datos: {
   propiedad_id: string;
-  inquilino_id: string;
+  inquilino: RefPersona;
   fecha_inicio: string;
 }): Promise<ActionResult> {
+  const inquilino = await resolverPersona("inquilinos", datos.inquilino);
+  if ("error" in inquilino) return { ok: false, error: inquilino.error };
+
   const supabase = await createClient();
-  const { error } = await supabase.from("legajos").insert(datos);
+  const { error } = await supabase.from("legajos").insert({
+    propiedad_id: datos.propiedad_id,
+    inquilino_id: inquilino.id,
+    fecha_inicio: datos.fecha_inicio,
+  });
   if (error) {
     return {
       ok: false,
@@ -400,7 +437,7 @@ async function datosResumen(legajoId: string) {
   const { data: gestiones } = await admin
     .from("gestiones")
     .select(
-      "descripcion, etapa, costo_final, pagador, creado_en, especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre)"
+      "descripcion, etapa, costo_final, cargo_admin, cobrado_monto, pagador, creado_en, especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre)"
     )
     .eq("legajo_id", legajoId)
     .order("creado_en");
@@ -418,6 +455,8 @@ async function datosResumen(legajoId: string) {
     descripcion: string;
     etapa: string;
     costo_final: number | null;
+    cargo_admin: number | null;
+    cobrado_monto: number | null;
     pagador: string | null;
     creado_en: string;
     especialidades: { nombre: string } | null;
@@ -440,7 +479,15 @@ async function datosResumen(legajoId: string) {
         especialidad: g.especialidades?.nombre ?? "—",
         descripcion: g.descripcion,
         tecnico: g.tecnico?.nombre ?? null,
-        costo: g.costo_final != null ? Number(g.costo_final) : null,
+        // STORY-942: el costo que ve el propietario es lo COBRADO (con fee
+        // adentro) — el mismo número de su nota de cobro, sin delatar la
+        // comisión. Fallback para obras sin cobro registrado.
+        costo:
+          g.cobrado_monto != null
+            ? Number(g.cobrado_monto)
+            : g.costo_final != null
+              ? Number(g.costo_final) + Number(g.cargo_admin ?? 0)
+              : null,
         pagador: g.pagador,
         finalizada: g.etapa === "finalizado",
       })),

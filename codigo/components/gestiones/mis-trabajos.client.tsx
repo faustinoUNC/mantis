@@ -39,7 +39,7 @@ const ETAPAS_TEC: DefEtapa[] = [
     match: (g) => g.etapa === "presupuesto" && g.presupuesto_pendiente },
   { id: "esperando", label: "Esperando aprobación", tipo: "seguimiento", cta: null,
     match: (g) => g.etapa === "conformidad" },
-  { id: "facturacion", label: "En facturación", tipo: "seguimiento", cta: null,
+  { id: "facturacion", label: "En cobro", tipo: "seguimiento", cta: null,
     match: (g) => g.etapa === "facturacion_cobro" },
   { id: "liquidacion", label: "En liquidación", tipo: "seguimiento", cta: null,
     match: (g) => g.etapa === "liquidacion_tecnico" },
