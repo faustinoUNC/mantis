@@ -90,7 +90,7 @@ export function EnvioDocumento({
           onClick={abrir}
         >
           <Icono id="ojo" size={16} />
-          {cargando === "generar" ? "Generando…" : "Vista previa"}
+          {cargando === "generar" ? "Generando…" : <span className="capitalize">Ver {etiqueta}</span>}
         </Button>
         {enviar && (
           <Button
