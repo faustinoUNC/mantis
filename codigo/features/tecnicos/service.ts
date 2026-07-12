@@ -7,6 +7,7 @@ import type { ActionResult } from "@/features/empleados/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 import { errorCuil, normalizarCuil } from "@/shared/utils/cuil";
+import { duplicadoPersona, ERROR_DUPLICADO_DB } from "@/shared/utils/duplicados";
 import { normalizarTelefono } from "@/shared/utils/telefono";
 import type {
   EstadoTecnico,
@@ -100,6 +101,13 @@ async function altaTecnico(
 
   const admin = createAdminClient();
 
+  const dup = await duplicadoPersona(admin, "tecnicos", {
+    email: datos.email,
+    cuil: normalizarCuil(datos.cuil),
+    telefono: datos.telefono || null,
+  });
+  if (dup) return { ok: false, error: dup };
+
   // Matrícula obligatoria si alguna especialidad la exige (validación server)
   const { data: exigentes } = await admin
     .from("especialidades")
@@ -146,7 +154,10 @@ async function altaTecnico(
   });
   if (errorTecnico) {
     await admin.auth.admin.deleteUser(id);
-    return { ok: false, error: "No se pudo guardar el técnico." };
+    return {
+      ok: false,
+      error: errorTecnico.code === "23505" ? ERROR_DUPLICADO_DB : "No se pudo guardar el técnico.",
+    };
   }
 
   await admin.from("tecnico_especialidades").insert(

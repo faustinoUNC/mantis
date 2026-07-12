@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-944](STORY-944.md) | CUIL, email y teléfono no pueden repetirse dentro de cada tipo de persona (técnicos, propietarios, inquilinos) — chequeo server + índice UNIQUE en DB | 🚧 en desarrollo |
 | [STORY-943](STORY-943.md) | Presupuestación: eliminar "Causa" y `pagador_sugerido` (migración 2 fases — fase 2 post-deploy), pagador explícito sin opción Inquilino inexistente, inspección obligatoria antes de presupuestar | ✅ done |
 | [STORY-942](STORY-942.md) | Documentos al pagador sin desglose: presupuesto y nota de cobro solo total (fee adentro); resumen de obras con el monto cobrado — la comisión no se expone | ✅ done |
 | [STORY-941](STORY-941.md) | "Cobro" en vez de "Facturación" + sección "Administración"/"Administraciones"; fuera los ABMs sueltos de personas — alta/edición/cambio de propietario e inquilino desde la propiedad | ✅ done |

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/features/empleados/types";
 import { createClient } from "@/shared/lib/supabase/server";
 import { errorCuil, normalizarCuil } from "@/shared/utils/cuil";
+import { duplicadoPersona, ERROR_DUPLICADO_DB } from "@/shared/utils/duplicados";
 import { normalizarTelefono } from "@/shared/utils/telefono";
 import type { Legajo, Persona, Propiedad, RefPersona, TipoPersona } from "./types";
 
@@ -51,14 +52,18 @@ export async function guardarPersona(
   const supabase = await createClient();
   const fila = {
     nombre: datos.nombre,
-    email: datos.email,
+    email: datos.email.trim().toLowerCase(),
     telefono: normalizarTelefono(datos.telefono) || null,
     cuil: datos.documento ? normalizarCuil(datos.documento) : null,
   };
+  const dup = await duplicadoPersona(supabase, tipo, fila, id);
+  if (dup) return { ok: false, error: dup };
   const { error } = id
     ? await supabase.from(tipo).update(fila).eq("id", id)
     : await supabase.from(tipo).insert(fila);
-  if (error) return { ok: false, error: "No se pudo guardar." };
+  if (error) {
+    return { ok: false, error: error.code === "23505" ? ERROR_DUPLICADO_DB : "No se pudo guardar." };
+  }
   // Las personas se editan desde la propiedad (STORY-941): refrescar lista y detalles.
   revalidatePath("/cartera/propiedades");
   revalidatePath("/cartera/propiedades/[id]", "page");
@@ -180,18 +185,22 @@ async function resolverPersona(
     return { error: errCuil };
   }
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from(tipo)
-    .insert({
-      nombre: ref.nueva.nombre,
-      email: ref.nueva.email,
-      telefono: normalizarTelefono(ref.nueva.telefono) || null,
-      cuil: ref.nueva.cuil ? normalizarCuil(ref.nueva.cuil) : null,
-    })
-    .select("id")
-    .single();
+  const fila = {
+    nombre: ref.nueva.nombre,
+    email: ref.nueva.email.trim().toLowerCase(),
+    telefono: normalizarTelefono(ref.nueva.telefono) || null,
+    cuil: ref.nueva.cuil ? normalizarCuil(ref.nueva.cuil) : null,
+  };
+  const dup = await duplicadoPersona(supabase, tipo, fila);
+  if (dup) return { error: dup };
+  const { data, error } = await supabase.from(tipo).insert(fila).select("id").single();
   if (error || !data) {
-    return { error: `No se pudo guardar el ${tipo === "propietarios" ? "propietario" : "inquilino"}.` };
+    return {
+      error:
+        error?.code === "23505"
+          ? ERROR_DUPLICADO_DB
+          : `No se pudo guardar el ${tipo === "propietarios" ? "propietario" : "inquilino"}.`,
+    };
   }
   return { id: data.id };
 }
