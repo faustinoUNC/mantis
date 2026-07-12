@@ -38,6 +38,18 @@ const MIME_PERMITIDOS: Record<string, string> = {
 };
 const MAX_DOC_BYTES = 8 * 1024 * 1024;
 
+// Antes de crear nada: si un doc no se va a poder subir, que el error se vea
+// (subirDoc devuelve null en silencio y el técnico quedaba sin documento).
+function errorArchivo(etiqueta: string, archivo: File): string | null {
+  if (!MIME_PERMITIDOS[archivo.type]) {
+    return `${etiqueta} tiene un formato no permitido: subí JPG, PNG, WEBP o PDF.`;
+  }
+  if (archivo.size > MAX_DOC_BYTES) {
+    return `${etiqueta} pesa más de 8 MB: subí un archivo más liviano.`;
+  }
+  return null;
+}
+
 async function subirDoc(
   tecnicoId: string,
   tipo: string,
@@ -98,6 +110,16 @@ async function altaTecnico(
   if (!docDniArchivo || docDniArchivo.size === 0) {
     return { ok: false, error: "Subí la foto o PDF de tu DNI." };
   }
+  const matriculas = form
+    .getAll("doc_matricula")
+    .filter((v): v is File => v instanceof File && v.size > 0);
+
+  const errDni = errorArchivo("El DNI", docDniArchivo);
+  if (errDni) return { ok: false, error: errDni };
+  for (const m of matriculas) {
+    const errMatricula = errorArchivo(`La matrícula "${m.name}"`, m);
+    if (errMatricula) return { ok: false, error: errMatricula };
+  }
 
   const admin = createAdminClient();
 
@@ -114,8 +136,7 @@ async function altaTecnico(
     .select("id")
     .in("id", datos.especialidadIds)
     .eq("requiere_matricula", true);
-  const matricula = form.get("doc_matricula") as File | null;
-  if ((exigentes?.length ?? 0) > 0 && (!matricula || matricula.size === 0)) {
+  if ((exigentes?.length ?? 0) > 0 && matriculas.length === 0) {
     return {
       ok: false,
       error: "Alguna especialidad elegida exige matrícula: subí el archivo.",
@@ -137,9 +158,9 @@ async function altaTecnico(
   }
   const id = creado.user.id;
 
-  const [docDni, docMatricula] = await Promise.all([
-    subirDoc(id, "dni", form.get("doc_dni") as File | null),
-    subirDoc(id, "matricula", matricula),
+  const [docDni, ...docsMatricula] = await Promise.all([
+    subirDoc(id, "dni", docDniArchivo),
+    ...matriculas.map((m, i) => subirDoc(id, `matricula-${i + 1}`, m)),
   ]);
 
   const { error: errorTecnico } = await admin.from("tecnicos").insert({
@@ -150,7 +171,7 @@ async function altaTecnico(
     cuil: normalizarCuil(datos.cuil),
     estado,
     doc_dni_path: docDni,
-    doc_matricula_path: docMatricula,
+    doc_matricula_paths: docsMatricula.filter(Boolean),
   });
   if (errorTecnico) {
     await admin.auth.admin.deleteUser(id);
@@ -270,7 +291,7 @@ export async function obtenerTecnico(
   const { data: t } = await supabase
     .from("tecnicos")
     .select(
-      "id, nombre, email, telefono, cuil, estado, creado_en, motivo_rechazo, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidad_id, especialidades(nombre))"
+      "id, nombre, email, telefono, cuil, estado, creado_en, motivo_rechazo, doc_dni_path, doc_matricula_paths, tecnico_especialidades(especialidad_id, especialidades(nombre))"
     )
     .eq("id", id)
     .single();
@@ -278,9 +299,15 @@ export async function obtenerTecnico(
 
   const admin = createAdminClient();
   const docs: TecnicoDetalle["docs"] = [];
-  const rutas: [TecnicoDetalle["docs"][number]["tipo"], string | null][] = [
+  const paths: string[] = t.doc_matricula_paths ?? [];
+  const rutas: [string, string | null][] = [
     ["DNI", t.doc_dni_path],
-    ["Matrícula", t.doc_matricula_path],
+    ...paths.map(
+      (path, i): [string, string] => [
+        paths.length > 1 ? `Matrícula ${i + 1}` : "Matrícula",
+        path,
+      ]
+    ),
   ];
   for (const [tipo, path] of rutas) {
     if (!path) continue;
@@ -374,7 +401,7 @@ export async function actualizarEspecialidadesTecnico(
 
   const admin = createAdminClient();
   const [{ data: tecnico }, { data: exigentes }] = await Promise.all([
-    admin.from("tecnicos").select("doc_matricula_path").eq("id", tecnicoId).single(),
+    admin.from("tecnicos").select("doc_matricula_paths").eq("id", tecnicoId).single(),
     admin
       .from("especialidades")
       .select("id, nombre")
@@ -382,7 +409,7 @@ export async function actualizarEspecialidadesTecnico(
       .eq("requiere_matricula", true),
   ]);
   if (!tecnico) return { ok: false, error: "Técnico no encontrado." };
-  if ((exigentes?.length ?? 0) > 0 && !tecnico.doc_matricula_path) {
+  if ((exigentes?.length ?? 0) > 0 && (tecnico.doc_matricula_paths?.length ?? 0) === 0) {
     return {
       ok: false,
       error: `${exigentes!.map((e) => e.nombre).join(", ")} exige matrícula y este técnico no tiene una cargada.`,
@@ -469,7 +496,7 @@ export async function miPerfilTecnico() {
   const { data: t } = await supabase
     .from("tecnicos")
     .select(
-      "nombre, email, telefono, cuil, doc_dni_path, doc_matricula_path, tecnico_especialidades(especialidades(nombre))"
+      "nombre, email, telefono, cuil, doc_dni_path, doc_matricula_paths, tecnico_especialidades(especialidades(nombre))"
     )
     .eq("id", user.id)
     .single();
@@ -482,7 +509,7 @@ export async function miPerfilTecnico() {
     telefono: t.telefono,
     cuil: t.cuil,
     tiene_dni: Boolean(t.doc_dni_path),
-    tiene_matricula: Boolean(t.doc_matricula_path),
+    tiene_matricula: (t.doc_matricula_paths?.length ?? 0) > 0,
     especialidades: ((t.tecnico_especialidades as unknown as TE[]) ?? [])
       .map((te) => te.especialidades?.nombre)
       .filter(Boolean) as string[],

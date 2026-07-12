@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { Icono } from "@/components/ui/iconos";
+import { comprimirArchivosDeInput } from "@/shared/utils/imagen.client";
 
 // Reemplazo del file input nativo (DESIGN.md §input-archivo): el nativo
 // desborda en 390px. Botón secundario + nombre del archivo elegido.
@@ -46,7 +47,11 @@ export function InputArchivo({
         capture={capture}
         required={required}
         className="sr-only"
-        onChange={(e) => setNombre(e.target.files?.[0]?.name ?? null)}
+        onChange={(e) => {
+          setNombre(e.target.files?.[0]?.name ?? null);
+          // Fotos de cámara: comprimir acá para no exceder el body del server action
+          void comprimirArchivosDeInput(e.target);
+        }}
       />
     </div>
   );

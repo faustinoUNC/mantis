@@ -15,7 +15,7 @@ export interface TecnicoDetalle extends TecnicoResumen {
   cuil: string | null;
   motivo_rechazo: string | null;
   especialidad_ids: string[];
-  docs: { tipo: "DNI" | "Matrícula"; url: string }[];
+  docs: { tipo: string; url: string }[]; // "DNI", "Matrícula" o "Matrícula N"
 }
 
 export interface Franja {

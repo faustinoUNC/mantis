@@ -13,6 +13,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // STORY-945: los server actions reciben fotos (comprimidas en el cliente,
+  // pero el default de 1 MB igual queda corto). En Vercel el techo real del
+  // body es ~4.5 MB de plataforma.
+  experimental: {
+    serverActions: { bodySizeLimit: "8mb" },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

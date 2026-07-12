@@ -9,15 +9,21 @@ import {
   crearTecnicoManual,
   enrolarTecnico,
 } from "@/features/tecnicos/service";
+import { comprimirArchivosDeInput } from "@/shared/utils/imagen.client";
+
+// Los PDFs no se comprimen y el body del request tiene techo (~4.5 MB en Vercel).
+const MAX_ARCHIVO_BYTES = 4 * 1024 * 1024;
 
 function CampoArchivo({
   label,
   name,
   requerido,
+  multiple,
 }: {
   label: string;
   name: string;
   requerido?: boolean;
+  multiple?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -29,7 +35,9 @@ function CampoArchivo({
         type="file"
         name={name}
         required={requerido}
+        multiple={multiple}
         accept="image/*,.pdf"
+        onChange={(e) => void comprimirArchivosDeInput(e.target)}
         className="text-sm text-muted file:mr-3 file:min-h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface file:text-sm file:font-medium file:text-foreground hover:file:bg-surface-2 file:transition-colors file:cursor-pointer"
       />
     </div>
@@ -56,13 +64,32 @@ export function TecnicoForm({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setEnviando(true);
+    // Validación acá y no solo en el server: con fotos de cámara el request
+    // puede morir por tamaño antes de que el server llegue a validar (STORY-945).
+    if (seleccionadas.size === 0) {
+      return setError("Elegí al menos una especialidad.");
+    }
     const form = new FormData(e.currentTarget);
-    const accion = modo === "manual" ? crearTecnicoManual : enrolarTecnico;
-    const r = await accion(form);
-    setEnviando(false);
-    if (!r.ok) return setError(r.error);
-    onExito();
+    for (const valor of form.values()) {
+      if (valor instanceof File && valor.size > MAX_ARCHIVO_BYTES) {
+        return setError(
+          `"${valor.name}" pesa demasiado: cada archivo puede tener hasta 4 MB.`
+        );
+      }
+    }
+    setEnviando(true);
+    try {
+      const accion = modo === "manual" ? crearTecnicoManual : enrolarTecnico;
+      const r = await accion(form);
+      if (!r.ok) return setError(r.error);
+      onExito();
+    } catch {
+      setError(
+        "No pudimos enviar la solicitud. Revisá tu conexión y que los archivos no sean demasiado pesados."
+      );
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -108,7 +135,12 @@ export function TecnicoForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <CampoArchivo label="DNI (foto/PDF)" name="doc_dni" requerido />
-        <CampoArchivo label="Matrícula" name="doc_matricula" requerido={exigeMatricula} />
+        <CampoArchivo
+          label="Matrícula (podés subir más de una)"
+          name="doc_matricula"
+          requerido={exigeMatricula}
+          multiple
+        />
       </div>
 
       {error && (

@@ -5,7 +5,7 @@
 
 ## Ahora (esta semana)
 
-
+- [ ] **Migración fase 2 de STORY-945 (post-deploy)** — Cuando el deploy con matrículas múltiples esté en prod: re-correr el backfill (`update tecnicos set doc_matricula_paths = array[doc_matricula_path] where doc_matricula_path is not null and doc_matricula_paths = '{}'`) y `alter table tecnicos drop column doc_matricula_path;` (la columna vieja quedó para convivir con el código anterior).
 - [ ] **Activar leaked password protection** — Dashboard de Supabase → Authentication → Sign In / Providers → toggle "Leaked password protection". 2 minutos.
 - [ ] **Prueba manual del flujo de presupuesto** — En la app deployada, como gestor: elegir pagador → vista previa → enviar presupuesto → aprobar. Confirmar que el email va al pagador elegido y que el total de la nota coincide con lo aprobado (fixes de STORY-906). 5 minutos.
 
