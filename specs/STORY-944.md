@@ -1,6 +1,6 @@
 # STORY-944 — CUIL, email y teléfono no pueden repetirse dentro de cada tipo de persona (v1.0)
 
-**Estado:** 🚧 en desarrollo (código aplicado, falta correr la migración SQL en Supabase) · **Origen:** Giuliano: *"En este momento los datos de todos los usuarios se pueden repetir, CUIL MAIL Y NUMERO DE TELEFONO, no se debe poder repetir nunca, en todas las instancias donde se da de alta algo (en el inicio a un técnico, dentro de la cuenta de administración a clientes y en todas las demás) debe validarse que estos datos no existan ya en la base de datos antes de ser creada"*.
+**Estado:** ✅ done · **Origen:** Giuliano: *"En este momento los datos de todos los usuarios se pueden repetir, CUIL MAIL Y NUMERO DE TELEFONO, no se debe poder repetir nunca, en todas las instancias donde se da de alta algo (en el inicio a un técnico, dentro de la cuenta de administración a clientes y en todas las demás) debe validarse que estos datos no existan ya en la base de datos antes de ser creada"*.
 
 ## Alcance (decisiones confirmadas con Giuliano)
 
@@ -19,7 +19,7 @@
 - **`shared/utils/duplicados.ts`** (nuevo): helper único `duplicadoPersona(supabase, tabla, datos, excluirId?)` — recorre email/cuil/telefono, si el valor no está vacío consulta `SELECT id FROM <tabla> WHERE <campo> = valor` (excluyendo el propio id en updates) y devuelve un mensaje en español si ya existe. Constante `ERROR_DUPLICADO_DB` como mensaje de fallback si un alta concurrente cuela un duplicado entre el chequeo previo y el insert (lo atrapa el índice UNIQUE, código Postgres `23505`).
 - **`features/tecnicos/service.ts`** (`altaTecnico`): chequeo `duplicadoPersona` antes de crear el usuario en Auth y antes del insert en `tecnicos`; fallback `23505` en el insert.
 - **`features/cartera/service.ts`** (`guardarPersona`, `resolverPersona`): mismo chequeo antes de insert/update; email normalizado a minúsculas en ambas funciones; fallback `23505` en ambos inserts.
-- **Migración SQL** (pendiente de correr manualmente — no hay MCP de Supabase activo en esta sesión): índices `UNIQUE` sobre `tecnicos`, `propietarios`, `inquilinos` en `email`, `cuil`, `telefono`. Los 3 campos ya se guardan como `NULL` cuando están vacíos (no `""`), así que un índice `UNIQUE` común alcanza — Postgres no considera duplicados dos `NULL`.
+- **Migración SQL** (corrida manualmente por Giuliano en el SQL Editor de Supabase — no hay MCP activo en esta sesión): índices `UNIQUE` sobre `tecnicos`, `propietarios`, `inquilinos` en `email`, `cuil`, `telefono`. Los 3 campos ya se guardan como `NULL` cuando están vacíos (no `""`), así que un índice `UNIQUE` común alcanza — Postgres no considera duplicados dos `NULL`. El chequeo previo (Paso 1) encontró un duplicado real de datos de prueba: los técnicos Ramiro Zarate y Gastón Heredia tenían el mismo CUIL de relleno (`20399355681`) — se vació el de Gastón (`update tecnicos set cuil = null where id = 'e8f6c409-f305-47a4-a6cf-ad984aff1328'`) y se recorrió el Paso 1 limpio antes de crear los índices.
 
 ```sql
 -- Paso 1: chequear que no haya duplicados existentes ANTES de crear los índices
@@ -59,6 +59,6 @@ create unique index if not exists inquilinos_telefono_key on inquilinos (telefon
 ## Dev Agent Record
 
 - **Archivos:** `codigo/shared/utils/duplicados.ts` (nuevo), `codigo/features/tecnicos/service.ts` (`altaTecnico`), `codigo/features/cartera/service.ts` (`guardarPersona`, `resolverPersona` + normalización de email a minúsculas).
-- **Migración:** ver bloque SQL arriba — pendiente de ejecución manual por Giuliano en el SQL Editor de Supabase (no hay MCP vivo en esta sesión). Hasta que se corra, la protección es solo a nivel app (chequeo previo), sin la garantía de concurrencia del índice UNIQUE.
+- **Migración:** ver bloque SQL arriba — ejecutada por Giuliano en el SQL Editor de Supabase (no hay MCP vivo en esta sesión). Los 9 índices `UNIQUE` están creados; la garantía de concurrencia ya está activa.
 - **Verificación:** `tsc --noEmit` y `eslint` limpios sobre los 3 archivos.
 - **Nota de reconciliación:** este trabajo se hizo en paralelo a STORY-941/942/943 (Faustino) que tocó el mismo archivo `cartera/service.ts` (unificación de alta/edición de personas desde la propiedad). Se reconcilió por `git stash` + `git pull --ff-only` + resolución manual del conflicto en `guardarPersona`; `resolverPersona` fusionó sin conflicto y el chequeo de duplicados quedó cubriendo también los nuevos callers de STORY-941 (`cambiarPropietario`, `abrirLegajo`).
