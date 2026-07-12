@@ -1,6 +1,6 @@
 # STORY-936 — Terminar la obra: avance obligatorio y gastos que justifican el exceso (v1.0)
 
-**Estado:** ✅ implementada y verificada E2E (2026-07-11, sin commitear — Fausti revisa) · **Origen:** Fausti (2026-07-11). Decisiones confirmadas: (1) al menos una nota de avance para poder terminar; (2) los gastos imprevistos siguen cargándose libres durante la ejecución, pero pasan a ser la **justificación obligatoria del exceso de materiales** en la rendición. Regla #0: sin migraciones, todo validación sobre lo existente.
+**Estado:** ✅ done (commit `473a677`) · **Origen:** Fausti (2026-07-11). Decisiones confirmadas: (1) al menos una nota de avance para poder terminar; (2) los gastos imprevistos siguen cargándose libres durante la ejecución, pero pasan a ser la **justificación obligatoria del exceso de materiales** en la rendición. Regla #0: sin migraciones, todo validación sobre lo existente.
 
 ## Objetivo
 
@@ -41,7 +41,7 @@ Cerrar dos huecos del flujo del técnico al terminar la ejecución:
 6. `tsc` + eslint + `next build` verdes.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementada y verificada E2E (2026-07-11). Sin commitear — pendiente de revisión de Fausti. Sin migración.
+- **Estado:** ✅ done (2026-07-11). Commit `473a677` en main, deploy automático en Vercel. Sin migración.
 - **Archivos:**
   - `features/gestiones/service.ts` — `subirConformidad` (rama terminando): exige ≥1 avance tipo `avance` y, con presupuesto aprobado, que `Σ gastos ≥ rendido − monto_materiales` (tolerancia de centavos); error con los montos.
   - `components/gestiones/detalle.client.tsx` — `AccionConformidadTecnico`: input de rendición controlado, leyenda de avance faltante, leyenda en vivo del exceso sin cubrir con los montos, botón "Terminar" deshabilitado en ambos casos. La resubida de rechazada no valida nada nuevo.
