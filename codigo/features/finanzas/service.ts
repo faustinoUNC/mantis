@@ -57,7 +57,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, pagador_sugerido, costo_final, cargo_admin, materiales_total, liq_monto, liq_factura_ref, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, descripcion, pagador, pagador_sugerido, costo_final, cargo_admin, materiales_total, liq_monto, liq_factura_ref, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -140,7 +140,12 @@ async function datosDocumento(
     datos: {
       tipo,
       numero: g.id.slice(0, 8).toUpperCase(),
-      fecha: new Date().toLocaleDateString("es-AR"),
+      // Comprobante: la fecha del documento es la del pago real (no la de
+      // regeneración/descarga), para que valga como constancia.
+      fecha:
+        tipo === "comprobante" && g.liq_pagada_en
+          ? new Date(g.liq_pagada_en).toLocaleDateString("es-AR")
+          : new Date().toLocaleDateString("es-AR"),
       destinatarioNombre,
       destinatarioRotulo,
       direccion: j.propiedades?.direccion ?? "—",

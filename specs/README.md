@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-940](STORY-940.md) | Bug: el "comprobante de liquidación" que recibe el técnico por email es en realidad un detalle genérico (falta confirmación de pago + fecha real de pago) | ✅ done |
 | [STORY-939](STORY-939.md) | Bug: los dos botones "Vista previa" al finalizar no distinguen nota de cobro de comprobante de liquidación | ✅ done |
 | [STORY-938](STORY-938.md) | Bug: el técnico no ve quién es el gestor ni el contacto del cliente en el detalle de su gestión (RLS acotada + UI) | 🚧 en desarrollo |
 | [STORY-937](STORY-937.md) | Desvío de presupuesto medido SOLO sobre materiales (reales vs presupuestados, fallback costo_final − mano de obra) y ponderado por plata — scorecard de asignación + card de Informes | ✅ done |

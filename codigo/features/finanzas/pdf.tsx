@@ -86,6 +86,15 @@ function Documento({ datos }: { datos: DatosDocumento }) {
           <Text style={s.valor}>{datos.direccion}</Text>
         </View>
 
+        {datos.tipo === "comprobante" && (
+          <View style={s.caja}>
+            <Text style={s.label}>Pago registrado</Text>
+            <Text style={s.valor}>
+              Se liquidó {monto(datos.total)} el {datos.fecha}.
+            </Text>
+          </View>
+        )}
+
         <View style={s.caja}>
           <Text style={s.label}>Trabajo realizado ({datos.especialidad})</Text>
           <Text style={{ marginTop: 2, lineHeight: 1.5 }}>{datos.descripcion}</Text>
