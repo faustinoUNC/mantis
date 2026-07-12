@@ -86,12 +86,14 @@ export async function PanelShell({
   return (
     <div className="flex-1 flex flex-col md:flex-row">
       <BloqueoWatcher usuarioId={usuario.id} />
+      {/* key en los slots: al cruzar la frontera server→client se pierde la
+          optimización de hijos estáticos y React los valida como lista */}
       <SidebarStaff
         items={items}
-        marca={<Marca />}
-        campana={<Campana usuarioId={usuario.id} iniciales={notificaciones} />}
+        marca={<Marca key="marca" />}
+        campana={<Campana key="campana" usuarioId={usuario.id} iniciales={notificaciones} />}
         pie={
-          <div className="flex md:flex-col md:gap-3 items-center md:items-stretch">
+          <div key="pie" className="flex md:flex-col md:gap-3 items-center md:items-stretch">
             <div className="hidden md:flex items-center gap-2.5 px-3 min-w-0">
               <Avatar nombre={usuario.nombre} size="md" />
               <div className="min-w-0">

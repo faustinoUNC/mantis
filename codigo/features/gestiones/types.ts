@@ -116,6 +116,10 @@ export interface GestionDetalle extends GestionResumen {
   materiales_total: number | null;
   materiales_foto_url: string | null;
   nota_emitida_en: string | null;
+  // STORY-935: marca persistida del envío del presupuesto por email — sin
+  // esto no se puede aprobar. Y archivado (null = activa, fuera del tablero).
+  presupuesto_enviado_en: string | null;
+  archivada_en: string | null;
   gestor_id: string;
   tecnico_id: string | null;
   propiedad_id: string;

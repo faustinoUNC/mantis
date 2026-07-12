@@ -22,6 +22,7 @@ import {
   enviarPresupuestoEmail,
 } from "@/features/finanzas/service";
 import {
+  archivarGestion,
   asignarTecnico,
   avanzarEtapa,
   calificarTecnico,
@@ -64,6 +65,8 @@ const LABEL_EVENTO: Record<string, string> = {
   nota_cobro_enviada: "Nota de cobro enviada",
   cobro_registrado: "Cobro registrado",
   liquidacion_registrada: "Liquidación registrada",
+  archivada: "Gestión archivada",
+  desarchivada: "Gestión desarchivada",
 };
 
 // Formato manual determinístico: toLocaleString mete un espacio invisible
@@ -586,6 +589,16 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
     setPagadorPrevio(gestion.pagador);
     if (gestion.pagador) setPagador(gestion.pagador);
   }
+  // STORY-935: sin email enviado al pagador no se aprueba. Nunca degrada a
+  // false: un envío local vale aunque el refresh vivo tarde en confirmarlo.
+  const [mailEnviado, setMailEnviado] = useState(
+    Boolean(gestion.presupuesto_enviado_en)
+  );
+  const [envioPrevio, setEnvioPrevio] = useState(gestion.presupuesto_enviado_en);
+  if (envioPrevio !== gestion.presupuesto_enviado_en) {
+    setEnvioPrevio(gestion.presupuesto_enviado_en);
+    if (gestion.presupuesto_enviado_en) setMailEnviado(true);
+  }
   const enviado = gestion.presupuestos.find((p) => p.estado === "enviado");
   const inspecciones = gestion.avances.filter((a) => a.tipo === "inspeccion");
 
@@ -658,6 +671,8 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
         destinatarioEtiqueta={pagador}
         generar={() => descargarPresupuestoPDF(gestion.id, { cargoAdmin, pagador })}
         enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdmin, pagador)}
+        yaEnviado={Boolean(gestion.presupuesto_enviado_en)}
+        onEnviado={() => setMailEnviado(true)}
       />
 
       {rechazando ? (
@@ -690,7 +705,7 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
             <option value="inquilino">Inquilino</option>
           </Select>
           <Button
-            disabled={cargando}
+            disabled={cargando || !mailEnviado}
             onClick={() =>
               correr(() =>
                 resolverPresupuesto(enviado.id, gestion.id, true, {
@@ -705,6 +720,12 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
           <Button variante="secundario" onClick={() => setRechazando(true)}>
             Rechazar
           </Button>
+          {!mailEnviado && (
+            <p className="w-full text-[12px] text-muted">
+              Para aprobar, primero enviá el presupuesto al {pagador} por email
+              — aprueba lo que recibió.
+            </p>
+          )}
         </div>
       )}
       {error && <p className="text-sm font-medium text-error">{error}</p>}
@@ -1146,6 +1167,32 @@ function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
+// ── Archivar (STORY-935) — saca la finalizada del tablero; se ve en Archivo ──
+
+function ArchivarGestion({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  const archivada = Boolean(gestion.archivada_en);
+  return (
+    <Card className="p-4 mt-4 border-dashed">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[13px] text-muted">
+          {archivada
+            ? "Archivada — no aparece en el tablero (está en Archivo)."
+            : "¿Ya está todo al día? Archivala para despejar el tablero."}
+        </p>
+        <Button
+          variante="fantasma"
+          disabled={cargando}
+          onClick={() => correr(() => archivarGestion(gestion.id, !archivada))}
+        >
+          {archivada ? "Desarchivar" : "Archivar gestión"}
+        </Button>
+      </div>
+      {error && <p className="mt-2 text-sm font-medium text-error">{error}</p>}
+    </Card>
+  );
+}
+
 function ReasignarGestor({
   gestion,
   gestores,
@@ -1415,6 +1462,7 @@ export function DetalleGestion({
         )}
         {gestion.urgencia === "urgente" && <Badge tono="urgente">Urgente</Badge>}
         <Badge tono="neutro">{gestion.especialidad}</Badge>
+        {gestion.archivada_en && <Badge tono="neutro">Archivada</Badge>}
       </div>
       <h1 className="mt-2 text-xl font-semibold tracking-tight leading-snug">
         {gestion.descripcion}
@@ -1537,6 +1585,10 @@ export function DetalleGestion({
         ["ingresado", "asignacion", "presupuesto", "en_ejecucion", "conformidad"].includes(
           gestion.etapa
         ) && <CancelarGestion gestion={gestion} />}
+
+      {(esGestorOwner || esAdministrativo) && gestion.etapa === "finalizado" && (
+        <ArchivarGestion gestion={gestion} />
+      )}
 
       {esAdmin && <ReasignarGestor gestion={gestion} gestores={gestores} />}
 

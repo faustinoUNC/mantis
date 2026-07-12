@@ -340,6 +340,14 @@ export async function enviarPresupuestoEmail(
     },
   });
 
+  // STORY-935: marca persistida del envío — habilita "Aprobar y ejecutar"
+  // (sobrevive al refresh; el reenvío solo actualiza la fecha).
+  const admin = createAdminClient();
+  await admin
+    .from("gestiones")
+    .update({ presupuesto_enviado_en: new Date().toISOString() })
+    .eq("id", gestionId);
+
   const supabase = await createClient();
   await supabase.from("eventos_gestion").insert({
     gestion_id: gestionId,

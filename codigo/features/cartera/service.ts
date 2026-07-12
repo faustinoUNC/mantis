@@ -472,6 +472,8 @@ export async function enviarResumenObras(legajoId: string): Promise<ActionResult
   const base64 = await generarResumenPDF(r.datos);
   await enviarEmailDocumento({
     para: r.emailPropietario,
+    // STORY-935: saludo por nombre, como el resto de los emails
+    destinatario: r.datos.propietario,
     asunto: `Resumen de obras — ${r.datos.direccion}`,
     titulo: "Resumen de obras de tu propiedad",
     cuerpo: `Te enviamos el detalle de los trabajos de mantenimiento realizados en ${r.datos.direccion} durante el período ${r.datos.periodo}.`,

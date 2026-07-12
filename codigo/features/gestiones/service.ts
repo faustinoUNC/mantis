@@ -69,14 +69,70 @@ const SELECT_RESUMEN =
   "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre)), legajos(inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // El tablero: RLS decide qué ve cada rol (ownership del gestor incluida).
+// Las archivadas (STORY-935) salen del tablero — viven en /gestiones/archivadas.
 export async function tableroGestiones(): Promise<GestionResumen[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("gestiones")
     .select(SELECT_RESUMEN)
+    .is("archivada_en", null)
     .order("urgencia", { ascending: false })
     .order("creado_en", { ascending: true });
   return (data ?? []).map((g) => normalizarFila(g as Record<string, unknown>));
+}
+
+// STORY-935: la vista "Archivo" — misma query y misma RLS que el tablero
+// (cada rol ve exactamente lo que le corresponde), solo que al revés.
+export async function gestionesArchivadas(): Promise<
+  (GestionResumen & { archivada_en: string })[]
+> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("gestiones")
+    .select(`${SELECT_RESUMEN}, archivada_en`)
+    .not("archivada_en", "is", null)
+    .order("archivada_en", { ascending: false });
+  return (data ?? []).map((g) => ({
+    ...normalizarFila(g as Record<string, unknown>),
+    archivada_en: (g as Record<string, unknown>).archivada_en as string,
+  }));
+}
+
+// STORY-935: archivar una finalizada la saca del tablero (no es una etapa —
+// es ordenar). El update va por cliente de sesión: la RLS decide quién puede
+// (admin, gestor owner, administrativo) y el guard de etapa hace el resto.
+export async function archivarGestion(
+  gestionId: string,
+  archivar: boolean
+): Promise<ActionResult> {
+  const actual = await obtenerUsuarioActual();
+  if (!actual) return { ok: false, error: "Sin sesión." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("gestiones")
+    .update({ archivada_en: archivar ? new Date().toISOString() : null })
+    .eq("id", gestionId)
+    .eq("etapa", "finalizado")
+    .select("id");
+  if (error || !data?.length) {
+    return {
+      ok: false,
+      error: archivar
+        ? "No se pudo archivar (solo gestiones finalizadas)."
+        : "No se pudo desarchivar.",
+    };
+  }
+
+  await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: archivar ? "archivada" : "desarchivada",
+    actor_id: actual.id,
+  });
+
+  refrescarTablero(gestionId);
+  revalidatePath("/gestiones/archivadas");
+  return { ok: true };
 }
 
 export async function crearGestion(datos: {
@@ -88,6 +144,17 @@ export async function crearGestion(datos: {
 }): Promise<ActionResult<{ gestionId: string }>> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
+
+  // STORY-935: sin técnico para la especialidad, la gestión nace muerta —
+  // mismo criterio exacto que la pantalla de asignación.
+  const disponibles = await tecnicosDisponibles(datos.especialidad_id);
+  if (disponibles.length === 0) {
+    return {
+      ok: false,
+      error:
+        "No hay técnicos activos con esa especialidad — cargá uno antes de crear la gestión.",
+    };
+  }
 
   const supabase = await createClient();
   const { data: legajo } = await supabase
@@ -137,7 +204,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_RESUMEN}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, materiales_total, materiales_foto_path, nota_emitida_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_RESUMEN}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, materiales_total, materiales_foto_path, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -188,6 +255,8 @@ export async function obtenerGestion(
     materiales_total: number | null;
     materiales_foto_path: string | null;
     nota_emitida_en: string | null;
+    presupuesto_enviado_en: string | null;
+    archivada_en: string | null;
     gestor_id: string;
     tecnico_id: string | null;
     propiedad_id: string;
@@ -213,6 +282,8 @@ export async function obtenerGestion(
     materiales_total: fila.materiales_total == null ? null : Number(fila.materiales_total),
     materiales_foto_url: await fotoConUrl(fila.materiales_foto_path),
     nota_emitida_en: fila.nota_emitida_en,
+    presupuesto_enviado_en: fila.presupuesto_enviado_en,
+    archivada_en: fila.archivada_en,
     gestor_id: fila.gestor_id,
     tecnico_id: fila.tecnico_id,
     propiedad_id: fila.propiedad_id,
@@ -621,8 +692,25 @@ export async function resolverPresupuesto(
     return { ok: false, error: "El cargo administrativo no puede ser negativo." };
   }
 
-  // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos veces
   const supabase = await createClient();
+
+  // STORY-935: el pagador aprueba lo que recibió — sin email enviado no hay
+  // aprobación (la UI deshabilita el botón; esto cubre refresh y carreras).
+  if (aprobar) {
+    const { data: g } = await supabase
+      .from("gestiones")
+      .select("presupuesto_enviado_en")
+      .eq("id", gestionId)
+      .single();
+    if (!g?.presupuesto_enviado_en) {
+      return {
+        ok: false,
+        error: "Enviá el presupuesto al pagador por email antes de aprobar.",
+      };
+    }
+  }
+
+  // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos veces
   const { data: filas, error } = await supabase
     .from("presupuestos")
     .update(

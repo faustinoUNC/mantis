@@ -30,6 +30,8 @@ const LABEL: Record<string, string> = {
   nota_cobro_enviada: "Nota de cobro enviada",
   cobro_registrado: "Cobro registrado",
   liquidacion_registrada: "Liquidación registrada",
+  archivada: "Gestión archivada",
+  desarchivada: "Gestión desarchivada",
 };
 
 // Cancelada está fuera del funnel (STORY-914) pero aparece en transiciones.

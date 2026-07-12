@@ -18,12 +18,14 @@ export function EnvioDocumento({
   generar,
   enviar,
   yaEnviado,
+  onEnviado,
 }: {
   etiqueta: string; // "presupuesto" | "nota de cobro" | ...
   destinatarioEtiqueta?: string; // "propietario" | "inquilino" — para el botón de envío
   generar: () => Promise<ActionResult<DocumentoGenerado>>;
   enviar?: () => Promise<ActionResult>; // sin enviar → solo ver/descargar
   yaEnviado?: boolean;
+  onEnviado?: () => void; // aviso al padre cuando el envío salió OK (STORY-935)
 }) {
   const [doc, setDoc] = useState<DocumentoGenerado | null>(null);
   const [abierto, setAbierto] = useState(false);
@@ -76,6 +78,7 @@ export function EnvioDocumento({
     setCargando(null);
     if (!r.ok) return setError(r.error);
     setEnviado(true);
+    onEnviado?.();
   }
 
   return (
