@@ -72,7 +72,7 @@ export function TecnicoForm({
         <Input label="Correo electrónico" name="email" type="email" required placeholder="tu@correo.com" />
         <InputPassword label="Contraseña" name="password" required minLength={8} placeholder="Mínimo 8 caracteres" />
         <Input label="Teléfono" name="telefono" inputMode="numeric" placeholder="Opcional, solo números" onChange={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ""); }} />
-        <Input label="CUIL" name="cuil" required inputMode="numeric" placeholder="Sin guiones, ej. 20301234567" />
+        <Input label="CUIL" name="cuil" required inputMode="numeric" placeholder="Sin guiones, ej. 20301234563" />
       </div>
 
       <fieldset>

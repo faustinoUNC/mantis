@@ -57,7 +57,7 @@ function Formulario({
       <Input label="Nombre" name="nombre" required defaultValue={persona?.nombre} placeholder="Nombre y apellido" />
       <Input label="Correo electrónico" name="email" type="email" required defaultValue={persona?.email} placeholder="correo@ejemplo.com" />
       <Input label="Teléfono" name="telefono" inputMode="numeric" defaultValue={persona?.telefono ?? ""} placeholder="Opcional, solo números" onChange={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ""); }} />
-      <Input label={docLabel} name="documento" inputMode="numeric" defaultValue={persona?.documento ?? ""} placeholder="11 dígitos, opcional" />
+      <Input label={docLabel} name="documento" inputMode="numeric" defaultValue={persona?.documento ?? ""} placeholder="Ej. 20301234563, opcional" />
       {error && (
         <p role="alert" className="text-sm font-medium text-error sm:col-span-2 lg:col-span-4">
           {error}

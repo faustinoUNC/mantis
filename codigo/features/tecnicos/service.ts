@@ -6,7 +6,7 @@ import { emailResultadoTecnico } from "@/features/email/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
-import { cuilValido, normalizarCuil } from "@/shared/utils/cuil";
+import { errorCuil, normalizarCuil } from "@/shared/utils/cuil";
 import { normalizarTelefono } from "@/shared/utils/telefono";
 import type {
   EstadoTecnico,
@@ -89,8 +89,9 @@ async function altaTecnico(
   if (!datos.cuil) {
     return { ok: false, error: "El CUIL es obligatorio." };
   }
-  if (!cuilValido(datos.cuil)) {
-    return { ok: false, error: "El CUIL no es válido (11 dígitos)." };
+  const errCuil = errorCuil(datos.cuil);
+  if (errCuil) {
+    return { ok: false, error: errCuil };
   }
   const docDniArchivo = form.get("doc_dni") as File | null;
   if (!docDniArchivo || docDniArchivo.size === 0) {

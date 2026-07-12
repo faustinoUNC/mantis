@@ -1,6 +1,6 @@
-# STORY-923 — CUIL como documento único (técnicos, propietarios, inquilinos) (v1.0)
+# STORY-923 — CUIL como documento único (técnicos, propietarios, inquilinos) (v1.1)
 
-**Estado:** ✅ done (commit `b0751b3`, main, 2026-07-09) · **Origen:** Fausti, de paso con STORY-922. Regla #0.
+**Estado:** ✅ done (commit `b0751b3`, main, 2026-07-09; v1.1 mensajes descriptivos 2026-07-12) · **Origen:** Fausti, de paso con STORY-922. Regla #0.
 
 ## Insight central
 
@@ -20,6 +20,10 @@ alter table public.propietarios rename column cuit to cuil;
 
 ### B. Validación compartida — `codigo/shared/utils/cuil.ts`
 `cuilValido(cuil: string): boolean` — acepta con o sin guiones, exige 11 dígitos + dígito verificador correcto (mod 11, coeficientes 5-4-3-2-7-6-5-4-3-2; resto 11→0, resto 10→inválido). Se guarda normalizado (solo dígitos). No se agrega `dniDesdeCuil` hasta que algo lo necesite (YAGNI).
+
+**v1.1 — mensajes de error descriptivos (bug reportado 2026-07-12).** El mensaje único "no es válido (11 dígitos)" confundía: quien tipeaba 11 dígitos inventados era rechazado por el verificador pero creía que fallaba el conteo. Peor: el placeholder de ejemplo del form de técnicos (`20301234567`) era un CUIL **inválido** (verificador correcto: 3, no 7) — copiar el ejemplo del propio sistema bloqueaba el alta. Fix (decisión de Fausti: el verificador SE MANTIENE, solo cambia la comunicación):
+- Nuevo helper `errorCuil(valor, etiqueta = "CUIL"): string | null` que distingue tres casos: sin números ("Ingresá el CUIL en números."), cantidad ≠ 11 (dice cuántos se contaron, sin guiones ni puntos) y verificador incorrecto (explica que el último número es un dígito verificador que no corresponde a los 10 anteriores). Lo usan los cuatro puntos de validación: `guardarPersona` y `resolverPersona` (cartera), enrolamiento de técnico y la pre-validación client del wizard de alta (etiqueta "CUIL/CUIT" en cartera).
+- Placeholders con ejemplo válido `20301234563`: form de técnicos y ambos forms de cartera (wizard + personas).
 
 ### C. Renombres en app
 - **Cartera** (`features/cartera`): desaparece el mapeo `COL_DOC` (ambas tablas usan `cuil`); labels en `personas.client.tsx`: propietarios **"CUIT / CUIL"** (puede ser empresa; mismo formato y verificador), inquilinos **"CUIL"**. Campo sigue opcional; si se completa, se valida server-side.
@@ -47,3 +51,4 @@ alter table public.propietarios rename column cuit to cuil;
   - `codigo/features/tecnicos/{service,types}.ts` + `codigo/components/tecnicos/form-tecnico.client.tsx` + `codigo/app/tecnico/perfil/page.tsx` + `codigo/app/tecnicos/[id]/page.tsx` — `dni`→`cuil` (campo, label, validación server "El CUIL no es válido"); `doc_dni_path` y el upload "DNI (foto/PDF)" sin cambios.
   - `scripts/demo-seed.sql` — columnas renombradas + CUILs de 11 dígitos con verificador real (calculados). Además se actualizaron por UPDATE los datos demo vivos (técnicos/inquilinos con CUIL válido; propietarios sin guiones).
 - **Verificación:** wizard STORY-922 ejercita `cuilValido` E2E (rechazo de verificador incorrecto, aceptación con guiones, guardado normalizado verificado por SQL); `/registro-tecnico` muestra el campo CUIL con su placeholder y conserva "DNI (foto/PDF)". `tsc` + eslint + `next build` verdes. Nota: el seed demo actualizado no se re-ejecutó (los datos demo ya estaban sembrados; se parchearon por UPDATE).
+- **v1.1 (2026-07-12):** `errorCuil` en `codigo/shared/utils/cuil.ts` reemplaza los mensajes hardcodeados en `codigo/features/cartera/service.ts` (crear/editar persona), `codigo/features/tecnicos/service.ts` (enrolamiento) y `codigo/components/cartera/alta-administracion.client.tsx` (pre-validación client); placeholders con ejemplo válido en `codigo/components/tecnicos/form-tecnico.client.tsx` y `codigo/components/cartera/{alta-administracion,personas}.client.tsx`. Revisión adversarial en subagente: 4 patches aplicados (mensajes precisos, patrón consistente, placeholder olvidado en personas), tests unitarios de `cuil.ts` diferidos (no hay infra de tests en el repo). `tsc` + eslint verdes.

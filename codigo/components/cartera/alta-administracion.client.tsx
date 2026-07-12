@@ -13,7 +13,7 @@ import { Select } from "@/components/ui/select";
 import { MapaDireccion } from "@/components/ui/mapa";
 import { crearAdministracion } from "@/features/cartera/service";
 import type { Persona, RefPersona } from "@/features/cartera/types";
-import { cuilValido } from "@/shared/utils/cuil";
+import { errorCuil } from "@/shared/utils/cuil";
 import { cn } from "@/shared/utils/cn";
 
 // Alta unificada (STORY-922): una Administración = propiedad + propietario
@@ -38,8 +38,9 @@ function validarPersona(
   if (!nueva.nombre.trim() || !nueva.email.trim()) {
     return `Completá nombre y email del ${quien}.`;
   }
-  if (nueva.cuil.trim() && !cuilValido(nueva.cuil)) {
-    return "El CUIL/CUIT no es válido (11 dígitos).";
+  const errCuil = nueva.cuil.trim() ? errorCuil(nueva.cuil, "CUIL/CUIT") : null;
+  if (errCuil) {
+    return errCuil;
   }
   return null;
 }
@@ -143,7 +144,7 @@ function CamposPersona({
       <Input label="Nombre" required value={valores.nombre} onChange={(e) => onCambio({ ...valores, nombre: e.target.value })} placeholder="Nombre y apellido" />
       <Input label="Correo electrónico" type="email" required value={valores.email} onChange={(e) => onCambio({ ...valores, email: e.target.value })} placeholder="correo@ejemplo.com" />
       <Input label="Teléfono" inputMode="numeric" value={valores.telefono} onChange={(e) => onCambio({ ...valores, telefono: e.target.value.replace(/\D/g, "") })} placeholder="Opcional, solo números" />
-      <Input label={docLabel} inputMode="numeric" value={valores.cuil} onChange={(e) => onCambio({ ...valores, cuil: e.target.value })} placeholder="11 dígitos, opcional" />
+      <Input label={docLabel} inputMode="numeric" value={valores.cuil} onChange={(e) => onCambio({ ...valores, cuil: e.target.value })} placeholder="Ej. 20301234563, opcional" />
     </div>
   );
 }

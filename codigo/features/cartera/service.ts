@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/features/empleados/types";
 import { createClient } from "@/shared/lib/supabase/server";
-import { cuilValido, normalizarCuil } from "@/shared/utils/cuil";
+import { errorCuil, normalizarCuil } from "@/shared/utils/cuil";
 import { normalizarTelefono } from "@/shared/utils/telefono";
 import type { Legajo, Persona, Propiedad, RefPersona, TipoPersona } from "./types";
 
@@ -44,8 +44,9 @@ export async function guardarPersona(
   datos: { nombre: string; email: string; telefono: string; documento: string },
   id?: string
 ): Promise<ActionResult> {
-  if (datos.documento && !cuilValido(datos.documento)) {
-    return { ok: false, error: "El CUIL/CUIT no es válido (11 dígitos)." };
+  const errCuil = datos.documento ? errorCuil(datos.documento, "CUIL/CUIT") : null;
+  if (errCuil) {
+    return { ok: false, error: errCuil };
   }
   const supabase = await createClient();
   const fila = {
@@ -172,8 +173,9 @@ async function resolverPersona(
   if (!ref.nueva.nombre || !ref.nueva.email) {
     return { error: "Completá nombre y email." };
   }
-  if (ref.nueva.cuil && !cuilValido(ref.nueva.cuil)) {
-    return { error: "El CUIL/CUIT no es válido (11 dígitos)." };
+  const errCuil = ref.nueva.cuil ? errorCuil(ref.nueva.cuil, "CUIL/CUIT") : null;
+  if (errCuil) {
+    return { error: errCuil };
   }
   const supabase = await createClient();
   const { data, error } = await supabase

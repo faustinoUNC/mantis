@@ -8,6 +8,26 @@ export function normalizarCuil(valor: string): string {
   return valor.replace(/\D/g, "");
 }
 
+/**
+ * Mensaje de error para mostrar al usuario, o null si el CUIL es válido.
+ * Distingue el problema de cantidad de dígitos del de verificador, porque
+ * "no es válido (11 dígitos)" confunde cuando los 11 dígitos están pero el
+ * número no existe.
+ */
+export function errorCuil(valor: string, etiqueta = "CUIL"): string | null {
+  const cuil = normalizarCuil(valor);
+  if (cuil.length === 0) {
+    return `Ingresá el ${etiqueta} en números.`;
+  }
+  if (cuil.length !== 11) {
+    return `El ${etiqueta} debe tener 11 números (contamos ${cuil.length}, sin guiones ni puntos).`;
+  }
+  if (!cuilValido(cuil)) {
+    return `El ${etiqueta} no es correcto: el último número es un dígito verificador que no corresponde a los 10 anteriores. Revisá que esté bien tipeado.`;
+  }
+  return null;
+}
+
 export function cuilValido(valor: string): boolean {
   const cuil = normalizarCuil(valor);
   if (!/^\d{11}$/.test(cuil)) return false;
