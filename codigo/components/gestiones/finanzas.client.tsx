@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { EnvioDocumento } from "@/components/gestiones/envio-documento.client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
   descargarDocumento,
   emitirNotaCobro,
+  MEDIO_LIQUIDACION_LABEL,
+  MEDIOS_LIQUIDACION,
   registrarCobro,
   registrarLiquidacion,
+  type MedioLiquidacion,
 } from "@/features/finanzas/service";
 import type { GestionDetalle } from "@/features/gestiones/types";
 
@@ -102,56 +104,59 @@ export function FinanzasAcciones({
   }
 
   if (gestion.etapa === "liquidacion_tecnico") {
-    // STORY-934: al técnico se le liquida lo que rindió en materiales + su
-    // mano de obra presupuestada. Fallback: costo_final (gestiones viejas
-    // sin rendición).
+    // STORY-934/946: al técnico se le liquida lo que rindió en materiales +
+    // su mano de obra presupuestada (fallback: costo_final, gestiones viejas
+    // sin rendición). El monto ya no lo tipea la administración — lo calcula
+    // el sistema; acá solo se confirma el medio de pago.
     const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
     const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
     const rendido = gestion.materiales_total;
-    const liqSugerida =
+    const liqTotal =
       rendido != null ? rendido + manoObra : Number(gestion.costo_final ?? 0);
     return (
       <div className="flex flex-col gap-4">
-        {rendido != null && (
-          <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
-            <div className="flex justify-between">
-              <span className="text-muted">Materiales rendidos</span>
-              <span className="font-mono">{plata(rendido)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted">Mano de obra (presupuesto aprobado)</span>
-              <span className="font-mono">{plata(manoObra)}</span>
-            </div>
-            <div className="flex justify-between pt-1 border-t border-border font-semibold">
-              <span>A liquidar al técnico</span>
-              <span className="font-mono">{plata(rendido + manoObra)}</span>
-            </div>
+        <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
+          {rendido != null && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted">Materiales rendidos</span>
+                <span className="font-mono">{plata(rendido)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">Mano de obra (presupuesto aprobado)</span>
+                <span className="font-mono">{plata(manoObra)}</span>
+              </div>
+            </>
+          )}
+          <div
+            className={
+              rendido != null
+                ? "flex justify-between pt-1 border-t border-border font-semibold"
+                : "flex justify-between font-semibold"
+            }
+          >
+            <span>A liquidar al técnico</span>
+            <span className="font-mono">{plata(liqTotal)}</span>
           </div>
-        )}
+        </div>
         <form
           className="flex flex-wrap items-end gap-3"
           onSubmit={(e) => {
             e.preventDefault();
-            const f = new FormData(e.currentTarget);
-            correr("liq", () =>
-              registrarLiquidacion(gestion.id, {
-                monto: Number(f.get("monto")),
-                factura_ref: String(f.get("factura_ref") ?? ""),
-              })
-            );
+            const medio = String(
+              new FormData(e.currentTarget).get("medio")
+            ) as MedioLiquidacion;
+            correr("liq", () => registrarLiquidacion(gestion.id, { medio }));
           }}
         >
-          <Input
-            label="Monto liquidado ($)"
-            name="monto"
-            type="number"
-            min="0"
-            step="0.01"
-            required
-            defaultValue={liqSugerida || undefined}
-          />
-          <div className="min-w-52">
-            <Input label="Ref. factura C del técnico" name="factura_ref" placeholder="Ej.: 0001-00001234" />
+          <div className="min-w-44">
+            <Select label="Método de pago" name="medio" defaultValue="transferencia">
+              {MEDIOS_LIQUIDACION.map((m) => (
+                <option key={m} value={m}>
+                  {MEDIO_LIQUIDACION_LABEL[m]}
+                </option>
+              ))}
+            </Select>
           </div>
           <Button type="submit" disabled={cargando !== null}>
             {cargando === "liq" ? "Registrando…" : "Liquidar y finalizar →"}

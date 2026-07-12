@@ -40,6 +40,7 @@ export interface DatosDocumento {
   presupuesto: { materiales: number; manoObra: number } | null;
   total: number;
   facturaRef?: string | null;
+  medioPago?: string | null;
   plazoDias?: number | null;
   // STORY-934: la línea de materiales trae la rendición real del técnico
   materialesRendidos?: boolean;
@@ -90,6 +91,7 @@ function Documento({ datos }: { datos: DatosDocumento }) {
             <Text style={s.label}>Pago registrado</Text>
             <Text style={s.valor}>
               Se liquidó {monto(datos.total)} el {datos.fecha}.
+              {datos.medioPago ? ` Método de pago: ${datos.medioPago}.` : ""}
             </Text>
           </View>
         )}

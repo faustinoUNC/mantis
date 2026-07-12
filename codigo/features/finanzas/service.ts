@@ -9,6 +9,29 @@ import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 import { generarPDF, type DatosDocumento } from "./pdf";
 
+// STORY-946: métodos de pago para liquidar al técnico (lista cerrada, sin
+// configurabilidad — Regla #0).
+export const MEDIOS_LIQUIDACION = [
+  "efectivo",
+  "credito",
+  "debito",
+  "transferencia",
+  "cheque",
+  "pagare",
+  "otros",
+] as const;
+export type MedioLiquidacion = (typeof MEDIOS_LIQUIDACION)[number];
+
+export const MEDIO_LIQUIDACION_LABEL: Record<MedioLiquidacion, string> = {
+  efectivo: "Efectivo",
+  credito: "Crédito",
+  debito: "Débito",
+  transferencia: "Transferencia",
+  cheque: "Cheque",
+  pagare: "Pagaré",
+  otros: "Otros",
+};
+
 async function exigirAdministrativo() {
   const actual = await obtenerUsuarioActual();
   if (
@@ -57,7 +80,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, costo_final, cargo_admin, materiales_total, liq_monto, liq_factura_ref, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, descripcion, pagador, costo_final, cargo_admin, materiales_total, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -168,6 +191,10 @@ async function datosDocumento(
         : null,
       total,
       facturaRef: tipo === "presupuesto" ? null : g.liq_factura_ref,
+      medioPago:
+        tipo === "comprobante" && g.liq_medio
+          ? MEDIO_LIQUIDACION_LABEL[g.liq_medio as MedioLiquidacion]
+          : null,
       plazoDias: tipo === "presupuesto" ? vigente?.plazo_dias ?? null : null,
       materialesRendidos: tipo !== "presupuesto" && materialesRendidos,
     },
@@ -425,22 +452,47 @@ export async function registrarCobro(
   return avanzarEtapa(gestionId, "liquidacion_tecnico");
 }
 
+// STORY-946: la administración ya no tipea el monto — lo calcula el sistema
+// (mismo criterio que el sugerido de STORY-934: materiales rendidos + mano
+// de obra presupuestada, con fallback a costo_final para gestiones viejas
+// sin rendición). La administración solo confirma el medio de pago.
 export async function registrarLiquidacion(
   gestionId: string,
-  datos: { monto: number; factura_ref: string }
+  datos: { medio: MedioLiquidacion }
 ): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
-  if (!datos.monto || datos.monto <= 0) {
-    return { ok: false, error: "Indicá el monto liquidado." };
+  if (!MEDIOS_LIQUIDACION.includes(datos.medio)) {
+    return { ok: false, error: "Indicá el método de pago." };
   }
 
   const supabase = await createClient();
+  const { data: g } = await supabase
+    .from("gestiones")
+    .select("costo_final, materiales_total, presupuestos(monto_mano_obra, estado)")
+    .eq("id", gestionId)
+    .single();
+  type Fila = {
+    costo_final: number | null;
+    materiales_total: number | null;
+    presupuestos: { monto_mano_obra: number; estado: string }[];
+  };
+  const fila = g as unknown as Fila | null;
+  const aprobado = fila?.presupuestos.find((p) => p.estado === "aprobado");
+  const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
+  const monto =
+    fila?.materiales_total != null
+      ? Number(fila.materiales_total) + manoObra
+      : Number(fila?.costo_final ?? 0);
+  if (!monto || monto <= 0) {
+    return { ok: false, error: "No se pudo calcular el monto a liquidar." };
+  }
+
   const { error } = await supabase
     .from("gestiones")
     .update({
-      liq_monto: datos.monto,
-      liq_factura_ref: datos.factura_ref || null,
+      liq_monto: monto,
+      liq_medio: datos.medio,
       liq_pagada_en: new Date().toISOString(),
     })
     .eq("id", gestionId);
@@ -465,8 +517,8 @@ export async function registrarLiquidacion(
   }
 
   await registrarEvento(gestionId, "liquidacion_registrada", actual.id, {
-    monto: datos.monto,
-    ...(datos.factura_ref && { factura_ref: datos.factura_ref }),
+    monto,
+    medio: datos.medio,
   });
   return avanzarEtapa(gestionId, "finalizado");
 }

@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-946](STORY-946.md) | Liquidación al técnico: el sistema calcula el monto (materiales rendidos + mano de obra presupuestada), la administración solo confirma método de pago (migración pendiente: `liq_medio`) | 🚧 en desarrollo |
 | [STORY-945](STORY-945.md) | Registro de técnico: fin del 413 silencioso en el celular (validación client-side + compresión de imágenes + try/catch + `bodySizeLimit`) y matrículas múltiples (migración 2 fases — fase 2 post-deploy) | ✅ done |
 | [STORY-944](STORY-944.md) | CUIL, email y teléfono no pueden repetirse dentro de cada tipo de persona (técnicos, propietarios, inquilinos) — chequeo server + índice UNIQUE en DB | ✅ done |
 | [STORY-943](STORY-943.md) | Presupuestación: eliminar "Causa" y `pagador_sugerido` (migración 2 fases — fase 2 post-deploy), pagador explícito sin opción Inquilino inexistente, inspección obligatoria antes de presupuestar | ✅ done |
