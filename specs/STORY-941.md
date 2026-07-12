@@ -1,6 +1,6 @@
 # STORY-941 — "Cobro" en vez de "Facturación" + sección Administración con alta/edición unificada en la propiedad (v1.0)
 
-**Estado:** 🚧 en desarrollo · **Origen:** Fausti (2026-07-12), cards 1 y 2 del tablero. Decisiones: (1) la etapa se llama **Cobro** — no emitimos facturas; (2) el menú "Cartera" pasa a **"Administración"** y la pantalla principal se titula **"Administraciones"**; (3) se eliminan los ABMs sueltos de propietarios/inquilinos — **el único camino de alta es la propiedad** (el wizard de STORY-922 ya lo contempla); la edición de datos y los casos "cambia el inquilino / cambia el propietario" de una propiedad existente se resuelven desde el detalle de la propiedad.
+**Estado:** ✅ done (commit `bb70bd6`) · **Origen:** Fausti (2026-07-12), cards 1 y 2 del tablero. Decisiones: (1) la etapa se llama **Cobro** — no emitimos facturas; (2) el menú "Cartera" pasa a **"Administración"** y la pantalla principal se titula **"Administraciones"**; (3) se eliminan los ABMs sueltos de propietarios/inquilinos — **el único camino de alta es la propiedad** (el wizard de STORY-922 ya lo contempla); la edición de datos y los casos "cambia el inquilino / cambia el propietario" de una propiedad existente se resuelven desde el detalle de la propiedad.
 
 ## Objetivo
 
@@ -44,7 +44,7 @@ Nomenclatura correcta (Cobro, Administración) y un solo modelo mental para pers
 4. `tsc` + eslint + `next build` verdes.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementada y verificada E2E (2026-07-12) — SIN commitear, Fausti revisa.
+- **Estado:** ✅ done (2026-07-12). Commit `bb70bd6` en main (rebaseado sobre el trabajo de Giuliano — renumerada desde el número original por choque con sus stories 938-940), deploy automático en Vercel verificado.
 - **Archivos:**
   - `features/gestiones/types.ts` — etapa `facturacion_cobro` label "Cobro".
   - `components/gestiones/mis-trabajos.client.tsx` ("En cobro"), `components/metricas/panel-metricas.client.tsx` ("Cobro"), `components/gestiones/detalle.client.tsx` ("Aprobar → Cobro" + textos).

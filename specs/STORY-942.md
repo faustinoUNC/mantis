@@ -1,6 +1,6 @@
 # STORY-942 — Documentos al pagador sin desglose: la comisión no se expone (v1.0)
 
-**Estado:** 🚧 en desarrollo · **Origen:** Fausti (2026-07-12), card 3. La línea "Gestión administrativa" (fee de la inmobiliaria) hoy queda a la vista en los PDFs que van al pagador, y el resumen de obras muestra costos SIN fee que no coinciden con lo cobrado — la diferencia delata la comisión.
+**Estado:** ✅ done (commit `bb70bd6`) · **Origen:** Fausti (2026-07-12), card 3. La línea "Gestión administrativa" (fee de la inmobiliaria) hoy queda a la vista en los PDFs que van al pagador, y el resumen de obras muestra costos SIN fee que no coinciden con lo cobrado — la diferencia delata la comisión.
 
 ## Objetivo
 
@@ -33,7 +33,7 @@ Que todos los documentos que salen a un pagador (propietario/inquilino) cuenten 
 4. `tsc` + eslint + `next build` verdes.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementada (2026-07-12) — SIN commitear, Fausti revisa.
+- **Estado:** ✅ done (2026-07-12). Commit `bb70bd6` en main (renumerada por choque con las stories 938-940 de Giuliano), deploy automático en Vercel verificado.
 - **Archivos:**
   - `features/finanzas/pdf.tsx` — desglose (Materiales/Mano de obra) SOLO para `tipo === "comprobante"`; la línea "Gestión administrativa" desapareció del template; `DatosDocumento.cargoAdmin` eliminado.
   - `features/finanzas/service.ts` — ya no arma `cargoAdmin` para el PDF (el total sigue incluyéndolo).

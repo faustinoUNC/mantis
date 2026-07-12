@@ -1,6 +1,6 @@
 # STORY-943 — Presupuestación: fuera la "Causa", pagador explícito (sin sugerido, sin inquilino inexistente) e inspección obligatoria (v1.0)
 
-**Estado:** 🚧 en desarrollo · **Origen:** Fausti (2026-07-12), cards 4, 5 y 6. Decisión de dominio: **la responsabilidad de pago se determina en la etapa Presupuesto**, cuando la inmobiliaria analiza la inspección del técnico — no al crear la gestión. La "Causa" (desgaste/daño/mejora) y el `pagador_sugerido` que derivaba eran una decisión anticipada sin sustento: se eliminan. Si el análisis del técnico no alcanza, la inmobiliaria le rechaza el presupuesto hasta que especifique.
+**Estado:** ✅ done (commit `bb70bd6`) · **Origen:** Fausti (2026-07-12), cards 4, 5 y 6. Decisión de dominio: **la responsabilidad de pago se determina en la etapa Presupuesto**, cuando la inmobiliaria analiza la inspección del técnico — no al crear la gestión. La "Causa" (desgaste/daño/mejora) y el `pagador_sugerido` que derivaba eran una decisión anticipada sin sustento: se eliminan. Si el análisis del técnico no alcanza, la inmobiliaria le rechaza el presupuesto hasta que especifique.
 
 ## Objetivo
 
@@ -45,7 +45,7 @@ Que la etapa Presupuesto sea el único lugar donde se decide quién paga, con la
 5. `tsc` + eslint + `next build` verdes; flujo E2E completo (crear → asignar → inspección → presupuesto → aprobar) sano.
 
 ## Dev Agent Record
-- **Estado:** ✅ implementada y verificada E2E (2026-07-12) — SIN commitear, Fausti revisa. ⚠️ **Migración en 2 fases**: fase 1 aplicada (`story_940_causa_fase1_convivencia` — quedó con el número viejo: se aplicó antes de renumerar la story por el choque con las 938-940 del remoto: `pagador_sugerido` nullable — el código viejo en prod convive hasta el deploy). **Fase 2 PENDIENTE post-deploy**: `alter table gestiones drop column causa, drop column pagador_sugerido; drop type causa_gestion;`
+- **Estado:** ✅ done (2026-07-12). Commit `bb70bd6` en main (rebaseado sobre el trabajo de Giuliano — renumerada desde el número original por choque con sus stories 938-940), deploy automático en Vercel verificado. ⚠️ **Migración en 2 fases**: fase 1 aplicada (`story_940_causa_fase1_convivencia` — quedó con el número viejo: se aplicó antes de renumerar la story por el choque con las 938-940 del remoto: `pagador_sugerido` nullable — el código viejo en prod convive hasta el deploy). **Fase 2 APLICADA** (2026-07-12, migración `story_943_causa_fase2_drop`, con el deploy `bb70bd6` ya vivo en Vercel): columnas `causa`/`pagador_sugerido` y type `causa_gestion` eliminados; prod verificada después del drop.
 - **Archivos:**
   - `features/gestiones/types.ts` — fuera `Causa`/`LABEL_CAUSA`/`PAGADOR_POR_CAUSA`; `GestionDetalle` sin `causa`/`pagador_sugerido`.
   - `features/gestiones/service.ts` — `crearGestion` sin causa ni sugerido; `obtenerGestion` sin esas columnas; `enviarPresupuesto` exige inspección en DB; `resolverPresupuesto` rechaza inquilino sin legajo.
