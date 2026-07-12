@@ -106,6 +106,15 @@ export interface Conformidad {
   creado_en: string;
 }
 
+// STORY-938: contacto para coordinar la visita — inquilino si la gestión
+// tiene legajo vigente, si no el propietario (propiedad desocupada).
+export interface ContactoCliente {
+  tipo: "inquilino" | "propietario";
+  nombre: string;
+  telefono: string | null;
+  email: string | null;
+}
+
 export interface GestionDetalle extends GestionResumen {
   causa: Causa;
   pagador_sugerido: Pagador;
@@ -131,6 +140,7 @@ export interface GestionDetalle extends GestionResumen {
   gastos: GastoImprevisto[];
   // STORY-914: calificación del técnico (una por gestión, se carga al finalizar)
   calificacion: { estrellas: number; comentario: string | null } | null;
+  contacto_cliente: ContactoCliente | null;
 }
 
 // STORY-915: desempeño del técnico para decidir la asignación a golpe de vista.

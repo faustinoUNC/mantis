@@ -132,6 +132,36 @@ function DatosGestion({ gestion }: { gestion: GestionDetalle }) {
             </svg>
           </a>
         </Dato>
+        {gestion.contacto_cliente && (
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-muted">
+              {gestion.contacto_cliente.tipo === "inquilino" ? "Inquilino" : "Propietario"}
+            </p>
+            <p className="mt-0.5 text-[15px] font-medium truncate">
+              {gestion.contacto_cliente.nombre}
+            </p>
+            {(gestion.contacto_cliente.telefono || gestion.contacto_cliente.email) && (
+              <p className="mt-0.5 flex flex-wrap gap-x-3 text-[13px] font-normal">
+                {gestion.contacto_cliente.telefono && (
+                  <a
+                    href={`tel:${gestion.contacto_cliente.telefono}`}
+                    className="text-brand hover:text-brand-hover"
+                  >
+                    {gestion.contacto_cliente.telefono}
+                  </a>
+                )}
+                {gestion.contacto_cliente.email && (
+                  <a
+                    href={`mailto:${gestion.contacto_cliente.email}`}
+                    className="truncate text-brand hover:text-brand-hover"
+                  >
+                    {gestion.contacto_cliente.email}
+                  </a>
+                )}
+              </p>
+            )}
+          </div>
+        )}
         <Dato label="Gestor">{gestion.gestor_nombre}</Dato>
         <Dato label="Técnico">{gestion.tecnico_nombre ?? "Sin asignar"}</Dato>
         <Dato label="Causa">{LABEL_CAUSA[gestion.causa]}</Dato>

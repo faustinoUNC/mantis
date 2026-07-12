@@ -68,6 +68,30 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
 const SELECT_RESUMEN =
   "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre)), legajos(inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
+// STORY-938: igual que SELECT_RESUMEN pero con el contacto de propietario/
+// inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
+const SELECT_DETALLE =
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+
+// Inquilino si la gestión tiene legajo vigente; si no, el propietario.
+function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_cliente"] {
+  const propiedad = g.propiedades as {
+    propietarios?: { nombre: string; email: string | null; telefono: string | null } | null;
+  } | null;
+  const legajo = g.legajos as {
+    inquilinos: { nombre: string; email: string | null; telefono: string | null } | null;
+  } | null;
+  const inquilino = legajo?.inquilinos;
+  const propietario = propiedad?.propietarios;
+  if (inquilino) {
+    return { tipo: "inquilino", nombre: inquilino.nombre, telefono: inquilino.telefono, email: inquilino.email };
+  }
+  if (propietario) {
+    return { tipo: "propietario", nombre: propietario.nombre, telefono: propietario.telefono, email: propietario.email };
+  }
+  return null;
+}
+
 // El tablero: RLS decide qué ve cada rol (ownership del gestor incluida).
 // Las archivadas (STORY-935) salen del tablero — viven en /gestiones/archivadas.
 export async function tableroGestiones(): Promise<GestionResumen[]> {
@@ -204,7 +228,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_RESUMEN}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, materiales_total, materiales_foto_path, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_DETALLE}, causa, pagador_sugerido, pagador, costo_final, cargo_admin, materiales_total, materiales_foto_path, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -274,6 +298,7 @@ export async function obtenerGestion(
   return {
     ...base,
     calificacion: calif ?? null,
+    contacto_cliente: resolverContacto(g as unknown as Record<string, unknown>),
     causa: fila.causa,
     pagador_sugerido: fila.pagador_sugerido,
     pagador: fila.pagador,
