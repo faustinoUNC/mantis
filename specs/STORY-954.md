@@ -34,4 +34,5 @@
 ## Dev Agent Record
 
 - **Archivos:** `codigo/features/metricas/service.ts` (query de capacidad + campo `capacidad` en `Metricas`), `codigo/components/metricas/panel-metricas.client.tsx` (memo `presion` + bloque "Cobertura de especialidades" con la card).
-- **Verificación:** `tsc --noEmit`, `eslint` y `next build` limpios.
+- **Verificación:** `tsc --noEmit`, `eslint` y `next build` limpios. Verificado visualmente en la app local como admin: 12 especialidades con datos reales, "Control de plagas" (2 gest. · 0 téc.) primera en rojo, resto ordenado por presión (Plomería 16,0 arriba).
+- **Commit:** `11cb7e3`.
