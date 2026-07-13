@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -71,9 +72,17 @@ export function LoginForm() {
           {error}
         </p>
       )}
-      <Button type="submit" className="w-full sm:w-auto sm:self-start sm:px-10" disabled={enviando}>
-        {enviando ? "Entrando…" : "Entrar al sistema"}
-      </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <Button type="submit" className="w-full sm:w-auto sm:px-10" disabled={enviando}>
+          {enviando ? "Entrando…" : "Entrar al sistema"}
+        </Button>
+        <Link
+          href="/recuperar-contrasena"
+          className="text-sm font-medium text-muted hover:text-foreground"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </div>
     </form>
   );
 }

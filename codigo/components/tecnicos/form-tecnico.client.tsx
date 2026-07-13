@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InputPassword } from "@/components/ui/input-password.client";
 import type { Especialidad } from "@/features/especialidades/types";
 import {
   crearTecnicoManual,
@@ -97,7 +96,6 @@ export function TecnicoForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Nombre" name="nombre" required placeholder="Nombre y apellido" />
         <Input label="Correo electrónico" name="email" type="email" required placeholder="tu@correo.com" />
-        <InputPassword label="Contraseña" name="password" required minLength={8} placeholder="Mínimo 8 caracteres" />
         <Input label="Teléfono" name="telefono" inputMode="numeric" placeholder="Opcional, solo números" onChange={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ""); }} />
         <Input label="CUIL" name="cuil" required inputMode="numeric" placeholder="Sin guiones, ej. 20301234563" />
       </div>

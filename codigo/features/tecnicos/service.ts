@@ -1,11 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { linkCrearContrasena } from "@/features/auth/recovery";
 import { obtenerUsuarioActual } from "@/features/auth/service";
-import { emailResultadoTecnico } from "@/features/email/service";
+import {
+  emailResultadoTecnico,
+  emailVerificacionTecnico,
+} from "@/features/email/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
+import { baseUrl } from "@/shared/utils/base-url";
 import { errorCuil, normalizarCuil } from "@/shared/utils/cuil";
 import { duplicadoPersona, ERROR_DUPLICADO_DB } from "@/shared/utils/duplicados";
 import { normalizarTelefono } from "@/shared/utils/telefono";
@@ -70,7 +75,6 @@ async function subirDoc(
 interface DatosAlta {
   nombre: string;
   email: string;
-  password: string;
   telefono: string;
   cuil: string;
   especialidadIds: string[];
@@ -80,7 +84,6 @@ function extraerDatos(form: FormData): DatosAlta {
   return {
     nombre: String(form.get("nombre") ?? "").trim(),
     email: String(form.get("email") ?? "").trim().toLowerCase(),
-    password: String(form.get("password") ?? ""),
     telefono: normalizarTelefono(String(form.get("telefono") ?? "")),
     cuil: String(form.get("cuil") ?? "").trim(),
     especialidadIds: form.getAll("especialidades").map(String),
@@ -93,8 +96,8 @@ async function altaTecnico(
   estado: EstadoTecnico
 ): Promise<ActionResult> {
   const datos = extraerDatos(form);
-  if (!datos.nombre || !datos.email || datos.password.length < 8) {
-    return { ok: false, error: "Completá nombre, email y contraseña (8+)." };
+  if (!datos.nombre || !datos.email) {
+    return { ok: false, error: "Completá nombre y email." };
   }
   if (datos.especialidadIds.length === 0) {
     return { ok: false, error: "Elegí al menos una especialidad." };
@@ -123,9 +126,27 @@ async function altaTecnico(
 
   const admin = createAdminClient();
 
+  // Reintento de registro (STORY-955): una solicitud pendiente SIN verificar
+  // es un registro huérfano (típico: email propio mal tipeado — el link de
+  // verificación nunca llega). Si el nuevo registro choca contra una de esas,
+  // se pisa la vieja (borrar el usuario de auth cascadea tecnicos y
+  // especialidades) en vez de bloquear al técnico para siempre.
+  const cuilNormalizado = normalizarCuil(datos.cuil);
+  let filtroHuerfanos = `email.eq.${datos.email},cuil.eq.${cuilNormalizado}`;
+  if (datos.telefono) filtroHuerfanos += `,telefono.eq.${datos.telefono}`;
+  const { data: huerfanos } = await admin
+    .from("tecnicos")
+    .select("id")
+    .eq("estado", "pendiente")
+    .eq("email_verificado", false)
+    .or(filtroHuerfanos);
+  for (const h of huerfanos ?? []) {
+    await admin.auth.admin.deleteUser(h.id);
+  }
+
   const dup = await duplicadoPersona(admin, "tecnicos", {
     email: datos.email,
-    cuil: normalizarCuil(datos.cuil),
+    cuil: cuilNormalizado,
     telefono: datos.telefono || null,
   });
   if (dup) return { ok: false, error: dup };
@@ -143,9 +164,10 @@ async function altaTecnico(
     };
   }
 
+  // Sin contraseña (STORY-955): el técnico la crea recién al ser aprobado,
+  // vía link de recovery — hasta entonces no puede iniciar sesión.
   const { data: creado, error: errorAuth } = await admin.auth.admin.createUser({
     email: datos.email,
-    password: datos.password,
     email_confirm: true,
   });
   if (errorAuth || !creado.user) {
@@ -163,13 +185,20 @@ async function altaTecnico(
     ...matriculas.map((m, i) => subirDoc(id, `matricula-${i + 1}`, m)),
   ]);
 
+  // Enrolamiento público: la solicitud queda invisible para el staff hasta
+  // que el técnico verifique su email con el token. Alta manual: el staff
+  // responde por el dato — nace verificada.
+  const esEnrolamiento = estado === "pendiente";
+  const token = esEnrolamiento ? crypto.randomUUID() : null;
   const { error: errorTecnico } = await admin.from("tecnicos").insert({
     id,
     nombre: datos.nombre,
     email: datos.email,
     telefono: datos.telefono || null,
-    cuil: normalizarCuil(datos.cuil),
+    cuil: cuilNormalizado,
     estado,
+    email_verificado: !esEnrolamiento,
+    token_verificacion: token,
     doc_dni_path: docDni,
     doc_matricula_paths: docsMatricula.filter(Boolean),
   });
@@ -198,8 +227,49 @@ async function altaTecnico(
     });
   }
 
+  if (esEnrolamiento) {
+    await emailVerificacionTecnico(
+      { nombre: datos.nombre, email: datos.email },
+      `${baseUrl()}/registro-tecnico/verificar?token=${token}`
+    );
+  } else {
+    // Alta manual: queda aprobado de una — va directo el email de
+    // bienvenida con el link para crear su contraseña.
+    const link = await linkCrearContrasena(datos.email);
+    await emailResultadoTecnico(
+      { nombre: datos.nombre, email: datos.email },
+      "aprobado",
+      { linkCrearContrasena: link ?? undefined }
+    );
+  }
+
   revalidatePath("/tecnicos");
   return { ok: true };
+}
+
+// PÚBLICA (sin sesión): el link del email de verificación. El token es un
+// uuid aleatorio de un solo propósito; si ya se usó, la respuesta es la
+// misma (idempotente para el doble clic).
+export async function verificarEmailTecnico(
+  token: string
+): Promise<"verificado" | "ya_verificado" | "invalido"> {
+  if (!/^[0-9a-f-]{36}$/i.test(token)) return "invalido";
+  const admin = createAdminClient();
+  const { data: t } = await admin
+    .from("tecnicos")
+    .select("id, email_verificado")
+    .eq("token_verificacion", token)
+    .single();
+  if (!t) return "invalido";
+  if (t.email_verificado) return "ya_verificado";
+  const { error } = await admin
+    .from("tecnicos")
+    .update({ email_verificado: true })
+    .eq("id", t.id);
+  if (error) return "invalido";
+  // Sin revalidatePath: esto corre durante el render de la página de
+  // verificación (no es un form action) y /tecnicos es dinámica igual.
+  return "verificado";
 }
 
 export async function crearTecnicoManual(form: FormData): Promise<ActionResult> {
@@ -253,6 +323,9 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
       .select(
         "id, nombre, email, telefono, estado, creado_en, tecnico_especialidades(especialidades(nombre))"
       )
+      // Una solicitud sin email verificado todavía "no existe" para el
+      // staff (STORY-955) — llega recién cuando el técnico abre el link.
+      .or("estado.neq.pendiente,email_verificado.eq.true")
       .order("creado_en", { ascending: false }),
     supabase.from("usuarios").select("id, esta_activo").eq("rol", "tecnico"),
   ]);
@@ -358,7 +431,13 @@ export async function aprobarTecnico(id: string): Promise<ActionResult> {
     .update({ estado: "aprobado", motivo_rechazo: null })
     .eq("id", id);
 
-  await emailResultadoTecnico(t, "aprobado");
+  // El aprobado todavía no tiene contraseña (STORY-955): el email de
+  // bienvenida lleva el link para crearla. Si generarlo falla, el email
+  // sale igual — le queda "¿Olvidaste tu contraseña?" como salida.
+  const link = await linkCrearContrasena(t.email);
+  await emailResultadoTecnico(t, "aprobado", {
+    linkCrearContrasena: link ?? undefined,
+  });
 
   revalidatePath("/tecnicos");
   return { ok: true };
@@ -381,7 +460,7 @@ export async function rechazarTecnico(
     .single();
   if (error || !t) return { ok: false, error: "No se pudo rechazar." };
 
-  await emailResultadoTecnico(t, "rechazado", motivo.trim());
+  await emailResultadoTecnico(t, "rechazado", { motivo: motivo.trim() });
 
   revalidatePath("/tecnicos");
   return { ok: true };

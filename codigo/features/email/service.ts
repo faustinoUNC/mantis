@@ -27,21 +27,33 @@ function esc(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+type Cta = { href: string; label: string };
+
 // El saludo por nombre hace que se sepa a simple vista para quién es el
 // mail (clave mientras la casilla de prueba es compartida). Se omite si no
 // hay un nombre real ("—" es el fallback de datosDocumento).
-function plantilla(titulo: string, cuerpo: string, destinatario?: string): string {
+function plantilla(
+  titulo: string,
+  cuerpo: string,
+  destinatario?: string,
+  cta?: Cta
+): string {
   const nombre = destinatario?.trim();
   const saludo =
     nombre && nombre !== "—"
       ? `<p style="margin:0 0 14px;font-size:15px;color:#18181b">Hola, ${esc(nombre)}:</p>`
       : "";
+  const boton = cta
+    ? `<p style="margin:22px 0 0"><a href="${esc(cta.href)}" style="display:inline-block;background:#059669;color:#fff;text-decoration:none;font-size:15px;font-weight:600;padding:11px 22px;border-radius:8px">${esc(cta.label)}</a></p>
+    <p style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#a1a1aa">Si el botón no funciona, copiá y pegá este enlace en el navegador:<br>${esc(cta.href)}</p>`
+    : "";
   return `<!doctype html><body style="margin:0;background:#fafafa;font-family:system-ui,-apple-system,sans-serif;padding:32px 16px">
   <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:28px">
     <p style="margin:0 0 20px;font-weight:800;font-size:15px;letter-spacing:-0.02em;text-transform:uppercase;color:#18181b">Man<span style="color:#059669">—</span>tis</p>
     <h1 style="margin:0 0 10px;font-size:19px;letter-spacing:-0.01em;color:#18181b">${esc(titulo)}</h1>
     ${saludo}
     <p style="margin:0;font-size:15px;line-height:1.6;color:#52525b">${esc(cuerpo)}</p>
+    ${boton}
     <hr style="border:none;border-top:1px solid #e4e4e7;margin:24px 0 14px">
     <p style="margin:0;font-size:12px;color:#a1a1aa">Este correo es informativo — no hace falta responderlo. Ante cualquier consulta, contactá a la inmobiliaria.</p>
   </div></body>`;
@@ -56,6 +68,7 @@ async function enviarEmail(datos: {
   tipo: string;
   gestion_id?: string;
   adjunto?: { filename: string; contentBase64: string };
+  cta?: Cta;
 }): Promise<void> {
   const admin = createAdminClient();
   let estado = "enviado";
@@ -72,7 +85,7 @@ async function enviarEmail(datos: {
         from: REMITENTE,
         to: [destinoEntregable(datos.para)],
         subject: datos.asunto,
-        html: plantilla(datos.titulo, datos.cuerpo, datos.destinatario),
+        html: plantilla(datos.titulo, datos.cuerpo, datos.destinatario, datos.cta),
         ...(datos.adjunto && {
           attachments: [
             {
@@ -127,11 +140,13 @@ const EMAILS_ESTADO: Record<
 };
 
 // Resultado del enrolamiento, al TÉCNICO (STORY-501 v1.2 — deuda de
-// STORY-303: sin esto solo se enteraba al reintentar el login).
+// STORY-303: sin esto solo se enteraba al reintentar el login). Desde
+// STORY-955 el aprobado no tiene contraseña todavía: el email trae el
+// link para crearla.
 export async function emailResultadoTecnico(
   tecnico: { nombre: string; email: string },
   resultado: "aprobado" | "rechazado",
-  motivo?: string
+  opciones?: { motivo?: string; linkCrearContrasena?: string }
 ): Promise<void> {
   const contenido =
     resultado === "aprobado"
@@ -139,18 +154,60 @@ export async function emailResultadoTecnico(
           asunto: "Tu solicitud fue aprobada",
           titulo: "¡Bienvenido a la red de técnicos!",
           cuerpo:
-            "La inmobiliaria aprobó tu solicitud. Ya podés ingresar al sistema con el correo y la contraseña que elegiste al registrarte.",
+            "La inmobiliaria aprobó tu solicitud. Creá tu contraseña para empezar a usar el sistema.",
+          cta: opciones?.linkCrearContrasena
+            ? { href: opciones.linkCrearContrasena, label: "Crear tu contraseña" }
+            : undefined,
         }
       : {
           asunto: "Novedades sobre tu solicitud",
           titulo: "Tu solicitud fue rechazada",
-          cuerpo: `La inmobiliaria revisó tu solicitud y no fue aprobada. Motivo: ${motivo || "sin especificar"}.`,
+          cuerpo: `La inmobiliaria revisó tu solicitud y no fue aprobada. Motivo: ${opciones?.motivo || "sin especificar"}.`,
         };
   await enviarEmail({
     para: tecnico.email,
     destinatario: tecnico.nombre,
     ...contenido,
     tipo: `tecnico_${resultado}`,
+  });
+}
+
+// Verificación del correo del técnico recién registrado (STORY-955): la
+// solicitud llega al staff recién cuando abre este link.
+export async function emailVerificacionTecnico(
+  tecnico: { nombre: string; email: string },
+  link: string
+): Promise<void> {
+  await enviarEmail({
+    para: tecnico.email,
+    destinatario: tecnico.nombre,
+    asunto: "Verificá tu correo para completar la solicitud",
+    titulo: "Falta un paso: verificá tu correo",
+    cuerpo:
+      "Recibimos tu solicitud para sumarte como técnico. Tocá el botón para confirmar que este correo es tuyo — recién ahí la inmobiliaria la va a revisar.",
+    cta: { href: link, label: "Verificar mi correo" },
+    tipo: "verificacion_email",
+  });
+}
+
+// Link para crear/restablecer la contraseña (STORY-955/956): lo piden el
+// propio usuario ("olvidé mi contraseña") o el admin (blanqueo de empleado).
+export async function emailRecuperarContrasena(
+  para: { nombre?: string; email: string },
+  link: string,
+  tipo: "recuperar_contrasena" | "restablecer_contrasena" = "recuperar_contrasena"
+): Promise<void> {
+  await enviarEmail({
+    para: para.email,
+    destinatario: para.nombre,
+    asunto: "Restablecé tu contraseña",
+    titulo: "Creá una contraseña nueva",
+    cuerpo:
+      tipo === "restablecer_contrasena"
+        ? "La inmobiliaria pidió restablecer la contraseña de tu cuenta. Tocá el botón para elegir una nueva."
+        : "Pediste restablecer tu contraseña. Tocá el botón para elegir una nueva. Si no fuiste vos, ignorá este correo.",
+    cta: { href: link, label: "Crear contraseña nueva" },
+    tipo,
   });
 }
 
