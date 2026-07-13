@@ -29,7 +29,6 @@ import type { Metricas } from "@/features/metricas/service";
 const BRAND = "#059669";
 const BRAND_D = "#065f46";
 const AMBAR = "#d97706";
-const ROJO = "#dc2626";
 const GRID = "#e4e4e7";
 const INK_MUTED = "#71717a";
 const TENDENCIA = "#52525b"; // neutro para la recta de tendencia (no es un acento)
@@ -625,20 +624,6 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     return { lista: [...sinTecnicos, ...conTecnicos], maxRatio };
   }, [filasEsp, metricas.capacidad]);
 
-  // ── Flujo: Rechazos desglosados (3 tipos, nunca mezclados) ──
-  const rechazos = useMemo(() => {
-    const conRechazoAsig = new Set<string>();
-    for (const e of metricas.eventos) {
-      if (e.tipo === "asignacion_rechazada" && idsPeriodo.has(e.gestionId)) conRechazoAsig.add(e.gestionId);
-    }
-    return [
-      { tipo: "Presupuesto", cantidad: filas.filter((f) => f.presupuestos.includes("rechazado")).length },
-      { tipo: "Conformidad", cantidad: filas.filter((f) => f.conformidades.includes("rechazada")).length },
-      { tipo: "Asignación", cantidad: filas.filter((f) => conRechazoAsig.has(f.id)).length },
-    ];
-  }, [filas, idsPeriodo, metricas.eventos]);
-  const totalRechazos = rechazos.reduce((s, r) => s + r.cantidad, 0);
-
   return (
     <section>
       <RefrescoVivo tabla="calificaciones" />
@@ -752,18 +737,6 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
               <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20}>
                 {funnel.alcanzado.map((d, i) => (<Cell key={d.name} fill={i === funnel.alcanzado.length - 1 ? BRAND_D : BRAND} />))}
               </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </MetricCard>
-
-        <MetricCard titulo="Rechazos por tipo" ayuda="Rechazos por instancia: presupuesto (el precio no se aprobó), conformidad (el trabajo se rechazó) o asignación (el técnico no tomó el trabajo)." n={totalRechazos}>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={rechazos} margin={{ left: 8, right: 8 }}>
-              <CartesianGrid stroke={GRID} vertical={false} />
-              <XAxis dataKey="tipo" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => <p className="text-muted">{p[0].value} rechazos</p>} />} />
-              <Bar dataKey="cantidad" fill={ROJO} radius={[4, 4, 0, 0]} maxBarSize={48} />
             </BarChart>
           </ResponsiveContainer>
         </MetricCard>

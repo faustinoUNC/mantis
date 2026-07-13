@@ -16,6 +16,8 @@
 
 ## Descartados (no hacer)
 
+- ~~Métrica "Rechazos por tipo" en Informes~~ — ELIMINADA por Fausti (2026-07-13): "no es valiosa para el negocio". Nació en STORY-914, se arregló en STORY-919 y se quitó en STORY-919 v1.1 (el desglose presupuesto/conformidad/asignación no cambia ninguna decisión). No re-proponerla.
+
 - ~~Adelantos de obra al técnico (STORY-933)~~ — Descartada por Fausti (2026-07-11) el mismo día de aprobarse, antes de implementar: "no nos complicamos" con plata adelantada. En su lugar: rendición de comprobantes + total gastado al terminar la ejecución, y liquidación = materiales rendidos + mano de obra (STORY-934).
 - ~~CRON_SECRET del job pg_cron a Vault~~ — Decisión de Fausti (2026-07-06): riesgo bajo, no se hará.
 - ~~Métrica "qué técnico es más barato" (comparar mano de obra entre técnicos)~~ — Descartada (2026-07-08, 2ª party mode, STORY-915). No se puede hacer confiable: el único normalizador de alcance (`presupuestos.plazo_dias`) es auto-reportado y poco fiable, y un catálogo de rubros estandarizados violaría la Regla #0. Fausti: no meter datos inexactos. **En su lugar** va el **desvío de presupuesto** (cada técnico vs. su propio presupuesto), que sí es confiable.

@@ -38,7 +38,6 @@ export interface FilaMetrica {
 
 export interface EventoMetrica {
   gestionId: string;
-  tipo: string; // transicion | asignacion_rechazada (STORY-919)
   deEtapa: string | null;
   aEtapa: string | null;
   creadoEn: string;
@@ -78,12 +77,10 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       .select(
         "id, descripcion, etapa, urgencia, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
       ),
-    // STORY-919: sumamos los rechazos de asignación (viven como evento, no como
-    // flag — el flujo real setea asignacion_aceptada=NULL al rechazar).
     supabase
       .from("eventos_gestion")
-      .select("gestion_id, tipo, de_etapa, a_etapa, creado_en")
-      .in("tipo", ["transicion", "asignacion_rechazada"]),
+      .select("gestion_id, de_etapa, a_etapa, creado_en")
+      .eq("tipo", "transicion"),
     // STORY-954: capacidad = técnicos aprobados y activos por especialidad.
     supabase
       .from("tecnico_especialidades")
@@ -193,7 +190,6 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     filas,
     eventos: (eventos ?? []).map((e) => ({
       gestionId: e.gestion_id,
-      tipo: e.tipo,
       deEtapa: e.de_etapa,
       aEtapa: e.a_etapa,
       creadoEn: e.creado_en,
