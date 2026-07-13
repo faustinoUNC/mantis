@@ -156,8 +156,8 @@ export function Campana({
                   <p className="font-mono text-[11px] text-muted mt-1">{hace(n.creado_en)}</p>
                 </div>
               );
-              return n.gestion_id ? (
-                <Link key={n.id} href={`/gestiones/${n.gestion_id}`} onClick={() => setAbierta(false)}>
+              return n.ruta ? (
+                <Link key={n.id} href={n.ruta} onClick={() => setAbierta(false)}>
                   {contenido}
                 </Link>
               ) : (
