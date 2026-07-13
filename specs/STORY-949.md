@@ -63,7 +63,7 @@ En vez de envolver los 4 inserts en un RPC, el alta deja de tocar al inquilino:
 
 ## Dev Agent Record
 
-- **Commit:** (hash en el commit de cierre)
+- **Commit:** 4c7e3a8 (renumerada de 948 a 949 antes de pushear: Giuliano tomó el 948 en paralelo — tercera colisión).
 - **Verificación:** `tsc --noEmit` + `eslint` limpios. E2E con Playwright sobre el
   dev server (datos de prueba borrados después):
   - Wizard de 3 pasos; alta con propietario nuevo → aterriza en el detalle con la
