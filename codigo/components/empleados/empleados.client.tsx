@@ -14,6 +14,7 @@ import {
   cambiarEstadoEmpleado,
   crearEmpleado,
   editarEmpleado,
+  restablecerContrasenaEmpleado,
 } from "@/features/empleados/service";
 import type { Empleado } from "@/features/empleados/types";
 import { usePaginado } from "@/shared/hooks/use-paginado";
@@ -82,17 +83,23 @@ function Fila({ empleado }: { empleado: Empleado }) {
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
+  const [confirmandoPass, setConfirmandoPass] = useState(false);
+  const [passEnviado, setPassEnviado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     setGuardando(true);
     const form = new FormData(e.currentTarget);
     const resultado = await editarEmpleado(empleado.id, {
       nombre: String(form.get("nombre")),
       rol: String(form.get("rol")) as Rol,
+      email: String(form.get("email")),
     });
     setGuardando(false);
     if (resultado.ok) setEditando(false);
+    else setError(resultado.error);
   }
 
   if (editando) {
@@ -102,6 +109,15 @@ function Fila({ empleado }: { empleado: Empleado }) {
           <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-40">
               <Input label="Nombre" name="nombre" defaultValue={empleado.nombre} required />
+            </div>
+            <div className="flex-1 min-w-48">
+              <Input
+                label="Correo electrónico"
+                name="email"
+                type="email"
+                defaultValue={empleado.email}
+                required
+              />
             </div>
             <div className="flex-1 min-w-40">
               <Select label="Rol" name="rol" defaultValue={empleado.rol}>
@@ -114,6 +130,11 @@ function Fila({ empleado }: { empleado: Empleado }) {
             <Button type="button" variante="fantasma" onClick={() => setEditando(false)}>
               Cancelar
             </Button>
+            {error && (
+              <p role="alert" className="w-full text-sm font-medium text-error">
+                {error}
+              </p>
+            )}
           </form>
         </td>
       </tr>
@@ -146,7 +167,36 @@ function Fila({ empleado }: { empleado: Empleado }) {
         </Badge>
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        {confirmando ? (
+        {confirmandoPass ? (
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-sm text-muted">
+              ¿Enviar link de contraseña a {empleado.email}?
+            </span>
+            <Button
+              variante="fantasma"
+              disabled={guardando}
+              className="min-h-0 h-8 px-2.5 text-sm"
+              onClick={async () => {
+                setGuardando(true);
+                const r = await restablecerContrasenaEmpleado(empleado.id);
+                setGuardando(false);
+                setConfirmandoPass(false);
+                if (r.ok) setPassEnviado(true);
+                else alert(r.error);
+              }}
+            >
+              {guardando ? "Enviando…" : "Sí, enviar"}
+            </Button>
+            <Button
+              variante="fantasma"
+              disabled={guardando}
+              className="min-h-0 h-8 px-2.5 text-sm"
+              onClick={() => setConfirmandoPass(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        ) : confirmando ? (
           <div className="flex items-center justify-end gap-2">
             <span className="text-sm text-muted">¿Inhabilitar a {empleado.nombre}?</span>
             <Button
@@ -168,8 +218,20 @@ function Fila({ empleado }: { empleado: Empleado }) {
           </div>
         ) : (
           <>
+            {passEnviado && (
+              <span className="text-[13px] font-medium text-brand mr-2">
+                Link enviado ✓
+              </span>
+            )}
             <Button variante="fantasma" className="min-h-0 h-8 px-2.5 text-sm" onClick={() => setEditando(true)}>
               Editar
+            </Button>
+            <Button
+              variante="fantasma"
+              className="min-h-0 h-8 px-2.5 text-sm"
+              onClick={() => setConfirmandoPass(true)}
+            >
+              Contraseña
             </Button>
             <Button
               variante="fantasma"

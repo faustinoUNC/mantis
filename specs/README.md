@@ -37,6 +37,8 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-956](STORY-956.md) | El admin gestiona el correo (edición inline con sync auth+usuarios) y la contraseña (link de restablecimiento por email) de los empleados (card #80 de Trello) | ✅ done |
+| [STORY-955](STORY-955.md) | Verificación de email en el registro de técnico (la solicitud llega al staff recién al verificar), contraseña por link al aprobar y "¿olvidaste tu contraseña?" para todos los roles (card #78 de Trello) | ✅ done |
 | [STORY-954](STORY-954.md) | Presión por especialidad en Informes: demanda de gestiones del período vs. técnicos aprobados (ranking de presión, card #73 de Trello) | ✅ done |
 | [STORY-953](STORY-953.md) | La campanita de notificaciones lleva a donde corresponde (inbox, técnico, gestión) | ✅ done |
 | [STORY-952](STORY-952.md) | Buscador de direcciones: re-rank client-side — las sugerencias que coinciden con la calle tipeada van primero (Photon rankeaba por cercanía) | ✅ done |
