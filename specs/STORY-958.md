@@ -1,4 +1,4 @@
-# STORY-958 — Un técnico rechazado puede volver a enviar la solicitud
+# STORY-958 — Un técnico rechazado puede volver a enviar la solicitud (v2.0)
 
 **Estado:** ✅ done · **Origen:** Fausti (2026-07-13): probó rechazar una solicitud y el reintento del técnico chocaba con *"ya hay un técnico con ese CUIT"*. Decisión (opción A del análisis): *el reintento pisa la rechazada* — para los casos reales de rechazo corregible (matrícula olvidada, foto ilegible).
 
@@ -23,6 +23,18 @@
 3. El email de rechazo trae el link para reintentar.
 4. Los reemplazos de pendientes-sin-verificar (STORY-955) ahora también limpian storage y notificaciones.
 5. `tsc`/eslint verdes.
+
+## Cambios v2.0 (2026-07-13) — el reintento REABRE la solicitud (no la pisa)
+
+Al probar la v1 Fausti detectó dos problemas: (1) la rechazada **desaparecía** de `/tecnicos` cuando el técnico reintentaba (hueco visible hasta la verificación, ahora en vivo por STORY-957) — la inmobiliaria debe poder seguir viéndolas siempre; (2) los reintentos parecían no recibir el mail de verificación — todos salieron `enviado` (Resend OK), pero Gmail agrupa los mails idénticos en un hilo y el link de cada mail anterior moría con el pisado. Rediseño (opción B elegida):
+
+- **El reintento de una rechazada reabre la MISMA fila** (mismo id y usuario de auth): datos/documentos nuevos (storage viejo reemplazado), `estado → pendiente`, `email_verificado → false`, y **conserva `motivo_rechazo`** como historial. Si cambió el email, se actualiza en auth (`updateUserById`). Especialidades reemplazadas. Las notificaciones viejas del staff ya no quedan 404 (misma ruta).
+- **El token de verificación se conserva**: los links de TODOS los mails anteriores del hilo siguen vivos — abrir un mail viejo ya no es un callejón sin salida. El asunto del mail de verificación además lleva el nombre ("Verificá tu correo, {nombre}") para desagrupar entre técnicos en la casilla compartida.
+- **El staff la ve en todo momento**: `listarTecnicos` muestra también pendientes sin verificar **con `motivo_rechazo`** (badge "Reintento — esperando verificación"); las solicitudes nuevas sin verificar siguen ocultas (decisión STORY-955). El detalle muestra "Reintento — rechazo anterior: {motivo}" y habilita Aprobar/Rechazar recién con el email verificado.
+- El **pisado con borrado** queda solo para huérfanas pendiente-sin-verificar y para el alta manual del staff que choca con una rechazada. El guard de `usuarios` (jamás tocar un ex-aprobado) sigue idéntico.
+- Tipos: `TecnicoResumen.email_verificado` nuevo (y expuesto en `obtenerTecnico`).
+
+Verificación v2.0 E2E: rechazada → reintento por el form → misma fila reabierta (id y token idénticos, motivo conservado) → visible como "Reintento — esperando verificación" con evaluación bloqueada → el link del token VIEJO verifica → notifica al staff (trigger) → "Pendiente de evaluación" con el aviso del rechazo anterior.
 
 ## Dev Agent Record
 

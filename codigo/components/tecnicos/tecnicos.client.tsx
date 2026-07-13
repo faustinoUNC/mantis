@@ -49,9 +49,15 @@ function Fila({ tecnico }: { tecnico: TecnicoResumen }) {
         </div>
       </td>
       <td className="px-4 py-3">
-        <Badge tono={inactivo ? "error" : TONO_ESTADO[tecnico.estado]}>
-          {inactivo ? "Inhabilitado" : LABEL_ESTADO[tecnico.estado]}
-        </Badge>
+        {/* pendiente sin verificar = reintento tras rechazo (STORY-958 v2):
+            visible pero todavía no evaluable. */}
+        {tecnico.estado === "pendiente" && !tecnico.email_verificado ? (
+          <Badge tono="neutro">Reintento — esperando verificación</Badge>
+        ) : (
+          <Badge tono={inactivo ? "error" : TONO_ESTADO[tecnico.estado]}>
+            {inactivo ? "Inhabilitado" : LABEL_ESTADO[tecnico.estado]}
+          </Badge>
+        )}
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         <Link

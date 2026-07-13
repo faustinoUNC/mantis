@@ -134,16 +134,17 @@ async function altaTecnico(
   // se pisa la vieja (borrar el usuario de auth cascadea tecnicos y
   // especialidades) en vez de bloquear al técnico para siempre.
   // Solicitudes reemplazables (STORY-955/958): una pendiente SIN verificar
-  // es un registro huérfano (típico: email propio mal tipeado) y una
-  // rechazada merece reintento (matrícula olvidada, foto ilegible). Si el
-  // registro nuevo choca contra una de esas, se pisa la vieja. El valor del
-  // usuario entra SOLO por .eq(campo, valor) — nunca dentro del .or(), que
-  // es una condición constante (inyectaría filtros de PostgREST, v1.1).
+  // es un registro huérfano (típico: email propio mal tipeado) que se pisa;
+  // una RECHAZADA merece reintento y se REABRE en la misma fila (v2.0: así
+  // el staff nunca la pierde de vista y conserva el motivo anterior). El
+  // valor del usuario entra SOLO por .eq(campo, valor) — nunca dentro del
+  // .or(), que es una condición constante (inyectaría filtros, v1.1).
+  const esEnrolamiento = estado === "pendiente";
   const cuilNormalizado = normalizarCuil(datos.cuil);
   const buscarReemplazables = (campo: string, valor: string) =>
     admin
       .from("tecnicos")
-      .select("id, doc_dni_path, doc_matricula_paths")
+      .select("id, email, estado, token_verificacion, doc_dni_path, doc_matricula_paths")
       .or("and(estado.eq.pendiente,email_verificado.eq.false),estado.eq.rechazado")
       .eq(campo, valor);
   const coincidencias = await Promise.all([
@@ -151,19 +152,29 @@ async function altaTecnico(
     buscarReemplazables("cuil", cuilNormalizado),
     ...(datos.telefono ? [buscarReemplazables("telefono", datos.telefono)] : []),
   ]);
-  const reemplazables = new Map<string, string[]>();
+  type Reemplazable = {
+    id: string;
+    email: string;
+    estado: string;
+    token: string | null;
+    docs: string[];
+  };
+  const reemplazables = new Map<string, Reemplazable>();
   for (const { data } of coincidencias) {
     for (const t of data ?? []) {
-      reemplazables.set(
-        t.id as string,
-        [t.doc_dni_path, ...(t.doc_matricula_paths ?? [])].filter(
+      reemplazables.set(t.id as string, {
+        id: t.id as string,
+        email: t.email as string,
+        estado: t.estado as string,
+        token: t.token_verificacion as string | null,
+        docs: [t.doc_dni_path, ...(t.doc_matricula_paths ?? [])].filter(
           (p): p is string => Boolean(p)
-        )
-      );
+        ),
+      });
     }
   }
   if (reemplazables.size > 0) {
-    // Jamás pisar un técnico que alguna vez fue aprobado: tiene historial
+    // Jamás tocar un técnico que alguna vez fue aprobado: tiene historial
     // colgando de su id (gestiones SET NULL, avances RESTRICT, calificaciones).
     const { data: conAcceso } = await admin
       .from("usuarios")
@@ -171,20 +182,32 @@ async function altaTecnico(
       .in("id", [...reemplazables.keys()]);
     for (const u of conAcceso ?? []) reemplazables.delete(u.id);
   }
-  for (const [idViejo, docs] of reemplazables) {
-    if (docs.length) await admin.storage.from(BUCKET).remove(docs);
+  let reabrir: Reemplazable | null = null;
+  for (const viejo of reemplazables.values()) {
+    // El reintento público reabre la rechazada; el alta manual del staff
+    // (aprobado directo) la pisa como a las huérfanas.
+    if (viejo.estado === "rechazado" && esEnrolamiento && !reabrir) {
+      reabrir = viejo;
+      continue;
+    }
+    if (viejo.docs.length) await admin.storage.from(BUCKET).remove(viejo.docs);
     // Notificaciones del staff sobre la solicitud pisada: quedarían en 404
     // desde la campanita (criterio STORY-951).
-    await admin.from("notificaciones").delete().eq("ruta", `/tecnicos/${idViejo}`);
+    await admin.from("notificaciones").delete().eq("ruta", `/tecnicos/${viejo.id}`);
     // Borrar el usuario de auth cascadea tecnicos y tecnico_especialidades.
-    await admin.auth.admin.deleteUser(idViejo);
+    await admin.auth.admin.deleteUser(viejo.id);
   }
 
-  const dup = await duplicadoPersona(admin, "tecnicos", {
-    email: datos.email,
-    cuil: cuilNormalizado,
-    telefono: datos.telefono || null,
-  });
+  const dup = await duplicadoPersona(
+    admin,
+    "tecnicos",
+    {
+      email: datos.email,
+      cuil: cuilNormalizado,
+      telefono: datos.telefono || null,
+    },
+    reabrir?.id
+  );
   if (dup) return { ok: false, error: dup };
 
   // Matrícula obligatoria si alguna especialidad la exige (validación server)
@@ -198,6 +221,74 @@ async function altaTecnico(
       ok: false,
       error: "Alguna especialidad elegida exige matrícula: subí el archivo.",
     };
+  }
+
+  // Reintento tras rechazo (STORY-958 v2.0): se reabre la MISMA solicitud —
+  // mismo id/usuario de auth, datos y documentos nuevos, vuelve a "esperando
+  // verificación" conservando motivo_rechazo como historial visible. Así el
+  // staff nunca la pierde de vista y las notificaciones viejas no quedan 404.
+  if (reabrir) {
+    if (reabrir.email !== datos.email) {
+      const { error: errorAuth } = await admin.auth.admin.updateUserById(
+        reabrir.id,
+        { email: datos.email, email_confirm: true }
+      );
+      if (errorAuth) {
+        return {
+          ok: false,
+          error: errorAuth.message.includes("already")
+            ? "Ya existe una cuenta con ese correo."
+            : "No se pudo actualizar el correo.",
+        };
+      }
+    }
+    if (reabrir.docs.length) {
+      await admin.storage.from(BUCKET).remove(reabrir.docs);
+    }
+    const [docDniNuevo, ...matriculasNuevas] = await Promise.all([
+      subirDoc(reabrir.id, "dni", docDniArchivo),
+      ...matriculas.map((m, i) => subirDoc(reabrir.id, `matricula-${i + 1}`, m)),
+    ]);
+    // Se conserva el token si existe: los links de los emails anteriores
+    // del mismo técnico siguen vivos (Gmail agrupa los reintentos en un
+    // hilo y abrir un mail viejo no puede ser un callejón sin salida).
+    const tokenReintento = reabrir.token ?? crypto.randomUUID();
+    const { error: errorReabrir } = await admin
+      .from("tecnicos")
+      .update({
+        nombre: datos.nombre,
+        email: datos.email,
+        telefono: datos.telefono || null,
+        cuil: cuilNormalizado,
+        estado: "pendiente",
+        email_verificado: false,
+        token_verificacion: tokenReintento,
+        doc_dni_path: docDniNuevo,
+        doc_matricula_paths: matriculasNuevas.filter(Boolean),
+      })
+      .eq("id", reabrir.id);
+    if (errorReabrir) {
+      return {
+        ok: false,
+        error:
+          errorReabrir.code === "23505"
+            ? ERROR_DUPLICADO_DB
+            : "No se pudo reenviar la solicitud.",
+      };
+    }
+    await admin.from("tecnico_especialidades").delete().eq("tecnico_id", reabrir.id);
+    await admin.from("tecnico_especialidades").insert(
+      datos.especialidadIds.map((especialidad_id) => ({
+        tecnico_id: reabrir!.id,
+        especialidad_id,
+      }))
+    );
+    await emailVerificacionTecnico(
+      { nombre: datos.nombre, email: datos.email },
+      `${baseUrl()}/registro-tecnico/verificar?token=${tokenReintento}`
+    );
+    revalidatePath("/tecnicos");
+    return { ok: true };
   }
 
   // Sin contraseña (STORY-955): el técnico la crea recién al ser aprobado,
@@ -224,7 +315,6 @@ async function altaTecnico(
   // Enrolamiento público: la solicitud queda invisible para el staff hasta
   // que el técnico verifique su email con el token. Alta manual: el staff
   // responde por el dato — nace verificada.
-  const esEnrolamiento = estado === "pendiente";
   const token = esEnrolamiento ? crypto.randomUUID() : null;
   const { error: errorTecnico } = await admin.from("tecnicos").insert({
     id,
@@ -357,11 +447,14 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
     supabase
       .from("tecnicos")
       .select(
-        "id, nombre, email, telefono, estado, creado_en, tecnico_especialidades(especialidades(nombre))"
+        "id, nombre, email, telefono, estado, email_verificado, motivo_rechazo, creado_en, tecnico_especialidades(especialidades(nombre))"
       )
-      // Una solicitud sin email verificado todavía "no existe" para el
-      // staff (STORY-955) — llega recién cuando el técnico abre el link.
-      .or("estado.neq.pendiente,email_verificado.eq.true")
+      // Una solicitud NUEVA sin email verificado todavía "no existe" para el
+      // staff (STORY-955). Los reintentos tras rechazo (tienen motivo_rechazo,
+      // STORY-958 v2) sí se muestran siempre — el staff ya los conocía.
+      .or(
+        "estado.neq.pendiente,email_verificado.eq.true,motivo_rechazo.not.is.null"
+      )
       .order("creado_en", { ascending: false }),
     supabase.from("usuarios").select("id, esta_activo").eq("rol", "tecnico"),
   ]);
@@ -374,6 +467,8 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
     email: string;
     telefono: string | null;
     estado: EstadoTecnico;
+    email_verificado: boolean;
+    motivo_rechazo: string | null;
     creado_en: string;
     tecnico_especialidades: { especialidades: { nombre: string } | null }[];
   };
@@ -383,6 +478,7 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
     email: t.email,
     telefono: t.telefono,
     estado: t.estado,
+    email_verificado: t.email_verificado,
     creado_en: t.creado_en,
     especialidades: t.tecnico_especialidades
       .map((te) => te.especialidades?.nombre)
@@ -400,7 +496,7 @@ export async function obtenerTecnico(
   const { data: t } = await supabase
     .from("tecnicos")
     .select(
-      "id, nombre, email, telefono, cuil, estado, creado_en, motivo_rechazo, doc_dni_path, doc_matricula_paths, tecnico_especialidades(especialidad_id, especialidades(nombre))"
+      "id, nombre, email, telefono, cuil, estado, email_verificado, creado_en, motivo_rechazo, doc_dni_path, doc_matricula_paths, tecnico_especialidades(especialidad_id, especialidades(nombre))"
     )
     .eq("id", id)
     .single();
@@ -435,6 +531,7 @@ export async function obtenerTecnico(
     telefono: t.telefono,
     cuil: t.cuil,
     estado: t.estado as EstadoTecnico,
+    email_verificado: t.email_verificado,
     creado_en: t.creado_en,
     motivo_rechazo: t.motivo_rechazo,
     especialidades: tes.map((te) => te.especialidades?.nombre).filter(Boolean) as string[],

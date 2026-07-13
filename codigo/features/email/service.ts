@@ -188,7 +188,10 @@ export async function emailVerificacionTecnico(
   await enviarEmail({
     para: tecnico.email,
     destinatario: tecnico.nombre,
-    asunto: "Verificá tu correo para completar la solicitud",
+    // Nombre en el asunto: rompe el agrupado de Gmail entre reintentos —
+    // el link de cada mail anterior muere al reintentar y hay que abrir
+    // el último (casilla de prueba compartida, STORY-958 v2).
+    asunto: `Verificá tu correo, ${tecnico.nombre}`,
     titulo: "Falta un paso: verificá tu correo",
     cuerpo:
       "Recibimos tu solicitud para sumarte como técnico. Tocá el botón para confirmar que este correo es tuyo — recién ahí la inmobiliaria la va a revisar.",

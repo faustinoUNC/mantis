@@ -98,7 +98,23 @@ export default async function TecnicoDetallePage({
         </p>
       )}
 
-      {tecnico.estado === "pendiente" && <Evaluacion tecnicoId={id} />}
+      {/* Reintento tras rechazo (STORY-958 v2): el motivo anterior queda a
+          la vista y la evaluación se habilita recién con el email verificado. */}
+      {tecnico.estado === "pendiente" && tecnico.motivo_rechazo && (
+        <p className="mt-4 text-sm text-urgente-fuerte bg-urgente-soft border border-urgente-soft-border rounded-md px-4 py-3">
+          Reintento — rechazo anterior: {tecnico.motivo_rechazo}
+        </p>
+      )}
+
+      {tecnico.estado === "pendiente" &&
+        (tecnico.email_verificado ? (
+          <Evaluacion tecnicoId={id} />
+        ) : (
+          <p className="mt-6 text-sm text-muted">
+            El técnico todavía no verificó su correo — la solicitud se podrá
+            evaluar cuando abra el link que le enviamos.
+          </p>
+        ))}
     </div>
   );
 }

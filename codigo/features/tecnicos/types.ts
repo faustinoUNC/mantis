@@ -6,6 +6,9 @@ export interface TecnicoResumen {
   email: string;
   telefono: string | null;
   estado: EstadoTecnico;
+  // false + pendiente = reintento tras rechazo esperando verificación
+  // (las solicitudes nuevas sin verificar no llegan al staff, STORY-955/958).
+  email_verificado: boolean;
   especialidades: string[];
   esta_activo: boolean | null; // null = sin fila en usuarios (pendiente/rechazado)
   creado_en: string; // fecha de registro/alta del técnico
