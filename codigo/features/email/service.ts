@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/shared/lib/supabase/admin";
+import { baseUrl } from "@/shared/utils/base-url";
 
 // ÚNICO punto de salida de emails (CLAUDE.md §3). Resend por fetch directo
 // (desviación consciente: sin SDK ni React Email — Regla #0). Los fallos se
@@ -160,9 +161,15 @@ export async function emailResultadoTecnico(
             : undefined,
         }
       : {
+          // El reintento pisa la solicitud rechazada (STORY-958): el mail
+          // invita a corregir y volver a enviarla.
           asunto: "Novedades sobre tu solicitud",
           titulo: "Tu solicitud fue rechazada",
-          cuerpo: `La inmobiliaria revisó tu solicitud y no fue aprobada. Motivo: ${opciones?.motivo || "sin especificar"}.`,
+          cuerpo: `La inmobiliaria revisó tu solicitud y no fue aprobada. Motivo: ${opciones?.motivo || "sin especificar"}. Si podés corregirlo, volvé a enviar la solicitud desde la página de registro.`,
+          cta: {
+            href: `${baseUrl()}/registro-tecnico`,
+            label: "Volver a enviar la solicitud",
+          },
         };
   await enviarEmail({
     para: tecnico.email,

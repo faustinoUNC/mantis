@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-958](STORY-958.md) | Un técnico rechazado puede volver a enviar la solicitud (el reintento pisa la rechazada, solo si nunca fue aprobado; email de rechazo con link para reintentar) | ✅ done |
 | [STORY-957](STORY-957.md) | La página de Técnicos se actualiza en tiempo real (tabla `tecnicos` a la publicación Realtime + `RefrescoVivo` en la lista) | ✅ done |
 | [STORY-956](STORY-956.md) | El admin gestiona el correo (edición inline con sync auth+usuarios) y la contraseña (link de restablecimiento por email) de los empleados (card #80 de Trello) | ✅ done |
 | [STORY-955](STORY-955.md) | Verificación de email en el registro de técnico (la solicitud llega al staff recién al verificar), contraseña por link al aprobar y "¿olvidaste tu contraseña?" para todos los roles (card #78 de Trello) | ✅ done |

@@ -133,26 +133,51 @@ async function altaTecnico(
   // verificación nunca llega). Si el nuevo registro choca contra una de esas,
   // se pisa la vieja (borrar el usuario de auth cascadea tecnicos y
   // especialidades) en vez de bloquear al técnico para siempre.
-  // Una query .eq() por campo (nada de .or() armado con strings: el email
-  // viene de un form público y podría inyectar filtros de PostgREST).
+  // Solicitudes reemplazables (STORY-955/958): una pendiente SIN verificar
+  // es un registro huérfano (típico: email propio mal tipeado) y una
+  // rechazada merece reintento (matrícula olvidada, foto ilegible). Si el
+  // registro nuevo choca contra una de esas, se pisa la vieja. El valor del
+  // usuario entra SOLO por .eq(campo, valor) — nunca dentro del .or(), que
+  // es una condición constante (inyectaría filtros de PostgREST, v1.1).
   const cuilNormalizado = normalizarCuil(datos.cuil);
-  const buscarHuerfanos = (campo: string, valor: string) =>
+  const buscarReemplazables = (campo: string, valor: string) =>
     admin
       .from("tecnicos")
-      .select("id")
-      .eq("estado", "pendiente")
-      .eq("email_verificado", false)
+      .select("id, doc_dni_path, doc_matricula_paths")
+      .or("and(estado.eq.pendiente,email_verificado.eq.false),estado.eq.rechazado")
       .eq(campo, valor);
   const coincidencias = await Promise.all([
-    buscarHuerfanos("email", datos.email),
-    buscarHuerfanos("cuil", cuilNormalizado),
-    ...(datos.telefono ? [buscarHuerfanos("telefono", datos.telefono)] : []),
+    buscarReemplazables("email", datos.email),
+    buscarReemplazables("cuil", cuilNormalizado),
+    ...(datos.telefono ? [buscarReemplazables("telefono", datos.telefono)] : []),
   ]);
-  const huerfanos = new Set(
-    coincidencias.flatMap(({ data }) => (data ?? []).map((h) => h.id as string))
-  );
-  for (const id of huerfanos) {
-    await admin.auth.admin.deleteUser(id);
+  const reemplazables = new Map<string, string[]>();
+  for (const { data } of coincidencias) {
+    for (const t of data ?? []) {
+      reemplazables.set(
+        t.id as string,
+        [t.doc_dni_path, ...(t.doc_matricula_paths ?? [])].filter(
+          (p): p is string => Boolean(p)
+        )
+      );
+    }
+  }
+  if (reemplazables.size > 0) {
+    // Jamás pisar un técnico que alguna vez fue aprobado: tiene historial
+    // colgando de su id (gestiones SET NULL, avances RESTRICT, calificaciones).
+    const { data: conAcceso } = await admin
+      .from("usuarios")
+      .select("id")
+      .in("id", [...reemplazables.keys()]);
+    for (const u of conAcceso ?? []) reemplazables.delete(u.id);
+  }
+  for (const [idViejo, docs] of reemplazables) {
+    if (docs.length) await admin.storage.from(BUCKET).remove(docs);
+    // Notificaciones del staff sobre la solicitud pisada: quedarían en 404
+    // desde la campanita (criterio STORY-951).
+    await admin.from("notificaciones").delete().eq("ruta", `/tecnicos/${idViejo}`);
+    // Borrar el usuario de auth cascadea tecnicos y tecnico_especialidades.
+    await admin.auth.admin.deleteUser(idViejo);
   }
 
   const dup = await duplicadoPersona(admin, "tecnicos", {
