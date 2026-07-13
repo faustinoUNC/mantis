@@ -9,6 +9,25 @@ import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 import { generarPDF, type DatosDocumento } from "./pdf";
 
+// STORY-950: métodos de pago para el cobro al pagador (lista cerrada, sin
+// configurabilidad — Regla #0). Se puede combinar como máximo 2 (medio +
+// medio2): cubre el caso real "mitad efectivo, mitad transferencia" sin la
+// complejidad de N medios arbitrarios.
+export const MEDIOS_COBRO = [
+  "efectivo",
+  "transferencia",
+  "tarjeta_credito",
+  "otro",
+] as const;
+export type MedioCobro = (typeof MEDIOS_COBRO)[number];
+
+export const MEDIO_COBRO_LABEL: Record<MedioCobro, string> = {
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+  tarjeta_credito: "Tarjeta de crédito",
+  otro: "Otro",
+};
+
 // STORY-946: métodos de pago para liquidar al técnico (lista cerrada, sin
 // configurabilidad — Regla #0).
 export const MEDIOS_LIQUIDACION = [
@@ -418,12 +437,19 @@ export async function enviarPresupuestoEmail(
   return { ok: true };
 }
 
+// STORY-950: permite combinar hasta 2 medios de pago (ej. mitad efectivo,
+// mitad transferencia) en vez de forzar un único medio para el 100%. El
+// monto del segundo medio lo tipea la administración; el del primero es el
+// resto (se calcula acá, nunca confiando en lo que mande el cliente).
 export async function registrarCobro(
   gestionId: string,
-  medio: "transferencia" | "efectivo" | "otro"
+  datos: { medio: MedioCobro; medio2?: MedioCobro; monto2?: number }
 ): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
+  if (!MEDIOS_COBRO.includes(datos.medio)) {
+    return { ok: false, error: "Indicá el medio de cobro." };
+  }
 
   const supabase = await createClient();
   // STORY-914: congelar el monto facturado y el fee del momento del cobro.
@@ -436,19 +462,49 @@ export async function registrarCobro(
     .single();
   const costoFinal = Number(g?.costo_final ?? 0);
   const cargoAdmin = Number(g?.cargo_admin ?? 0);
+  const total = costoFinal + cargoAdmin;
+
+  let medioCobro2: string | null = null;
+  let montoCobro2: number | null = null;
+  if (datos.medio2) {
+    if (!MEDIOS_COBRO.includes(datos.medio2)) {
+      return { ok: false, error: "Indicá el segundo medio de cobro." };
+    }
+    if (datos.medio2 === datos.medio) {
+      return { ok: false, error: "Elegí dos medios de pago distintos para combinar." };
+    }
+    const monto2 = Number(datos.monto2);
+    if (!Number.isFinite(monto2) || monto2 <= 0) {
+      return { ok: false, error: "Ingresá el monto del segundo medio." };
+    }
+    if (monto2 >= total) {
+      return {
+        ok: false,
+        error: `El monto del segundo medio no puede ser mayor o igual al total a cobrar ($ ${total.toLocaleString("es-AR")}).`,
+      };
+    }
+    medioCobro2 = datos.medio2;
+    montoCobro2 = monto2;
+  }
 
   const { error } = await supabase
     .from("gestiones")
     .update({
       cobrado_en: new Date().toISOString(),
-      medio_cobro: medio,
-      cobrado_monto: costoFinal + cargoAdmin,
+      medio_cobro: datos.medio,
+      medio_cobro_2: medioCobro2,
+      cobrado_monto: total,
+      cobrado_monto_2: montoCobro2,
       cobrado_fee: cargoAdmin,
     })
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo registrar el cobro." };
 
-  await registrarEvento(gestionId, "cobro_registrado", actual.id, { medio });
+  await registrarEvento(gestionId, "cobro_registrado", actual.id, {
+    medio: datos.medio,
+    medio2: medioCobro2,
+    monto2: montoCobro2,
+  });
   return avanzarEtapa(gestionId, "liquidacion_tecnico");
 }
 
