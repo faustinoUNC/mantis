@@ -669,23 +669,19 @@ export async function actualizarEspecialidadesTecnico(
   return { ok: true };
 }
 
-// Editar datos personales de un técnico ya creado (STORY-948): la
-// inmobiliaria corrige errores de carga (ej. email mal tipeado) sin
-// necesidad de recrear la cuenta. El email vive en auth.users — se
-// actualiza ahí primero (con rollback si después falla el guardado en
-// tecnicos, mismo criterio de compensación que altaTecnico).
+// Editar datos de identidad de un técnico ya creado (STORY-948, recortada
+// por STORY-959): la inmobiliaria corrige nombre y CUIL. El CONTACTO
+// (email/teléfono) es del técnico y se edita solo desde su perfil.
 export async function editarDatosTecnico(
   tecnicoId: string,
-  datos: { nombre: string; email: string; telefono: string; cuil: string }
+  datos: { nombre: string; cuil: string }
 ): Promise<ActionResult> {
   const permiso = await exigirStaffMantenimiento();
   if (!permiso.ok) return permiso;
 
   const nombre = datos.nombre.trim();
-  const email = datos.email.trim().toLowerCase();
-  const telefono = normalizarTelefono(datos.telefono);
-  if (!nombre || !email || !telefono) {
-    return { ok: false, error: "Completá nombre, email y teléfono." };
+  if (!nombre) {
+    return { ok: false, error: "Completá el nombre." };
   }
   if (!datos.cuil.trim()) {
     return { ok: false, error: "El CUIL es obligatorio." };
@@ -695,24 +691,68 @@ export async function editarDatosTecnico(
   const cuil = normalizarCuil(datos.cuil);
 
   const admin = createAdminClient();
-  const dup = await duplicadoPersona(
-    admin,
-    "tecnicos",
-    { email, cuil, telefono: telefono || null },
-    tecnicoId
-  );
+  const dup = await duplicadoPersona(admin, "tecnicos", { cuil }, tecnicoId);
   if (dup) return { ok: false, error: dup };
 
   const { data: actual } = await admin
     .from("tecnicos")
-    .select("email, estado")
+    .select("estado")
     .eq("id", tecnicoId)
     .single();
   if (!actual) return { ok: false, error: "Técnico no encontrado." };
 
+  const { error } = await admin
+    .from("tecnicos")
+    .update({ nombre, cuil })
+    .eq("id", tecnicoId);
+  if (error) {
+    return {
+      ok: false,
+      error: error.code === "23505" ? ERROR_DUPLICADO_DB : "No se pudo guardar.",
+    };
+  }
+
+  // Aprobado con acceso propio: usuarios.nombre queda en sync.
+  if (actual.estado === "aprobado") {
+    await admin.from("usuarios").update({ nombre }).eq("id", tecnicoId);
+  }
+
+  revalidatePath(`/tecnicos/${tecnicoId}`);
+  revalidatePath("/tecnicos");
+  return { ok: true };
+}
+
+// El CONTACTO es del propio técnico (STORY-959): email y teléfono se
+// cambian desde /tecnico/perfil con su sesión. El email vive en auth.users
+// — se actualiza ahí primero, con rollback si falla el guardado en
+// tecnicos (mismo criterio de compensación que altaTecnico).
+export async function actualizarMiContacto(datos: {
+  email: string;
+  telefono: string;
+}): Promise<ActionResult> {
+  const actual = await obtenerUsuarioActual();
+  if (actual?.rol !== "tecnico") {
+    return { ok: false, error: "No tenés permiso para hacer esto." };
+  }
+
+  const email = datos.email.trim().toLowerCase();
+  const telefono = normalizarTelefono(datos.telefono);
+  if (!email || !telefono) {
+    return { ok: false, error: "Completá email y teléfono." };
+  }
+
+  const admin = createAdminClient();
+  const dup = await duplicadoPersona(
+    admin,
+    "tecnicos",
+    { email, telefono },
+    actual.id
+  );
+  if (dup) return { ok: false, error: dup };
+
   const cambiaEmail = actual.email !== email;
   if (cambiaEmail) {
-    const { error: errorAuth } = await admin.auth.admin.updateUserById(tecnicoId, {
+    const { error: errorAuth } = await admin.auth.admin.updateUserById(actual.id, {
       email,
       email_confirm: true,
     });
@@ -728,11 +768,11 @@ export async function editarDatosTecnico(
 
   const { error } = await admin
     .from("tecnicos")
-    .update({ nombre, email, telefono: telefono || null, cuil })
-    .eq("id", tecnicoId);
+    .update({ email, telefono })
+    .eq("id", actual.id);
   if (error) {
     if (cambiaEmail) {
-      await admin.auth.admin.updateUserById(tecnicoId, { email: actual.email });
+      await admin.auth.admin.updateUserById(actual.id, { email: actual.email });
     }
     return {
       ok: false,
@@ -740,13 +780,9 @@ export async function editarDatosTecnico(
     };
   }
 
-  // Aprobado con acceso propio: usuarios.nombre/email quedan en sync.
-  if (actual.estado === "aprobado") {
-    await admin.from("usuarios").update({ nombre, email }).eq("id", tecnicoId);
-  }
+  await admin.from("usuarios").update({ email }).eq("id", actual.id);
 
-  revalidatePath(`/tecnicos/${tecnicoId}`);
-  revalidatePath("/tecnicos");
+  revalidatePath("/tecnico/perfil");
   return { ok: true };
 }
 

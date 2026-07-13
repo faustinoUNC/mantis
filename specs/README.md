@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-959](STORY-959.md) | El técnico gestiona su contacto (email/teléfono) y su contraseña desde el perfil; la inmobiliaria ya no edita datos de contacto (recorte de STORY-948 a nombre + CUIL) | ✅ done |
 | [STORY-958](STORY-958.md) | Un técnico rechazado puede volver a enviar la solicitud — v2.0: el reintento reabre la MISMA fila (visible siempre para el staff como "Reintento", motivo anterior conservado, links de mails viejos vivos) | ✅ done |
 | [STORY-957](STORY-957.md) | La página de Técnicos se actualiza en tiempo real (tabla `tecnicos` a la publicación Realtime + `RefrescoVivo` en la lista) | ✅ done |
 | [STORY-956](STORY-956.md) | El admin gestiona el correo (edición inline con sync auth+usuarios) y la contraseña (link de restablecimiento por email) de los empleados (card #80 de Trello) | ✅ done |

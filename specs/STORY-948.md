@@ -1,5 +1,7 @@
 # STORY-948 — La inmobiliaria puede editar todos los datos de un técnico (v1.1)
 
+> **Recortada por [STORY-959](STORY-959.md)** (2026-07-13): la edición del staff quedó en **nombre + CUIL**. El contacto (email/teléfono) pasó a ser del técnico, que lo edita desde su perfil.
+
 **Estado:** ✅ done · **Origen:** Giuliano: *"Falta permitir que la inmobiliaria pueda editar todos los datos personales y especialidades de los técnicos (confirmando la matrícula en caso de ser necesario), ya que si el técnico comete algún error como escribir mal el mail se pondrán en contacto con la administración para que lo corrijan así que deben poder editar todo de los técnicos."*
 
 ## Alcance

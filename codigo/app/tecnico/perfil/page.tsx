@@ -1,4 +1,8 @@
 import { redirect } from "next/navigation";
+import {
+  CambiarContrasena,
+  ContactoPerfil,
+} from "@/components/tecnicos/perfil-tecnico.client";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -27,14 +31,8 @@ export default async function PerfilTecnicoPage() {
       </div>
 
       <Card className="divide-y divide-border">
-        <div className="px-4 py-3">
-          <p className="text-[13px] font-medium text-muted">Correo</p>
-          <p className="mt-0.5">{perfil.email}</p>
-        </div>
-        <div className="px-4 py-3">
-          <p className="text-[13px] font-medium text-muted">Teléfono</p>
-          <p className="mt-0.5">{perfil.telefono ?? "—"}</p>
-        </div>
+        <ContactoPerfil email={perfil.email} telefono={perfil.telefono} />
+        <CambiarContrasena />
         <div className="px-4 py-3">
           <p className="text-[13px] font-medium text-muted">CUIL</p>
           <p className="mt-0.5 font-mono text-[14px]">{perfil.cuil ?? "—"}</p>
@@ -68,7 +66,8 @@ export default async function PerfilTecnicoPage() {
       </Card>
 
       <p className="text-[13px] text-muted mt-4">
-        Para actualizar tus datos, contactá a la inmobiliaria.
+        Para cambios de nombre, CUIL, especialidades o documentación,
+        contactá a la inmobiliaria.
       </p>
 
       <form action={salir} className="mt-6">

@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { editarDatosTecnico } from "@/features/tecnicos/service";
 import { errorCuil } from "@/shared/utils/cuil";
 
-// Edición de datos personales de un técnico ya creado (staff mantenimiento,
-// STORY-948): corrige errores de carga como un email mal tipeado sin
-// necesidad de recrear la cuenta.
+// Edición de identidad de un técnico ya creado (staff mantenimiento,
+// STORY-948, recortada por STORY-959): nombre y CUIL. El contacto
+// (email/teléfono) lo cambia el técnico desde su propio perfil.
 export function DatosTecnico({
   tecnicoId,
   nombre,
@@ -26,17 +26,12 @@ export function DatosTecnico({
 }) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
-  const [valores, setValores] = useState({
-    nombre,
-    email,
-    telefono: telefono ?? "",
-    cuil: cuil ?? "",
-  });
+  const [valores, setValores] = useState({ nombre, cuil: cuil ?? "" });
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   function empezarEdicion() {
-    setValores({ nombre, email, telefono: telefono ?? "", cuil: cuil ?? "" });
+    setValores({ nombre, cuil: cuil ?? "" });
     setError(null);
     setEditando(true);
   }
@@ -44,8 +39,8 @@ export function DatosTecnico({
   async function guardar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    if (!valores.nombre.trim() || !valores.email.trim() || !valores.telefono.trim()) {
-      return setError("Completá nombre, email y teléfono.");
+    if (!valores.nombre.trim()) {
+      return setError("Completá el nombre.");
     }
     const errCuil = errorCuil(valores.cuil, "CUIL/CUIT");
     if (errCuil) return setError(errCuil);
@@ -94,23 +89,6 @@ export function DatosTecnico({
             onChange={(e) => setValores({ ...valores, nombre: e.target.value })}
           />
           <Input
-            label="Correo electrónico"
-            type="email"
-            required
-            value={valores.email}
-            onChange={(e) => setValores({ ...valores, email: e.target.value })}
-          />
-          <Input
-            label="Teléfono"
-            required
-            inputMode="numeric"
-            value={valores.telefono}
-            onChange={(e) =>
-              setValores({ ...valores, telefono: e.target.value.replace(/\D/g, "") })
-            }
-            placeholder="Solo números"
-          />
-          <Input
             label="CUIL"
             required
             inputMode="numeric"
@@ -132,6 +110,9 @@ export function DatosTecnico({
             Cancelar
           </Button>
         </div>
+        <p className="text-[13px] text-muted">
+          El correo y el teléfono los actualiza el técnico desde su perfil.
+        </p>
       </form>
     </Card>
   );
