@@ -331,6 +331,7 @@ export async function obtenerTecnico(
     especialidades: tes.map((te) => te.especialidades?.nombre).filter(Boolean) as string[],
     especialidad_ids: tes.map((te) => te.especialidad_id),
     esta_activo: null,
+    tieneMatricula: paths.length > 0,
     docs,
   };
 }
@@ -387,16 +388,25 @@ export async function rechazarTecnico(
 }
 
 // Editar especialidades de un técnico ya creado (staff de mantenimiento).
-// Si se agrega una que exige matrícula y el técnico no la tiene cargada,
-// se rechaza (coherente con la validación del registro).
+// Si se agrega una que exige matrícula y el técnico no tiene ninguna
+// cargada, el mismo form deja subir el archivo ahí mismo (STORY-948) — antes
+// esto bloqueaba sin salida, y el gestor no tenía forma de resolverlo.
 export async function actualizarEspecialidadesTecnico(
   tecnicoId: string,
-  especialidadIds: string[]
+  form: FormData
 ): Promise<ActionResult> {
   const permiso = await exigirStaffMantenimiento();
   if (!permiso.ok) return permiso;
+  const especialidadIds = form.getAll("especialidades").map(String);
   if (especialidadIds.length === 0) {
     return { ok: false, error: "El técnico debe tener al menos una especialidad." };
+  }
+  const nuevasMatriculas = form
+    .getAll("doc_matricula")
+    .filter((v): v is File => v instanceof File && v.size > 0);
+  for (const m of nuevasMatriculas) {
+    const errMatricula = errorArchivo(`La matrícula "${m.name}"`, m);
+    if (errMatricula) return { ok: false, error: errMatricula };
   }
 
   const admin = createAdminClient();
@@ -409,11 +419,23 @@ export async function actualizarEspecialidadesTecnico(
       .eq("requiere_matricula", true),
   ]);
   if (!tecnico) return { ok: false, error: "Técnico no encontrado." };
-  if ((exigentes?.length ?? 0) > 0 && (tecnico.doc_matricula_paths?.length ?? 0) === 0) {
+  const existentes = tecnico.doc_matricula_paths ?? [];
+  const tendraMatricula = existentes.length > 0 || nuevasMatriculas.length > 0;
+  if ((exigentes?.length ?? 0) > 0 && !tendraMatricula) {
     return {
       ok: false,
-      error: `${exigentes!.map((e) => e.nombre).join(", ")} exige matrícula y este técnico no tiene una cargada.`,
+      error: `${exigentes!.map((e) => e.nombre).join(", ")} exige matrícula: subí el archivo o sacá esa especialidad.`,
     };
+  }
+
+  if (nuevasMatriculas.length > 0) {
+    const subidas = await Promise.all(
+      nuevasMatriculas.map((m, i) =>
+        subirDoc(tecnicoId, `matricula-${existentes.length + i + 1}`, m)
+      )
+    );
+    const paths = [...existentes, ...subidas.filter((p): p is string => Boolean(p))];
+    await admin.from("tecnicos").update({ doc_matricula_paths: paths }).eq("id", tecnicoId);
   }
 
   // Reemplazo completo del set (simple e idempotente)
@@ -425,6 +447,87 @@ export async function actualizarEspecialidadesTecnico(
     }))
   );
   if (error) return { ok: false, error: "No se pudieron guardar las especialidades." };
+
+  revalidatePath(`/tecnicos/${tecnicoId}`);
+  revalidatePath("/tecnicos");
+  return { ok: true };
+}
+
+// Editar datos personales de un técnico ya creado (STORY-948): la
+// inmobiliaria corrige errores de carga (ej. email mal tipeado) sin
+// necesidad de recrear la cuenta. El email vive en auth.users — se
+// actualiza ahí primero (con rollback si después falla el guardado en
+// tecnicos, mismo criterio de compensación que altaTecnico).
+export async function editarDatosTecnico(
+  tecnicoId: string,
+  datos: { nombre: string; email: string; telefono: string; cuil: string }
+): Promise<ActionResult> {
+  const permiso = await exigirStaffMantenimiento();
+  if (!permiso.ok) return permiso;
+
+  const nombre = datos.nombre.trim();
+  const email = datos.email.trim().toLowerCase();
+  const telefono = normalizarTelefono(datos.telefono);
+  if (!nombre || !email) {
+    return { ok: false, error: "Completá nombre y email." };
+  }
+  if (!datos.cuil.trim()) {
+    return { ok: false, error: "El CUIL es obligatorio." };
+  }
+  const errCuil = errorCuil(datos.cuil);
+  if (errCuil) return { ok: false, error: errCuil };
+  const cuil = normalizarCuil(datos.cuil);
+
+  const admin = createAdminClient();
+  const dup = await duplicadoPersona(
+    admin,
+    "tecnicos",
+    { email, cuil, telefono: telefono || null },
+    tecnicoId
+  );
+  if (dup) return { ok: false, error: dup };
+
+  const { data: actual } = await admin
+    .from("tecnicos")
+    .select("email, estado")
+    .eq("id", tecnicoId)
+    .single();
+  if (!actual) return { ok: false, error: "Técnico no encontrado." };
+
+  const cambiaEmail = actual.email !== email;
+  if (cambiaEmail) {
+    const { error: errorAuth } = await admin.auth.admin.updateUserById(tecnicoId, {
+      email,
+      email_confirm: true,
+    });
+    if (errorAuth) {
+      return {
+        ok: false,
+        error: errorAuth.message.includes("already")
+          ? "Ya existe una cuenta con ese correo."
+          : "No se pudo actualizar el correo.",
+      };
+    }
+  }
+
+  const { error } = await admin
+    .from("tecnicos")
+    .update({ nombre, email, telefono: telefono || null, cuil })
+    .eq("id", tecnicoId);
+  if (error) {
+    if (cambiaEmail) {
+      await admin.auth.admin.updateUserById(tecnicoId, { email: actual.email });
+    }
+    return {
+      ok: false,
+      error: error.code === "23505" ? ERROR_DUPLICADO_DB : "No se pudo guardar.",
+    };
+  }
+
+  // Aprobado con acceso propio: usuarios.nombre/email quedan en sync.
+  if (actual.estado === "aprobado") {
+    await admin.from("usuarios").update({ nombre, email }).eq("id", tecnicoId);
+  }
 
   revalidatePath(`/tecnicos/${tecnicoId}`);
   revalidatePath("/tecnicos");

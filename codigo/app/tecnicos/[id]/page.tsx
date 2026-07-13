@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { DatosTecnico } from "@/components/tecnicos/datos-tecnico.client";
 import { EspecialidadesTecnico } from "@/components/tecnicos/especialidades-tecnico.client";
 import { Evaluacion } from "@/components/tecnicos/evaluacion.client";
 import { listarEspecialidadesActivas } from "@/features/especialidades/service";
@@ -29,21 +30,9 @@ export default async function TecnicoDetallePage({
       </Link>
 
       <div className="mt-3 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {tecnico.nombre}
-          </h1>
-          <p className="text-sm text-muted mt-1">
-            {tecnico.email}
-            {tecnico.telefono && ` · ${tecnico.telefono}`}
-            {tecnico.cuil && (
-              <>
-                {" · CUIL "}
-                <span className="font-mono text-[13px]">{tecnico.cuil}</span>
-              </>
-            )}
-          </p>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {tecnico.nombre}
+        </h1>
         <Badge
           tono={
             tecnico.estado === "pendiente"
@@ -61,11 +50,22 @@ export default async function TecnicoDetallePage({
         </Badge>
       </div>
 
+      <div className="mt-3">
+        <DatosTecnico
+          tecnicoId={id}
+          nombre={tecnico.nombre}
+          email={tecnico.email}
+          telefono={tecnico.telefono}
+          cuil={tecnico.cuil}
+        />
+      </div>
+
       <EspecialidadesTecnico
         tecnicoId={id}
         actuales={tecnico.especialidad_ids}
         nombresActuales={tecnico.especialidades}
         catalogo={catalogo}
+        tieneMatricula={tecnico.tieneMatricula}
       />
 
       <Card className="mt-6 p-5">
