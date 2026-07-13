@@ -37,7 +37,7 @@ tercera. El usuario percibe que el buscador "anda mal".
 ## Dev Agent Record
 
 - **Archivos:** `codigo/components/ui/buscador-direccion.client.tsx`.
-- **Commit:** (hash en el commit de cierre)
+- **Commit:** 63fde7e
 - **Verificación:** `tsc` + eslint verdes. E2E con Playwright: "Av. Colón 1234"
   → primera sugerencia "Avenida Colón 1234, Córdoba, Córdoba" (antes tercera,
   detrás de dos calles de Mendiolaza que no eran Colón); "San Martín 350,

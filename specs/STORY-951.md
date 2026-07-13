@@ -39,7 +39,7 @@ Sin migración, sin cambios de RPC, sin tocar la página de detalle: la ruta
 ## Dev Agent Record
 
 - **Archivos:** `codigo/features/gestiones/service.ts` (`responderAsignacion`).
-- **Commit:** (hash en el commit de cierre)
+- **Commit:** 63fde7e
 - **Verificación:** `tsc` + eslint verdes. E2E con Playwright como técnica demo
   (Andrea Roldán): la campanita mostraba "Nueva solicitud de trabajo" de la
   gestión del placard; se rechazó la asignación desde el detalle → redirect a
