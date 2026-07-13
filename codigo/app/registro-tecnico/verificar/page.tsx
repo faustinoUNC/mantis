@@ -25,9 +25,9 @@ export default async function VerificarEmailPage({
         >
           {ok ? (
             <>
-              ¡Gracias!
+              ¡Listo! Tu solicitud
               <br />
-              Ya sos parte de la fila<span className="text-brand">.</span>
+              está en evaluación<span className="text-brand">.</span>
             </>
           ) : (
             <>
@@ -39,7 +39,7 @@ export default async function VerificarEmailPage({
         </h1>
         <p className="mt-4 text-[15px] text-muted max-w-md leading-relaxed">
           {ok
-            ? "Tu correo quedó confirmado y tu solicitud ya está en evaluación. Cuando la inmobiliaria te apruebe, te va a llegar un email con el link para crear tu contraseña."
+            ? "Tu correo quedó confirmado y la inmobiliaria ya recibió tu solicitud para revisarla. Si te aprueban, te va a llegar un email con el link para crear tu contraseña y entrar al sistema."
             : "El link de verificación no es válido. Si todavía no verificaste tu correo, volvé a registrarte para recibir uno nuevo."}
         </p>
         <p className="mt-8 text-sm text-muted">
