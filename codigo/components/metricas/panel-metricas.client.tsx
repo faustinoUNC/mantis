@@ -815,7 +815,9 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       </Bloque>
 
       {/* ══ Cobertura de especialidades (STORY-954): qué se demanda y si hay
-          técnicos para cubrirlo. Demanda sigue el período; técnicos son de hoy. ══ */}
+          técnicos para cubrirlo. Demanda sigue el período; técnicos son de hoy.
+          Solo staff de mantenimiento: el administrativo no gestiona técnicos. ══ */}
+      {metricas.rol !== "gestor_administrativo" && (
       <Bloque titulo="Cobertura de especialidades" cols={1}>
         <MetricCard titulo="Presión por especialidad" ayuda="Gestiones del período por técnico aprobado en cada especialidad — cuanto más alta la presión, menos gente para la demanda. Arriba y en rojo: demanda sin ningún técnico. Los técnicos se cuentan a hoy, no cambian con el período." n={presion.lista.length} unidad="especialidades" humildad={false}>
           <ul className="space-y-3 pt-1 max-h-72 overflow-y-auto">
@@ -840,6 +842,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           </ul>
         </MetricCard>
       </Bloque>
+      )}
 
         </div>
       </div>

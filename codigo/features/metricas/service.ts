@@ -57,8 +57,9 @@ export interface Metricas {
   filas: FilaMetrica[];
   eventos: EventoMetrica[];
   especialidades: string[];
-  // STORY-954: técnicos aprobados por especialidad (capacidad actual). Sin
-  // filtrar esta_activo: el RLS de usuarios no deja leerlo al administrativo.
+  // STORY-954 v1.1: técnicos aprobados Y activos por especialidad (mismo
+  // criterio que la asignación). La card se oculta al gestor administrativo
+  // (su RLS no lee usuarios de técnicos y la gestión de técnicos no es su área).
   capacidad: { especialidad: string; tecnicos: number }[];
 }
 
@@ -71,7 +72,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
   if (!actual || actual.rol === "tecnico") return null;
 
   const supabase = await createClient();
-  const [{ data: gestiones }, { data: eventos }, { data: cobertura }] = await Promise.all([
+  const [{ data: gestiones }, { data: eventos }, { data: cobertura }, { data: usuariosTec }] = await Promise.all([
     supabase
       .from("gestiones")
       .select(
@@ -83,11 +84,12 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       .from("eventos_gestion")
       .select("gestion_id, tipo, de_etapa, a_etapa, creado_en")
       .in("tipo", ["transicion", "asignacion_rechazada"]),
-    // STORY-954: capacidad = técnicos aprobados por especialidad.
+    // STORY-954: capacidad = técnicos aprobados y activos por especialidad.
     supabase
       .from("tecnico_especialidades")
-      .select("especialidades(nombre), tecnicos!inner(estado)")
+      .select("tecnico_id, especialidades(nombre), tecnicos!inner(estado)")
       .eq("tecnicos.estado", "aprobado"),
+    supabase.from("usuarios").select("id, esta_activo").eq("rol", "tecnico"),
   ]);
 
   type G = {
@@ -153,12 +155,14 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
 
   const especialidades = [...new Set(filas.map((f) => f.especialidad))].sort();
 
-  // STORY-954: cuenta de técnicos aprobados por nombre de especialidad.
+  // STORY-954 v1.1: cuenta de técnicos aprobados y activos por especialidad.
+  const activos = new Set((usuariosTec ?? []).filter((u) => u.esta_activo).map((u) => u.id));
   const porEspecialidad = new Map<string, number>();
-  type Cob = { especialidades: { nombre: string } | null };
+  type Cob = { tecnico_id: string; especialidades: { nombre: string } | null };
   for (const c of (cobertura ?? []) as unknown as Cob[]) {
     const nombre = c.especialidades?.nombre;
-    if (nombre) porEspecialidad.set(nombre, (porEspecialidad.get(nombre) ?? 0) + 1);
+    if (nombre && activos.has(c.tecnico_id))
+      porEspecialidad.set(nombre, (porEspecialidad.get(nombre) ?? 0) + 1);
   }
   const capacidad = [...porEspecialidad.entries()].map(([especialidad, tecnicos]) => ({
     especialidad,
