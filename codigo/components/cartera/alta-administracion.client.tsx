@@ -22,12 +22,13 @@ import {
   type Modo,
 } from "./persona-campos.client";
 
-// Alta unificada (STORY-922): una Administración = propiedad + propietario
-// (obligatorios) + inquilino con legajo (opcional). Wizard de 4 pasos chicos.
-// Las piezas de persona (selector existente/nuevo, campos) viven en
-// persona-campos.client (compartidas con el detalle de la propiedad).
+// Alta unificada (STORY-922, achicada en STORY-949): una Administración =
+// propiedad + propietario. El inquilino NO se carga acá — el legajo se abre
+// después desde el detalle de la propiedad (evita altas a medias si un dato
+// del inquilino falla). Las piezas de persona (selector existente/nuevo,
+// campos) viven en persona-campos.client (compartidas con el detalle).
 
-const PASOS = ["Propietario", "Propiedad", "Ocupación", "Confirmar"];
+const PASOS = ["Propietario", "Propiedad", "Confirmar"];
 
 function Stepper({ paso, onIr }: { paso: number; onIr: (p: number) => void }) {
   return (
@@ -80,35 +81,6 @@ function Stepper({ paso, onIr }: { paso: number; onIr: (p: number) => void }) {
   );
 }
 
-function OpcionOcupacion({
-  activa,
-  titulo,
-  detalle,
-  onElegir,
-}: {
-  activa: boolean;
-  titulo: string;
-  detalle: string;
-  onElegir: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onElegir}
-      aria-pressed={activa}
-      className={cn(
-        "flex-1 min-w-56 text-left rounded-lg border p-4 transition-colors",
-        activa
-          ? "border-brand bg-brand-soft/40"
-          : "border-border hover:border-border-strong hover:bg-surface-2/60"
-      )}
-    >
-      <p className={cn("font-medium", activa && "text-brand-active")}>{titulo}</p>
-      <p className="text-sm text-muted mt-1">{detalle}</p>
-    </button>
-  );
-}
-
 function FilaResumen({
   label,
   valor,
@@ -140,13 +112,10 @@ function FilaResumen({
 
 export function AltaAdministracion({
   propietarios,
-  inquilinos,
 }: {
   propietarios: Persona[];
-  inquilinos: Persona[];
 }) {
   const router = useRouter();
-  const hoy = new Date().toISOString().slice(0, 10);
 
   const [paso, setPaso] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -163,24 +132,9 @@ export function AltaAdministracion({
   const [tipo, setTipo] = useState("");
   const [pin, setPin] = useState<DireccionElegida | null>(null);
 
-  // Paso 3 — ocupación
-  const [ocupada, setOcupada] = useState<boolean | null>(null);
-  const [inqModo, setInqModo] = useState<Modo>(inquilinos.length ? "existente" : "nuevo");
-  const [inqId, setInqId] = useState(inquilinos[0]?.id ?? "");
-  const [inqNuevo, setInqNuevo] = useState(PERSONA_VACIA);
-  const [fechaInicio, setFechaInicio] = useState(hoy);
-
   function validarPaso(p: number): string | null {
     if (p === 0) return validarPersona(propModo, propId, propNuevo, "propietario");
     if (p === 1) return direccion.trim() ? null : "Completá la dirección de la propiedad.";
-    if (p === 2) {
-      if (ocupada === null) return "Contanos si la propiedad está alquilada hoy.";
-      if (!ocupada) return null;
-      return (
-        validarPersona(inqModo, inqId, inqNuevo, "inquilino") ??
-        (fechaInicio ? null : "Indicá desde cuándo está el inquilino.")
-      );
-    }
     return null;
   }
 
@@ -201,9 +155,6 @@ export function AltaAdministracion({
     const r = await crearAdministracion({
       propietario: refPersona(propModo, propId, propNuevo),
       propiedad: { direccion: direccion.trim(), tipo: tipo.trim() },
-      inquilino: ocupada
-        ? { persona: refPersona(inqModo, inqId, inqNuevo), fecha_inicio: fechaInicio }
-        : null,
     });
     if (!r.ok) {
       setEnviando(false);
@@ -217,10 +168,6 @@ export function AltaAdministracion({
     propModo === "existente"
       ? propietarios.find((p) => p.id === propId)?.nombre ?? "—"
       : propNuevo.nombre || "—";
-  const nombreInquilino =
-    inqModo === "existente"
-      ? inquilinos.find((i) => i.id === inqId)?.nombre ?? "—"
-      : inqNuevo.nombre || "—";
 
   return (
     <div className="animate-aparecer max-w-3xl">
@@ -234,7 +181,8 @@ export function AltaAdministracion({
         <p className="text-[13px] font-medium text-muted">Administración</p>
         <h1 className="text-2xl font-semibold tracking-tight mt-0.5">Nueva administración</h1>
         <p className="text-sm text-muted mt-1">
-          La propiedad y su propietario en un solo paso — y el inquilino, si lo hay.
+          La propiedad y su propietario. Si está alquilada, el legajo del
+          inquilino se abre después, desde el detalle de la propiedad.
         </p>
       </div>
 
@@ -301,62 +249,6 @@ export function AltaAdministracion({
 
         {paso === 2 && (
           <>
-            <h2 className="font-semibold tracking-tight mb-1">¿Está alquilada hoy?</h2>
-            <p className="text-sm text-muted mb-4">
-              Una propiedad puede entrar en administración desocupada — el inquilino es opcional.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <OpcionOcupacion
-                activa={ocupada === true}
-                titulo="Sí, tiene inquilino"
-                detalle="Abrimos ahora el legajo con sus datos."
-                onElegir={() => {
-                  setOcupada(true);
-                  setError(null);
-                }}
-              />
-              <OpcionOcupacion
-                activa={ocupada === false}
-                titulo="No, está desocupada"
-                detalle="Queda libre; abrís el legajo cuando entre un inquilino."
-                onElegir={() => {
-                  setOcupada(false);
-                  setError(null);
-                }}
-              />
-            </div>
-            {ocupada && (
-              <div className="mt-5 pt-5 border-t border-border animate-aparecer flex flex-col gap-4">
-                <SelectorPersona
-                  personas={inquilinos}
-                  quien="inquilino"
-                  docLabel="CUIL"
-                  modo={inqModo}
-                  onModo={(m) => {
-                    setInqModo(m);
-                    setError(null);
-                  }}
-                  id={inqId}
-                  onId={setInqId}
-                  nueva={inqNuevo}
-                  onNueva={setInqNuevo}
-                />
-                <div className="max-w-48">
-                  <Input
-                    label="Inquilino desde"
-                    type="date"
-                    required
-                    value={fechaInicio}
-                    onChange={(e) => setFechaInicio(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {paso === 3 && (
-          <>
             <h2 className="font-semibold tracking-tight mb-1">Revisá antes de crear</h2>
             <p className="text-sm text-muted mb-4">
               Esto es lo que se va a dar de alta en la cartera.
@@ -374,17 +266,11 @@ export function AltaAdministracion({
                 detalle={tipo || undefined}
                 onCambiar={() => irA(1)}
               />
-              <FilaResumen
-                label="Ocupación"
-                valor={ocupada ? nombreInquilino : "Desocupada"}
-                detalle={
-                  ocupada
-                    ? `Legajo vigente desde el ${new Date(`${fechaInicio}T00:00:00`).toLocaleDateString("es-AR")}`
-                    : "Podés abrir el legajo desde la propiedad cuando entre un inquilino"
-                }
-                onCambiar={() => irA(2)}
-              />
             </div>
+            <p className="text-sm text-muted mt-4">
+              La propiedad entra desocupada. Si tiene inquilino, abrí su legajo
+              en el paso siguiente, desde el detalle de la propiedad.
+            </p>
           </>
         )}
 

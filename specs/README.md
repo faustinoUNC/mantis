@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-949](STORY-949.md) | Alta de administración solo propietario+propiedad (fin de las altas a medias por inquilino inválido) + desplegable de legajos solo con inquilinos sin legajo vigente | ✅ done |
 | [STORY-948](STORY-948.md) | La inmobiliaria puede editar todos los datos personales, especialidades y matrícula de un técnico ya creado | ✅ done |
 | [STORY-947](STORY-947.md) | El teléfono de propietarios e inquilinos deja de ser opcional (client + server, sin migración) | ✅ done |
 | [STORY-946](STORY-946.md) | Liquidación al técnico: el sistema calcula el monto (materiales rendidos + mano de obra presupuestada), la administración solo confirma método de pago (migración pendiente: `liq_medio`) | 🚧 en desarrollo |

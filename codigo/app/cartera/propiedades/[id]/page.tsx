@@ -6,6 +6,7 @@ import { PropietarioSeccion } from "@/components/cartera/propietario.client";
 import { BotonGoogleMaps, MapaDireccion } from "@/components/ui/mapa";
 import {
   legajosDePropiedad,
+  listarInquilinosSinLegajo,
   listarPersonas,
   obtenerPropiedad,
 } from "@/features/cartera/service";
@@ -17,10 +18,10 @@ export default async function PropiedadPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [propiedad, legajos, inquilinos, propietarios] = await Promise.all([
+  const [propiedad, legajos, inquilinosLibres, propietarios] = await Promise.all([
     obtenerPropiedad(id),
     legajosDePropiedad(id),
-    listarPersonas("inquilinos"),
+    listarInquilinosSinLegajo(),
     listarPersonas("propietarios"),
   ]);
   if (!propiedad) notFound();
@@ -62,7 +63,7 @@ export default async function PropiedadPage({
       <Legajos
         propiedadId={id}
         legajos={legajos}
-        inquilinosActivos={inquilinos.filter((i) => i.activo)}
+        inquilinosActivos={inquilinosLibres}
       />
     </div>
   );

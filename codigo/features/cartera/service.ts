@@ -171,10 +171,11 @@ export async function listarPropiedades(): Promise<Propiedad[]> {
   });
 }
 
-// ── Alta unificada "Administración" (STORY-922) ──
-// Wizard sobre las tablas existentes — SIN entidad nueva. Inserts secuenciales:
-// todo estado intermedio es válido (propietario sin propiedades, propiedad
-// desocupada), así que un fallo parcial nunca corrompe y no hace falta RPC.
+// ── Alta unificada "Administración" (STORY-922, achicada en STORY-949) ──
+// Wizard sobre las tablas existentes — SIN entidad nueva. El alta crea SOLO
+// propietario + propiedad (el legajo del inquilino se abre después, desde el
+// detalle): así el único estado intermedio posible (propietario sin
+// propiedades) es válido y no hace falta RPC.
 
 async function resolverPersona(
   tipo: TipoPersona,
@@ -216,7 +217,6 @@ async function resolverPersona(
 export async function crearAdministracion(datos: {
   propietario: RefPersona;
   propiedad: { direccion: string; tipo: string };
-  inquilino: { persona: RefPersona; fecha_inicio: string } | null;
 }): Promise<ActionResult<{ propiedadId: string }>> {
   if (!datos.propiedad.direccion) {
     return { ok: false, error: "Completá la dirección de la propiedad." };
@@ -240,27 +240,6 @@ export async function crearAdministracion(datos: {
       ok: false,
       error: "No se pudo crear la propiedad. El propietario quedó guardado en la cartera.",
     };
-  }
-
-  if (datos.inquilino) {
-    const inquilino = await resolverPersona("inquilinos", datos.inquilino.persona);
-    if ("error" in inquilino) {
-      return {
-        ok: false,
-        error: `${inquilino.error} La propiedad quedó creada como desocupada — podés abrir el legajo desde su detalle.`,
-      };
-    }
-    const { error: errorLegajo } = await supabase.from("legajos").insert({
-      propiedad_id: propiedad.id,
-      inquilino_id: inquilino.id,
-      fecha_inicio: datos.inquilino.fecha_inicio,
-    });
-    if (errorLegajo) {
-      return {
-        ok: false,
-        error: "La propiedad quedó creada, pero no se pudo abrir el legajo — abrilo desde su detalle.",
-      };
-    }
   }
 
   revalidatePath("/cartera/propiedades");
@@ -346,6 +325,18 @@ export async function legajosDePropiedad(
   }));
 }
 
+// Un inquilino con legajo vigente no puede abrir otro (STORY-949): el
+// desplegable de apertura solo ofrece a los que están libres.
+export async function listarInquilinosSinLegajo(): Promise<Persona[]> {
+  const supabase = await createClient();
+  const [inquilinos, { data: vigentes }] = await Promise.all([
+    listarPersonas("inquilinos"),
+    supabase.from("legajos").select("inquilino_id").is("fecha_fin", null),
+  ]);
+  const ocupados = new Set((vigentes ?? []).map((v) => v.inquilino_id));
+  return inquilinos.filter((i) => i.activo && !ocupados.has(i.id));
+}
+
 // El inquilino puede ser uno ya cargado o uno nuevo (STORY-941): al cambiar
 // el ocupante de una propiedad existente, el alta se hace acá mismo.
 export async function abrirLegajo(datos: {
@@ -357,6 +348,21 @@ export async function abrirLegajo(datos: {
   if ("error" in inquilino) return { ok: false, error: inquilino.error };
 
   const supabase = await createClient();
+  // Revalida en el server lo que el desplegable ya filtra: una pestaña vieja
+  // puede ofrecer un inquilino que mientras tanto abrió legajo en otro lado.
+  const { data: vigente } = await supabase
+    .from("legajos")
+    .select("id")
+    .eq("inquilino_id", inquilino.id)
+    .is("fecha_fin", null)
+    .limit(1)
+    .maybeSingle();
+  if (vigente) {
+    return {
+      ok: false,
+      error: "Ese inquilino ya tiene un legajo vigente en otra propiedad.",
+    };
+  }
   const { error } = await supabase.from("legajos").insert({
     propiedad_id: datos.propiedad_id,
     inquilino_id: inquilino.id,
