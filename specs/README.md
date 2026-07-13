@@ -37,14 +37,14 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
-| [STORY-953](STORY-953.md) | La campanita de notificaciones lleva a donde corresponde (inbox, técnico, gestión) — migración pendiente: columna `ruta` | 🚧 en desarrollo |
+| [STORY-953](STORY-953.md) | La campanita de notificaciones lleva a donde corresponde (inbox, técnico, gestión) | ✅ done |
 | [STORY-952](STORY-952.md) | Buscador de direcciones: re-rank client-side — las sugerencias que coinciden con la calle tipeada van primero (Photon rankeaba por cercanía) | ✅ done |
 | [STORY-951](STORY-951.md) | Sin 404 desde la campanita tras rechazar una asignación: al rechazar se borran las notificaciones del técnico sobre esa gestión | ✅ done |
-| [STORY-950](STORY-950.md) | Cobro con medios de pago combinados (mitad efectivo, mitad transferencia) + tarjeta de crédito como medio (migración pendiente: `medio_cobro_2`, `cobrado_monto_2`) | 🚧 en desarrollo |
+| [STORY-950](STORY-950.md) | Cobro con medios de pago combinados (mitad efectivo, mitad transferencia) + tarjeta de crédito como medio | ✅ done |
 | [STORY-949](STORY-949.md) | Alta de administración solo propietario+propiedad (fin de las altas a medias por inquilino inválido) + desplegable de legajos solo con inquilinos sin legajo vigente | ✅ done |
 | [STORY-948](STORY-948.md) | La inmobiliaria puede editar todos los datos personales, especialidades y matrícula de un técnico ya creado | ✅ done |
 | [STORY-947](STORY-947.md) | El teléfono de propietarios e inquilinos deja de ser opcional (client + server, sin migración) | ✅ done |
-| [STORY-946](STORY-946.md) | Liquidación al técnico: el sistema calcula el monto (materiales rendidos + mano de obra presupuestada), la administración solo confirma método de pago (migración pendiente: `liq_medio`) | 🚧 en desarrollo |
+| [STORY-946](STORY-946.md) | Liquidación al técnico: el sistema calcula el monto (materiales rendidos + mano de obra presupuestada), la administración solo confirma método de pago | ✅ done |
 | [STORY-945](STORY-945.md) | Registro de técnico: fin del 413 silencioso en el celular (validación client-side + compresión de imágenes + try/catch + `bodySizeLimit`) y matrículas múltiples (migración 2 fases — fase 2 post-deploy) | ✅ done |
 | [STORY-944](STORY-944.md) | CUIL, email y teléfono no pueden repetirse dentro de cada tipo de persona (técnicos, propietarios, inquilinos) — chequeo server + índice UNIQUE en DB | ✅ done |
 | [STORY-943](STORY-943.md) | Presupuestación: eliminar "Causa" y `pagador_sugerido` (migración 2 fases — fase 2 post-deploy), pagador explícito sin opción Inquilino inexistente, inspección obligatoria antes de presupuestar | ✅ done |

@@ -12,7 +12,7 @@ import {
 import { comprimirArchivosDeInput } from "@/shared/utils/imagen.client";
 
 // Los PDFs no se comprimen y el body del request tiene techo (~4.5 MB en Vercel).
-const MAX_ARCHIVO_BYTES = 4 * 1024 * 1024;
+export const MAX_ARCHIVO_BYTES = 4 * 1024 * 1024;
 
 export function CampoArchivo({
   label,

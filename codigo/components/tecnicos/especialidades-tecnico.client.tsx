@@ -5,7 +5,10 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CampoArchivo } from "@/components/tecnicos/form-tecnico.client";
+import {
+  CampoArchivo,
+  MAX_ARCHIVO_BYTES,
+} from "@/components/tecnicos/form-tecnico.client";
 import type { Especialidad } from "@/features/especialidades/types";
 import { actualizarEspecialidadesTecnico } from "@/features/tecnicos/service";
 
@@ -39,13 +42,29 @@ export function EspecialidadesTecnico({
   async function guardar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setGuardando(true);
     const form = new FormData(e.currentTarget);
-    const r = await actualizarEspecialidadesTecnico(tecnicoId, form);
-    setGuardando(false);
-    if (!r.ok) return setError(r.error);
-    setEditando(false);
-    router.refresh();
+    // Validación acá y no solo en el server: un PDF de matrícula pesado mata
+    // el request antes de que el server llegue a validar (STORY-945).
+    for (const valor of form.values()) {
+      if (valor instanceof File && valor.size > MAX_ARCHIVO_BYTES) {
+        return setError(
+          `"${valor.name}" pesa demasiado: cada archivo puede tener hasta 4 MB.`
+        );
+      }
+    }
+    setGuardando(true);
+    try {
+      const r = await actualizarEspecialidadesTecnico(tecnicoId, form);
+      if (!r.ok) return setError(r.error);
+      setEditando(false);
+      router.refresh();
+    } catch {
+      setError(
+        "No pudimos guardar los cambios. Revisá tu conexión y que los archivos no sean demasiado pesados."
+      );
+    } finally {
+      setGuardando(false);
+    }
   }
 
   if (!editando) {

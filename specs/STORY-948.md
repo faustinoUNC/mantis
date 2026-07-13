@@ -1,4 +1,4 @@
-# STORY-948 — La inmobiliaria puede editar todos los datos de un técnico (v1.0)
+# STORY-948 — La inmobiliaria puede editar todos los datos de un técnico (v1.1)
 
 **Estado:** ✅ done · **Origen:** Giuliano: *"Falta permitir que la inmobiliaria pueda editar todos los datos personales y especialidades de los técnicos (confirmando la matrícula en caso de ser necesario), ya que si el técnico comete algún error como escribir mal el mail se pondrán en contacto con la administración para que lo corrijan así que deben poder editar todo de los técnicos."*
 
@@ -34,7 +34,14 @@
 7. `gestor_administrativo` no ve ni puede ejecutar ninguna de estas acciones (gate sin cambios).
 8. `tsc`/eslint verdes.
 
+## Cambios v1.1 (2026-07-13)
+
+El submit de `EspecialidadesTecnico.guardar()` reintroducía el bug del 413 silencioso que STORY-945 eliminó del alta: el form ahora sube matrículas pero no replicaba ninguna de las dos defensas de `TecnicoForm.onSubmit`. Un PDF de 4–8 MB pasaba la validación del server (corta en 8 MB) pero moría en el techo real de Vercel (~4,5 MB) antes de llegar al server action, y como la llamada no estaba envuelta en try/catch, el botón quedaba colgado en "Guardando…" sin mensaje. Fix:
+
+- `form-tecnico.client.tsx` exporta `MAX_ARCHIVO_BYTES` (4 MB, mismo valor que usa el alta) para no duplicar el tope.
+- `especialidades-tecnico.client.tsx` valida cada archivo contra ese tope antes de enviar, y envuelve la llamada en try/catch/finally: error visible en el catch, `setGuardando(false)` garantizado en el finally.
+
 ## Dev Agent Record
 
-- **Archivos:** `codigo/features/tecnicos/service.ts` (`editarDatosTecnico` nueva, `actualizarEspecialidadesTecnico` cambia de firma, `obtenerTecnico` agrega `tieneMatricula`), `codigo/features/tecnicos/types.ts` (`TecnicoDetalle.tieneMatricula`), `codigo/components/tecnicos/form-tecnico.client.tsx` (`CampoArchivo` exportado), `codigo/components/tecnicos/especialidades-tecnico.client.tsx` (FormData + upload de matrícula), `codigo/components/tecnicos/datos-tecnico.client.tsx` (nuevo), `codigo/app/tecnicos/[id]/page.tsx` (wiring).
+- **Archivos:** `codigo/features/tecnicos/service.ts` (`editarDatosTecnico` nueva, `actualizarEspecialidadesTecnico` cambia de firma, `obtenerTecnico` agrega `tieneMatricula`), `codigo/features/tecnicos/types.ts` (`TecnicoDetalle.tieneMatricula`), `codigo/components/tecnicos/form-tecnico.client.tsx` (`CampoArchivo` exportado; v1.1: `MAX_ARCHIVO_BYTES` exportado), `codigo/components/tecnicos/especialidades-tecnico.client.tsx` (FormData + upload de matrícula; v1.1: tope de 4 MB client-side + try/catch/finally), `codigo/components/tecnicos/datos-tecnico.client.tsx` (nuevo), `codigo/app/tecnicos/[id]/page.tsx` (wiring).
 - **Verificación:** `tsc --noEmit` y `eslint` limpios. Falta probar el flujo end-to-end en la app corriendo (no se hizo en esta sesión).

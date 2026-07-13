@@ -1,6 +1,6 @@
 # STORY-946 — Liquidación al técnico: monto calculado por el sistema, la administración solo confirma el pago (v1.0)
 
-**Estado:** 🚧 en desarrollo (falta correr la migración SQL) · **Origen:** Giuliano: *"A la hora de liquidar en la cuenta administración en vez de dejar que la administración llene un cuadro con que tanto es, el sistema va a calcular cuanto es en base al presupuesto y a los gastos adicionales que el técnico puso y la administración solo va a poner si pago o no y con que método de pago"*.
+**Estado:** ✅ done (migración `liq_medio` verificada aplicada en Supabase el 2026-07-13) · **Origen:** Giuliano: *"A la hora de liquidar en la cuenta administración en vez de dejar que la administración llene un cuadro con que tanto es, el sistema va a calcular cuanto es en base al presupuesto y a los gastos adicionales que el técnico puso y la administración solo va a poner si pago o no y con que método de pago"*.
 
 ## Alcance (decisiones confirmadas con Giuliano)
 

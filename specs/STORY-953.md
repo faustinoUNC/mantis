@@ -1,6 +1,6 @@
 # STORY-953 — La campanita de notificaciones lleva a donde corresponde (v1.0)
 
-**Estado:** 🚧 en desarrollo (falta correr la migración SQL) · **Origen:** Giuliano (siguiendo un Trello): *"Al hacer click en alguno de los items de la campanita de notificaciones, estaría bueno que te lleve a donde corresponda."*
+**Estado:** ✅ done (migración `ruta` + funciones `notificar_*` verificadas aplicadas en Supabase el 2026-07-13) · **Origen:** Giuliano (siguiendo un Trello): *"Al hacer click en alguno de los items de la campanita de notificaciones, estaría bueno que te lleve a donde corresponda."*
 
 ## Alcance
 

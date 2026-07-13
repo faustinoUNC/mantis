@@ -1,6 +1,6 @@
 # STORY-950 — Cobro con medios de pago combinados (v1.1)
 
-**Estado:** 🚧 en desarrollo (falta correr la migración SQL) · **Origen:** Giuliano: *"Permitir combinación de medios de pago y agregar medio de pago de tarjeta de crédito. Hoy no hay forma de registrar un cobro parcial ni combinar medios, solo se puede marcar 'cobrado' una vez, con un medio único. Como ahora el admin no escribe cuánto es, hacé que solo si marca que va a ser un pago combinado deje escribir, pero deje escribir una y a la otra la autocomplete con lo que falta, además debe validar que no se pase escribiendo de más."*
+**Estado:** ✅ done (migración `medio_cobro_2`/`cobrado_monto_2` verificada aplicada en Supabase el 2026-07-13) · **Origen:** Giuliano: *"Permitir combinación de medios de pago y agregar medio de pago de tarjeta de crédito. Hoy no hay forma de registrar un cobro parcial ni combinar medios, solo se puede marcar 'cobrado' una vez, con un medio único. Como ahora el admin no escribe cuánto es, hacé que solo si marca que va a ser un pago combinado deje escribir, pero deje escribir una y a la otra la autocomplete con lo que falta, además debe validar que no se pase escribiendo de más."*
 
 ## Alcance
 
