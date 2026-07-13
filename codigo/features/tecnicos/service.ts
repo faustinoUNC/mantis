@@ -131,17 +131,26 @@ async function altaTecnico(
   // verificación nunca llega). Si el nuevo registro choca contra una de esas,
   // se pisa la vieja (borrar el usuario de auth cascadea tecnicos y
   // especialidades) en vez de bloquear al técnico para siempre.
+  // Una query .eq() por campo (nada de .or() armado con strings: el email
+  // viene de un form público y podría inyectar filtros de PostgREST).
   const cuilNormalizado = normalizarCuil(datos.cuil);
-  let filtroHuerfanos = `email.eq.${datos.email},cuil.eq.${cuilNormalizado}`;
-  if (datos.telefono) filtroHuerfanos += `,telefono.eq.${datos.telefono}`;
-  const { data: huerfanos } = await admin
-    .from("tecnicos")
-    .select("id")
-    .eq("estado", "pendiente")
-    .eq("email_verificado", false)
-    .or(filtroHuerfanos);
-  for (const h of huerfanos ?? []) {
-    await admin.auth.admin.deleteUser(h.id);
+  const buscarHuerfanos = (campo: string, valor: string) =>
+    admin
+      .from("tecnicos")
+      .select("id")
+      .eq("estado", "pendiente")
+      .eq("email_verificado", false)
+      .eq(campo, valor);
+  const coincidencias = await Promise.all([
+    buscarHuerfanos("email", datos.email),
+    buscarHuerfanos("cuil", cuilNormalizado),
+    ...(datos.telefono ? [buscarHuerfanos("telefono", datos.telefono)] : []),
+  ]);
+  const huerfanos = new Set(
+    coincidencias.flatMap(({ data }) => (data ?? []).map((h) => h.id as string))
+  );
+  for (const id of huerfanos) {
+    await admin.auth.admin.deleteUser(id);
   }
 
   const dup = await duplicadoPersona(admin, "tecnicos", {
