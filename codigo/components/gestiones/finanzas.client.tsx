@@ -6,16 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
-  descargarDocumento,
-  emitirNotaCobro,
   MEDIO_COBRO_LABEL,
   MEDIO_LIQUIDACION_LABEL,
   MEDIOS_COBRO,
   MEDIOS_LIQUIDACION,
-  registrarCobro,
-  registrarLiquidacion,
   type MedioCobro,
   type MedioLiquidacion,
+} from "@/features/finanzas/medios";
+import {
+  descargarDocumento,
+  emitirNotaCobro,
+  registrarCobro,
+  registrarLiquidacion,
 } from "@/features/finanzas/service";
 import type { GestionDetalle } from "@/features/gestiones/types";
 
@@ -179,7 +181,7 @@ export function FinanzasAcciones({
               <span className="font-mono">{plata(cargoAdmin)}</span>
             </div>
             <div className="flex justify-between pt-1 border-t border-border font-semibold">
-              <span>Total a facturar al {gestion.pagador ?? "pagador"}</span>
+              <span>Total a cobrar al {gestion.pagador ?? "pagador"}</span>
               <span className="font-mono">{plata(trabajo + cargoAdmin)}</span>
             </div>
           </div>

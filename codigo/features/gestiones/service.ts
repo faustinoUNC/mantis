@@ -638,7 +638,23 @@ export async function responderAsignacion(
     p_motivo: motivo ?? null,
   });
   if (error) return { ok: false, error: "No se pudo responder la asignación." };
-  if (acepta) await emailEstadoGestion(gestionId, "tecnico_asignado");
+  if (acepta) {
+    await emailEstadoGestion(gestionId, "tecnico_asignado");
+  } else {
+    // Sus notificaciones sobre esta gestión ("Nueva solicitud de trabajo")
+    // quedarían linkeando a una gestión que la RLS ya no le muestra — 404
+    // desde la campanita (STORY-951). Admin client: notificaciones no tiene
+    // policy de DELETE; el filtro por usuario_id acota el borrado a lo suyo.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { createAdminClient } = await import("@/shared/lib/supabase/admin");
+      await createAdminClient()
+        .from("notificaciones")
+        .delete()
+        .eq("usuario_id", user.id)
+        .eq("gestion_id", gestionId);
+    }
+  }
   // Al rechazar, el RPC pone tecnico_id = null y la RLS deja de mostrarle la
   // gestión al técnico: revalidar el detalle re-renderizaría un 404 debajo
   // suyo. Solo tableros; el cliente lo lleva a /tecnico.

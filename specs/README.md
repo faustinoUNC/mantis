@@ -37,6 +37,8 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-952](STORY-952.md) | Buscador de direcciones: re-rank client-side — las sugerencias que coinciden con la calle tipeada van primero (Photon rankeaba por cercanía) | ✅ done |
+| [STORY-951](STORY-951.md) | Sin 404 desde la campanita tras rechazar una asignación: al rechazar se borran las notificaciones del técnico sobre esa gestión | ✅ done |
 | [STORY-950](STORY-950.md) | Cobro con medios de pago combinados (mitad efectivo, mitad transferencia) + tarjeta de crédito como medio (migración pendiente: `medio_cobro_2`, `cobrado_monto_2`) | 🚧 en desarrollo |
 | [STORY-949](STORY-949.md) | Alta de administración solo propietario+propiedad (fin de las altas a medias por inquilino inválido) + desplegable de legajos solo con inquilinos sin legajo vigente | ✅ done |
 | [STORY-948](STORY-948.md) | La inmobiliaria puede editar todos los datos personales, especialidades y matrícula de un técnico ya creado | ✅ done |

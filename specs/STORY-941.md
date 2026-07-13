@@ -1,4 +1,4 @@
-# STORY-941 — "Cobro" en vez de "Facturación" + sección Administración con alta/edición unificada en la propiedad (v1.0)
+# STORY-941 — "Cobro" en vez de "Facturación" + sección Administración con alta/edición unificada en la propiedad (v1.1)
 
 **Estado:** ✅ done (commit `bb70bd6`) · **Origen:** Fausti (2026-07-12), cards 1 y 2 del tablero. Decisiones: (1) la etapa se llama **Cobro** — no emitimos facturas; (2) el menú "Cartera" pasa a **"Administración"** y la pantalla principal se titula **"Administraciones"**; (3) se eliminan los ABMs sueltos de propietarios/inquilinos — **el único camino de alta es la propiedad** (el wizard de STORY-922 ya lo contempla); la edición de datos y los casos "cambia el inquilino / cambia el propietario" de una propiedad existente se resuelven desde el detalle de la propiedad.
 
@@ -58,3 +58,12 @@ Nomenclatura correcta (Cobro, Administración) y un solo modelo mental para pers
   - `features/cartera/types.ts` — `Legajo.inquilino`.
   - ELIMINADOS: `app/cartera/propietarios/`, `app/cartera/inquilinos/`, `components/cartera/personas.client.tsx`, `components/cartera/tabs.client.tsx`; layout sin tabs.
 - **Verificación:** `tsc` + eslint + `next build` verdes. E2E con Playwright: menú "Administración" y título "Administraciones" OK; detalle de propiedad con sección Propietario (editar/cambiar) OK; alta de inquilino NUEVO + apertura de legajo + cierre OK (datos de prueba borrados); wizard `/cartera/nueva` sano tras el refactor; guard de roles intacto. Sin migraciones.
+
+## v1.1 (2026-07-12) — "Total a facturar" → "Total a cobrar" (card #58 reabierta)
+
+Ramiro encontró que en el cuadro de Acción de la etapa Cobro quedaba "Total a
+facturar al {pagador}" (components/gestiones/finanzas.client.tsx). Se renombra a
+"Total a cobrar al {pagador}". Barrido completo de "factur" en el código: los
+únicos restos son legítimos — el enum interno `facturacion_cobro` de la DB (no
+visible), la foto de la factura de los gastos imprevistos y la referencia de
+factura del técnico en la liquidación (facturas reales, no la etapa).

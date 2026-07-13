@@ -1,4 +1,4 @@
-# STORY-950 — Cobro con medios de pago combinados (v1.0)
+# STORY-950 — Cobro con medios de pago combinados (v1.1)
 
 **Estado:** 🚧 en desarrollo (falta correr la migración SQL) · **Origen:** Giuliano: *"Permitir combinación de medios de pago y agregar medio de pago de tarjeta de crédito. Hoy no hay forma de registrar un cobro parcial ni combinar medios, solo se puede marcar 'cobrado' una vez, con un medio único. Como ahora el admin no escribe cuánto es, hacé que solo si marca que va a ser un pago combinado deje escribir, pero deje escribir una y a la otra la autocomplete con lo que falta, además debe validar que no se pase escribiendo de más."*
 
@@ -44,3 +44,13 @@ Sin backfill: cobros ya registrados antes de este cambio quedan con ambas column
 - **Migración:** ver bloque SQL arriba — pendiente de que Giuliano la corra en el SQL Editor de Supabase (no hay MCP vivo en esta sesión).
 - **Verificación:** `tsc --noEmit` y `eslint` limpios. Falta probar el flujo end-to-end en la app corriendo (no se hizo en esta sesión).
 - **Nota de reconciliación:** esta historia se numeró originalmente STORY-949, pero Faustino pusheó su propio STORY-949 (alta de administración sin inquilino) mientras esta estaba en desarrollo. Se renumeró a STORY-950 tras confirmar que no había overlap de archivos (`git pull --ff-only` limpio).
+
+## v1.1 (2026-07-12) — hotfix: las constantes de medios salen de service.ts
+
+`features/finanzas/service.ts` es un archivo `"use server"` y Next prohíbe que
+exporte algo que no sea una función async: los exports `MEDIOS_COBRO`,
+`MEDIO_COBRO_LABEL`, `MEDIOS_LIQUIDACION` y `MEDIO_LIQUIDACION_LABEL` rompían el
+detalle de gestión con 500 ("A \"use server\" file can only export async
+functions, found object"). Se movieron a `features/finanzas/medios.ts` (sin
+"use server"); service.ts y finanzas.client.tsx importan de ahí. Sin cambios de
+comportamiento.

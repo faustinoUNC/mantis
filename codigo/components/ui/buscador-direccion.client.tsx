@@ -37,6 +37,22 @@ function alturaDe(texto: string): string | null {
   return numeros ? numeros[numeros.length - 1] : null;
 }
 
+// Photon rankea por cercanía y puede poner primero calles que no se parecen a
+// lo tipeado (STORY-952): para comparar, se normaliza sin tildes, números ni
+// prefijos de vía. La ñ pierde la virgulilla (queda "n") en ambos lados, así
+// que la comparación sigue siendo consistente.
+function normalizarCalle(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(av|avda|avenida|calle|bv|blvd|boulevard|pje|pasaje|ruta)\b\.?/g, " ")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\d+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function aSugerencia(
   p: PropsPhoton,
   coordenadas: [number, number],
@@ -94,7 +110,7 @@ export function BuscadorDireccion({
     const t = setTimeout(async () => {
       try {
         const r = await fetch(
-          `${URL_PHOTON}?q=${encodeURIComponent(texto)}&limit=5&lat=-31.42&lon=-64.18`,
+          `${URL_PHOTON}?q=${encodeURIComponent(texto)}&limit=10&lat=-31.42&lon=-64.18`,
           { signal: ctl.signal }
         );
         type Feature = { properties: PropsPhoton; geometry: { coordinates: [number, number] } };
@@ -107,8 +123,16 @@ export function BuscadorDireccion({
             (s, i, arr): s is DireccionElegida =>
               s !== null && arr.findIndex((x) => x?.etiqueta === s.etiqueta) === i
           );
-        setSugerencias(lista);
-        setAbierta(lista.length > 0);
+        // Las sugerencias cuya calle coincide con lo tipeado van primero; el
+        // empate conserva el orden de Photon (cercanía). Sort estable.
+        const calle = normalizarCalle(texto.split(",")[0]);
+        const coincide = (s: DireccionElegida) =>
+          calle !== "" && normalizarCalle(s.etiqueta.split(",")[0]).includes(calle);
+        const ordenada = lista
+          .sort((a, b) => Number(coincide(b)) - Number(coincide(a)))
+          .slice(0, 5);
+        setSugerencias(ordenada);
+        setAbierta(ordenada.length > 0);
       } catch {
         // Sin red o request abortado: el campo queda como texto libre.
       }
