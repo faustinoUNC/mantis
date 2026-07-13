@@ -46,6 +46,10 @@
 9. Re-registro con datos de una solicitud pendiente sin verificar la reemplaza; contra una verificada sigue rechazando por duplicado.
 10. Todos los emails quedan logueados en `emails_enviados`; `tsc` y `eslint` verdes.
 
+## Cambios v1.1 (2026-07-13)
+
+La limpieza de solicitudes huérfanas armaba un `.or()` de PostgREST interpolando el email crudo del form público — un email con metacaracteres (`,`, paréntesis) podía inyectar filtros y borrar solicitudes pendientes ajenas (hallazgo del review de seguridad del commit). Ahora son queries `.eq()` separadas por campo (email/cuil/teléfono) unidas por id en JS. Commit f1c7318; reintento re-verificado E2E.
+
 ## Dev Agent Record
 
 - **Migración:** `story_955_verificacion_email` aplicada (columnas `email_verificado` + `token_verificacion` en `tecnicos`, backfill de existentes a `true`, trigger `trg_notificar_solicitud_tecnico` pasa de AFTER INSERT a AFTER UPDATE OF `email_verificado`).
