@@ -20,7 +20,7 @@ Evolución del MANTIS original (`/Users/fausti/Downloads/projects/tesis/sist_ges
 - BMAD instalado en `_bmad/` (skills `bmad-*` en `.claude/skills/`). Output en `_bmad-output/`.
 - Docs base: `specs/PRD.md` y `specs/ARQUITECTURA.md`. Índice: `specs/README.md`.
 - **Pendientes del proyecto: `tasks/PENDIENTES.md`** (única fuente de verdad — mantenerla al día: completados a "Hechos", descartados quedan documentados para no re-proponerlos).
-- **Numeración de stories — Giuliano trabaja en paralelo y los números CHOCAN** (pasó dos veces el 2026-07-12: 938/939/940 → 941/942/943 y 944 → 945). Regla: `git fetch` + revisar `specs/` de `origin/main` **antes de crear una STORY** (tomar el siguiente número libre EN ORIGIN, no local) y **de nuevo antes de pushear** (pull --rebase primero; si mientras tanto tomaron el número, renumerar la nuestra: archivo, índice, PENDIENTES y comentarios en código, y recién ahí push).
+- **Numeración de stories — Giuliano trabaja en paralelo y los números CHOCAN** (pasó TRES veces el 2026-07-12: 938/939/940 → 941/942/943, 944 → 945 y 948 → 949). Regla: `git fetch` + revisar `specs/` de `origin/main` **antes de crear una STORY** (tomar el siguiente número libre EN ORIGIN, no local) y **de nuevo antes de pushear** (pull --rebase primero; si mientras tanto tomaron el número, renumerar la nuestra: archivo, índice, PENDIENTES y comentarios en código, y recién ahí push). La regla vale para TODO push: fetch + pull --rebase siempre antes de pushear, aunque el cambio no cree stories.
 
 ### 2. Dominio — decisiones innegociables
 - Se dice **"gestión de mantenimiento"**, nunca "incidente".
