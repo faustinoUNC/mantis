@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -179,6 +180,9 @@ export function Tecnicos({
       </Card>
 
       <Paginador {...paginadorProps} />
+      {/* La lista aparece/cambia con eventos de otros (solicitud verificada,
+          aprobación de otro gestor) — refresco en vivo (STORY-957). */}
+      <RefrescoVivo tabla="tecnicos" />
     </div>
   );
 }
