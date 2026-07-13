@@ -19,23 +19,30 @@ const NOMBRE_TABLA: Record<TablaPersona, string> = {
 // entre sí) — NO cruzada entre tablas. Chequeo previo al insert/update para
 // dar un mensaje en español antes de pegar contra el índice UNIQUE de la
 // migración correspondiente (que es la garantía real ante altas concurrentes).
+// Se chequean LOS TRES campos y el mensaje nombra todos los repetidos, para
+// que el usuario corrija todo de una y no descubra el siguiente al reintentar.
 export async function duplicadoPersona(
   supabase: SupabaseClient,
   tabla: TablaPersona,
   datos: { email?: string | null; cuil?: string | null; telefono?: string | null },
   excluirId?: string
 ): Promise<string | null> {
-  for (const campo of ["email", "cuil", "telefono"] as const) {
-    const valor = datos[campo];
-    if (!valor) continue;
-    let query = supabase.from(tabla).select("id").eq(campo, valor).limit(1);
-    if (excluirId) query = query.neq("id", excluirId);
-    const { data } = await query;
-    if (data && data.length > 0) {
-      return `Ya hay un ${NOMBRE_TABLA[tabla]} registrado con ese ${ETIQUETA[campo]}.`;
-    }
-  }
-  return null;
+  const campos = (["email", "cuil", "telefono"] as const).filter((c) => datos[c]);
+  const resultados = await Promise.all(
+    campos.map((campo) => {
+      let query = supabase.from(tabla).select("id").eq(campo, datos[campo]!).limit(1);
+      if (excluirId) query = query.neq("id", excluirId);
+      return query;
+    })
+  );
+  const repetidos = campos.filter((_, i) => (resultados[i].data?.length ?? 0) > 0);
+  if (repetidos.length === 0) return null;
+  const lista = repetidos.map((c) => `ese ${ETIQUETA[c]}`);
+  const detalle =
+    lista.length > 1
+      ? `${lista.slice(0, -1).join(", ")} y ${lista[lista.length - 1]}`
+      : lista[0];
+  return `Ya hay un ${NOMBRE_TABLA[tabla]} registrado con ${detalle}.`;
 }
 
 // Mensaje de fallback si un alta concurrente coló un duplicado entre el

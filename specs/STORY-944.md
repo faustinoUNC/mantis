@@ -1,4 +1,4 @@
-# STORY-944 — CUIL, email y teléfono no pueden repetirse dentro de cada tipo de persona (v1.0)
+# STORY-944 — CUIL, email y teléfono no pueden repetirse dentro de cada tipo de persona (v1.1)
 
 **Estado:** ✅ done · **Origen:** Giuliano: *"En este momento los datos de todos los usuarios se pueden repetir, CUIL MAIL Y NUMERO DE TELEFONO, no se debe poder repetir nunca, en todas las instancias donde se da de alta algo (en el inicio a un técnico, dentro de la cuenta de administración a clientes y en todas las demás) debe validarse que estos datos no existan ya en la base de datos antes de ser creada"*.
 
@@ -62,3 +62,14 @@ create unique index if not exists inquilinos_telefono_key on inquilinos (telefon
 - **Migración:** ver bloque SQL arriba — ejecutada por Giuliano en el SQL Editor de Supabase (no hay MCP vivo en esta sesión). Los 9 índices `UNIQUE` están creados; la garantía de concurrencia ya está activa.
 - **Verificación:** `tsc --noEmit` y `eslint` limpios sobre los 3 archivos.
 - **Nota de reconciliación:** este trabajo se hizo en paralelo a STORY-941/942/943 (Faustino) que tocó el mismo archivo `cartera/service.ts` (unificación de alta/edición de personas desde la propiedad). Se reconcilió por `git stash` + `git pull --ff-only` + resolución manual del conflicto en `guardarPersona`; `resolverPersona` fusionó sin conflicto y el chequeo de duplicados quedó cubriendo también los nuevos callers de STORY-941 (`cambiarPropietario`, `abrirLegajo`).
+
+## v1.1 (2026-07-12) — el mensaje nombra TODOS los campos repetidos
+
+Hallazgo de la verificación de STORY-949: `duplicadoPersona` cortaba en el
+primer campo repetido (orden email → CUIL → teléfono), así que con email y
+CUIL duplicados a la vez solo se informaba el email y el usuario descubría el
+CUIL recién al reintentar. Ahora chequea los tres campos (en paralelo) y el
+mensaje los junta: "Ya hay un propietario registrado con ese email y ese
+CUIL/CUIT." Aplica a todos los callers (cartera y técnicos) sin cambios en
+ellos. Criterio de aceptación nuevo: con dos o más datos repetidos, el mensaje
+nombra todos de una.
