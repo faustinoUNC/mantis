@@ -44,8 +44,8 @@ export function DatosTecnico({
   async function guardar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    if (!valores.nombre.trim() || !valores.email.trim()) {
-      return setError("Completá nombre y email.");
+    if (!valores.nombre.trim() || !valores.email.trim() || !valores.telefono.trim()) {
+      return setError("Completá nombre, email y teléfono.");
     }
     const errCuil = errorCuil(valores.cuil, "CUIL/CUIT");
     if (errCuil) return setError(errCuil);
@@ -102,12 +102,13 @@ export function DatosTecnico({
           />
           <Input
             label="Teléfono"
+            required
             inputMode="numeric"
             value={valores.telefono}
             onChange={(e) =>
               setValores({ ...valores, telefono: e.target.value.replace(/\D/g, "") })
             }
-            placeholder="Opcional, solo números"
+            placeholder="Solo números"
           />
           <Input
             label="CUIL"

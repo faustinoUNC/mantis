@@ -96,8 +96,10 @@ async function altaTecnico(
   estado: EstadoTecnico
 ): Promise<ActionResult> {
   const datos = extraerDatos(form);
-  if (!datos.nombre || !datos.email) {
-    return { ok: false, error: "Completá nombre y email." };
+  // Teléfono obligatorio (STORY-947 v1.1): se valida el normalizado (solo
+  // dígitos), así "abc" o espacios no lo bypasean.
+  if (!datos.nombre || !datos.email || !datos.telefono) {
+    return { ok: false, error: "Completá nombre, email y teléfono." };
   }
   if (datos.especialidadIds.length === 0) {
     return { ok: false, error: "Elegí al menos una especialidad." };
@@ -556,8 +558,8 @@ export async function editarDatosTecnico(
   const nombre = datos.nombre.trim();
   const email = datos.email.trim().toLowerCase();
   const telefono = normalizarTelefono(datos.telefono);
-  if (!nombre || !email) {
-    return { ok: false, error: "Completá nombre y email." };
+  if (!nombre || !email || !telefono) {
+    return { ok: false, error: "Completá nombre, email y teléfono." };
   }
   if (!datos.cuil.trim()) {
     return { ok: false, error: "El CUIL es obligatorio." };

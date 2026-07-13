@@ -1,4 +1,4 @@
-# STORY-947 — El teléfono de propietarios e inquilinos deja de ser opcional (v1.0)
+# STORY-947 — El teléfono de propietarios e inquilinos deja de ser opcional (v1.1)
 
 **Estado:** ✅ done · **Origen:** Giuliano: *"Cargar el teléfono para los clientes no debe ser opcional, arregla eso"*.
 
@@ -31,7 +31,15 @@
 6. El teléfono de técnicos sigue siendo opcional (fuera de alcance).
 7. `tsc`/eslint verdes.
 
+## Cambios v1.1 (2026-07-13)
+
+Pedido de Fausti: el teléfono también es obligatorio **para técnicos** (revierte la exclusión del alcance v1.0). Mismo criterio que v1.0 — client + server sobre el teléfono normalizado, sin migración (técnicos ya cargados sin teléfono no se ven afectados hasta que se editen):
+
+- `components/tecnicos/form-tecnico.client.tsx`: Input de teléfono con `required`, placeholder "Solo números" (alta pública y manual).
+- `components/tecnicos/datos-tecnico.client.tsx` (edición, STORY-948): ídem + validación client con mensaje "Completá nombre, email y teléfono."
+- `features/tecnicos/service.ts`: `altaTecnico` y `editarDatosTecnico` rechazan teléfono vacío tras normalizar.
+
 ## Dev Agent Record
 
-- **Archivos:** `codigo/components/cartera/persona-campos.client.tsx` (`CamposPersona`, `validarPersona`), `codigo/features/cartera/service.ts` (`guardarPersona`, `resolverPersona`).
-- **Verificación:** `tsc --noEmit` y `eslint` limpios.
+- **Archivos:** `codigo/components/cartera/persona-campos.client.tsx` (`CamposPersona`, `validarPersona`), `codigo/features/cartera/service.ts` (`guardarPersona`, `resolverPersona`). v1.1: `codigo/components/tecnicos/form-tecnico.client.tsx`, `codigo/components/tecnicos/datos-tecnico.client.tsx`, `codigo/features/tecnicos/service.ts`.
+- **Verificación:** `tsc --noEmit` y `eslint` limpios (v1.0 y v1.1).

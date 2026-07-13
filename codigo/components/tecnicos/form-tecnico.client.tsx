@@ -96,7 +96,7 @@ export function TecnicoForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Nombre" name="nombre" required placeholder="Nombre y apellido" />
         <Input label="Correo electrónico" name="email" type="email" required placeholder="tu@correo.com" />
-        <Input label="Teléfono" name="telefono" inputMode="numeric" placeholder="Opcional, solo números" onChange={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ""); }} />
+        <Input label="Teléfono" name="telefono" required inputMode="numeric" placeholder="Solo números" onChange={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ""); }} />
         <Input label="CUIL" name="cuil" required inputMode="numeric" placeholder="Sin guiones, ej. 20301234563" />
       </div>
 
