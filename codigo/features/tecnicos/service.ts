@@ -249,10 +249,14 @@ async function altaTecnico(
       subirDoc(reabrir.id, "dni", docDniArchivo),
       ...matriculas.map((m, i) => subirDoc(reabrir.id, `matricula-${i + 1}`, m)),
     ]);
-    // Se conserva el token si existe: los links de los emails anteriores
-    // del mismo técnico siguen vivos (Gmail agrupa los reintentos en un
-    // hilo y abrir un mail viejo no puede ser un callejón sin salida).
-    const tokenReintento = reabrir.token ?? crypto.randomUUID();
+    // Mismo email → se conserva el token: los links de los emails
+    // anteriores del hilo siguen vivos (abrir un mail viejo no puede ser
+    // un callejón sin salida). Email DISTINTO → token fresco: verificar
+    // la casilla nueva solo puede hacerse desde la casilla nueva (los
+    // links que fueron a la anterior dejan de valer).
+    const mismoEmail = reabrir.email === datos.email;
+    const tokenReintento =
+      mismoEmail && reabrir.token ? reabrir.token : crypto.randomUUID();
     const { error: errorReabrir } = await admin
       .from("tecnicos")
       .update({
