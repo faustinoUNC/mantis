@@ -27,6 +27,10 @@
 3. El staff ya no puede editar email/teléfono de un técnico (ni por UI ni llamando la action con esos campos); nombre y CUIL siguen editables.
 4. `tsc`/eslint verdes.
 
+## Cambios v1.1 (2026-07-13)
+
+Elegir como contraseña nueva la misma que ya se tenía caía en el mensaje genérico ("No se pudo guardar…"): verificado empíricamente que GoTrue la rechaza con código `same_password` (422). Ahora: (1) el form del perfil chequea `nueva === actual` antes de llamar ("La contraseña nueva no puede ser igual a la actual.") y mapea `same_password` como refuerzo; (2) `/crear-contrasena` (recovery, no conoce la actual) mapea `same_password` a "Esa ya es tu contraseña actual — elegí una distinta, o entrá directamente con ella."
+
 ## Dev Agent Record
 
 - **Archivos:** `codigo/features/tecnicos/service.ts` (`actualizarMiContacto` nueva, `editarDatosTecnico` recortada), `codigo/components/tecnicos/perfil-tecnico.client.tsx` (nuevo), `codigo/components/tecnicos/datos-tecnico.client.tsx` (solo nombre + CUIL), `codigo/app/tecnico/perfil/page.tsx`. Sin migración.

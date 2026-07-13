@@ -64,7 +64,13 @@ export function CrearContrasenaForm({ tokenHash }: { tokenHash: string | null })
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
-      setError("No se pudo guardar la contraseña. Probá de nuevo.");
+      // "same_password": vino por recovery y eligió la contraseña que ya
+      // tenía — GoTrue la rechaza y el mensaje genérico confundía.
+      setError(
+        error.code === "same_password"
+          ? "Esa ya es tu contraseña actual — elegí una distinta, o entrá directamente con ella."
+          : "No se pudo guardar la contraseña. Probá de nuevo."
+      );
       setEnviando(false);
       return;
     }

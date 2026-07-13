@@ -128,6 +128,9 @@ export function CambiarContrasena() {
     if (nueva.length < 8) {
       return setError("La contraseña nueva debe tener al menos 8 caracteres.");
     }
+    if (nueva === actual) {
+      return setError("La contraseña nueva no puede ser igual a la actual.");
+    }
     setGuardando(true);
     const supabase = createClient();
     const {
@@ -150,7 +153,12 @@ export function CambiarContrasena() {
     });
     setGuardando(false);
     if (errorNueva) {
-      return setError("No se pudo guardar la contraseña. Probá de nuevo.");
+      // Refuerzo del chequeo previo (GoTrue también lo valida server-side).
+      return setError(
+        errorNueva.code === "same_password"
+          ? "La contraseña nueva no puede ser igual a la actual."
+          : "No se pudo guardar la contraseña. Probá de nuevo."
+      );
     }
     setExito(true);
     setAbierto(false);
