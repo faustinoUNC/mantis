@@ -57,6 +57,9 @@ export interface Metricas {
   filas: FilaMetrica[];
   eventos: EventoMetrica[];
   especialidades: string[];
+  // STORY-954: técnicos aprobados por especialidad (capacidad actual). Sin
+  // filtrar esta_activo: el RLS de usuarios no deja leerlo al administrativo.
+  capacidad: { especialidad: string; tecnicos: number }[];
 }
 
 const TERMINALES = new Set(["finalizado", "cancelada"]);
@@ -68,7 +71,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
   if (!actual || actual.rol === "tecnico") return null;
 
   const supabase = await createClient();
-  const [{ data: gestiones }, { data: eventos }] = await Promise.all([
+  const [{ data: gestiones }, { data: eventos }, { data: cobertura }] = await Promise.all([
     supabase
       .from("gestiones")
       .select(
@@ -80,6 +83,11 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       .from("eventos_gestion")
       .select("gestion_id, tipo, de_etapa, a_etapa, creado_en")
       .in("tipo", ["transicion", "asignacion_rechazada"]),
+    // STORY-954: capacidad = técnicos aprobados por especialidad.
+    supabase
+      .from("tecnico_especialidades")
+      .select("especialidades(nombre), tecnicos!inner(estado)")
+      .eq("tecnicos.estado", "aprobado"),
   ]);
 
   type G = {
@@ -145,6 +153,18 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
 
   const especialidades = [...new Set(filas.map((f) => f.especialidad))].sort();
 
+  // STORY-954: cuenta de técnicos aprobados por nombre de especialidad.
+  const porEspecialidad = new Map<string, number>();
+  type Cob = { especialidades: { nombre: string } | null };
+  for (const c of (cobertura ?? []) as unknown as Cob[]) {
+    const nombre = c.especialidades?.nombre;
+    if (nombre) porEspecialidad.set(nombre, (porEspecialidad.get(nombre) ?? 0) + 1);
+  }
+  const capacidad = [...porEspecialidad.entries()].map(([especialidad, tecnicos]) => ({
+    especialidad,
+    tecnicos,
+  }));
+
   // ── Tiles accionables (en vivo, no histórico) ──
   const activas = filas.filter((f) => !TERMINALES.has(f.etapa)).length;
   // Urgente + todavía sin arrancar (Ingresado o Asignación): el trabajo urgente
@@ -175,5 +195,6 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       creadoEn: e.creado_en,
     })),
     especialidades,
+    capacidad,
   };
 }

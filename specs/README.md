@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-954](STORY-954.md) | Presión por especialidad en Informes: demanda de gestiones del período vs. técnicos aprobados (ranking de presión, card #73 de Trello) | ✅ done |
 | [STORY-953](STORY-953.md) | La campanita de notificaciones lleva a donde corresponde (inbox, técnico, gestión) | ✅ done |
 | [STORY-952](STORY-952.md) | Buscador de direcciones: re-rank client-side — las sugerencias que coinciden con la calle tipeada van primero (Photon rankeaba por cercanía) | ✅ done |
 | [STORY-951](STORY-951.md) | Sin 404 desde la campanita tras rechazar una asignación: al rechazar se borran las notificaciones del técnico sobre esa gestión | ✅ done |

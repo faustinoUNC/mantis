@@ -604,6 +604,23 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     return { cobrarTrabajo, cobrarFee, cobrarTotal: cobrarTrabajo + cobrarFee, liquidar, nCobrar, nLiquidar };
   }, [filasEsp]);
 
+  // ── Período: Presión por especialidad — demanda vs. capacidad (STORY-954) ──
+  // presión = gestiones del período / técnicos aprobados de la especialidad.
+  // Las que tienen demanda y ningún técnico van primeras (estado, no magnitud).
+  const presion = useMemo(() => {
+    const demanda = new Map<string, number>();
+    for (const f of filas) demanda.set(f.especialidad, (demanda.get(f.especialidad) ?? 0) + 1);
+    const tecnicos = new Map(metricas.capacidad.map((c) => [c.especialidad, c.tecnicos]));
+    const todas = [...demanda.entries()].map(([esp, gest]) => {
+      const tec = tecnicos.get(esp) ?? 0;
+      return { esp, gest, tec, ratio: tec > 0 ? gest / tec : null };
+    });
+    const sinTecnicos = todas.filter((r) => r.ratio === null).sort((a, b) => b.gest - a.gest);
+    const conTecnicos = todas.filter((r) => r.ratio !== null).sort((a, b) => b.ratio! - a.ratio!);
+    const maxRatio = Math.max(1, ...conTecnicos.map((r) => r.ratio!));
+    return { lista: [...sinTecnicos, ...conTecnicos], maxRatio };
+  }, [filas, metricas.capacidad]);
+
   // ── Flujo: Rechazos desglosados (3 tipos, nunca mezclados) ──
   const rechazos = useMemo(() => {
     const conRechazoAsig = new Set<string>();
@@ -795,6 +812,33 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           )}
         </MetricCard>
 
+      </Bloque>
+
+      {/* ══ Cobertura de especialidades (STORY-954): qué se demanda y si hay
+          técnicos para cubrirlo. Demanda sigue el período; técnicos son de hoy. ══ */}
+      <Bloque titulo="Cobertura de especialidades" cols={1}>
+        <MetricCard titulo="Presión por especialidad" ayuda="Gestiones del período por técnico aprobado en cada especialidad — cuanto más alta la presión, menos gente para la demanda. Arriba y en rojo: demanda sin ningún técnico. Los técnicos se cuentan a hoy, no cambian con el período." n={presion.lista.length} unidad="especialidades" humildad={false}>
+          <ul className="space-y-3 pt-1 max-h-72 overflow-y-auto">
+            {presion.lista.map((r) => (
+              <li key={r.esp} className="flex items-center gap-3">
+                <span className="text-sm w-40 truncate">{r.esp}</span>
+                <div className="flex-1 h-2.5 rounded-full bg-surface-2 overflow-hidden">
+                  {r.ratio !== null && (
+                    <div className="h-full rounded-full" style={{ width: `${(r.ratio / presion.maxRatio) * 100}%`, background: rampaMagnitud(r.ratio / presion.maxRatio) }} />
+                  )}
+                </div>
+                <span className="text-sm font-medium tabular-nums w-52 text-right whitespace-nowrap">
+                  {r.ratio === null ? (
+                    <span className="text-error text-[13px] font-semibold">⚠ Sin técnicos</span>
+                  ) : (
+                    <>{r.ratio.toFixed(1).replace(".", ",")} <span className="text-muted font-normal text-[12px]">gest./téc.</span></>
+                  )}
+                  <span className="text-muted font-normal text-[12px]"> · {r.gest} gest. · {r.tec} téc.</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </MetricCard>
       </Bloque>
 
         </div>
