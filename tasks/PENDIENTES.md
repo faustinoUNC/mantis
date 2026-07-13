@@ -1,10 +1,11 @@
 # Pendientes — MANTIS 2
 
 > Única fuente de verdad de los pendientes del proyecto. Al completar uno,
-> moverlo a "Hechos" con la fecha. Última actualización: 2026-07-12.
+> moverlo a "Hechos" con la fecha. Última actualización: 2026-07-13.
 
 ## Ahora (esta semana)
 
+- [ ] **UX menor en pago combinado (STORY-950)** — Al tildar "Pago combinado" con el monto del medio 2 vacío/cero, el botón queda habilitado pero el submit corta en silencio (`finanzas.client.tsx`: `monto2Num <= 0` no está en el `disabled` ni tiene mensaje). Agregar la condición al `disabled` + mensaje "Ingresá el monto del segundo medio." (hallazgo de la revisión del 2026-07-13; patch v1.2 de la spec).
 - [ ] **Activar leaked password protection** — Dashboard de Supabase → Authentication → Sign In / Providers → toggle "Leaked password protection". 2 minutos.
 - [ ] **Prueba manual del flujo de presupuesto** — En la app deployada, como gestor: elegir pagador → vista previa → enviar presupuesto → aprobar. Confirmar que el email va al pagador elegido y que el total de la nota coincide con lo aprobado (fixes de STORY-906). 5 minutos.
 
