@@ -213,8 +213,13 @@ export function FinanzasAcciones({
     const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
     const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
     const rendido = gestion.materiales_total;
+    // STORY-961: los gastos imprevistos se suman aparte (el técnico rinde solo
+    // materiales), y se reembolsan al técnico junto con materiales + mano de obra.
+    const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
     const liqTotal =
-      rendido != null ? rendido + manoObra : Number(gestion.costo_final ?? 0);
+      rendido != null
+        ? rendido + totalGastos + manoObra
+        : Number(gestion.costo_final ?? 0);
     return (
       <div className="flex flex-col gap-4">
         <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
@@ -223,6 +228,10 @@ export function FinanzasAcciones({
               <div className="flex justify-between">
                 <span className="text-muted">Materiales rendidos</span>
                 <span className="font-mono">{plata(rendido)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">Gastos imprevistos</span>
+                <span className="font-mono">{plata(totalGastos)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Mano de obra (presupuesto aprobado)</span>

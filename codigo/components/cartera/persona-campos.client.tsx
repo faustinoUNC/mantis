@@ -30,7 +30,7 @@ export function validarPersona(
   if (!nueva.nombre.trim() || !nueva.email.trim() || !nueva.telefono.trim()) {
     return `Completá nombre, email y teléfono del ${quien}.`;
   }
-  const errCuil = nueva.cuil.trim() ? errorCuil(nueva.cuil, "CUIL/CUIT") : null;
+  const errCuil = errorCuil(nueva.cuil, "CUIL/CUIT");
   if (errCuil) {
     return errCuil;
   }
@@ -85,7 +85,7 @@ export function CamposPersona({
       <Input label="Nombre" required value={valores.nombre} onChange={(e) => onCambio({ ...valores, nombre: e.target.value })} placeholder="Nombre y apellido" />
       <Input label="Correo electrónico" type="email" required value={valores.email} onChange={(e) => onCambio({ ...valores, email: e.target.value })} placeholder="correo@ejemplo.com" />
       <Input label="Teléfono" required inputMode="numeric" value={valores.telefono} onChange={(e) => onCambio({ ...valores, telefono: e.target.value.replace(/\D/g, "") })} placeholder="Solo números" />
-      <Input label={docLabel} inputMode="numeric" value={valores.cuil} onChange={(e) => onCambio({ ...valores, cuil: e.target.value })} placeholder="Ej. 20301234563, opcional" />
+      <Input label={docLabel} required inputMode="numeric" value={valores.cuil} onChange={(e) => onCambio({ ...valores, cuil: e.target.value })} placeholder="Ej. 20301234563" />
     </div>
   );
 }
@@ -165,6 +165,8 @@ export function FormEditarPersona({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    const errCuil = errorCuil(valores.cuil, "CUIL/CUIT");
+    if (errCuil) return setError(errCuil);
     setEnviando(true);
     const r = await guardarPersona(
       tipo,

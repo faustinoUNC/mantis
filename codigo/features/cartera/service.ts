@@ -49,7 +49,7 @@ export async function guardarPersona(
   if (!telefono) {
     return { ok: false, error: "El teléfono es obligatorio." };
   }
-  const errCuil = datos.documento ? errorCuil(datos.documento, "CUIL/CUIT") : null;
+  const errCuil = errorCuil(datos.documento, "CUIL/CUIT");
   if (errCuil) {
     return { ok: false, error: errCuil };
   }
@@ -58,7 +58,7 @@ export async function guardarPersona(
     nombre: datos.nombre,
     email: datos.email.trim().toLowerCase(),
     telefono,
-    cuil: datos.documento ? normalizarCuil(datos.documento) : null,
+    cuil: normalizarCuil(datos.documento),
   };
   const dup = await duplicadoPersona(supabase, tipo, fila, id);
   if (dup) return { ok: false, error: dup };
@@ -189,7 +189,7 @@ async function resolverPersona(
   if (!telefono) {
     return { error: "El teléfono es obligatorio." };
   }
-  const errCuil = ref.nueva.cuil ? errorCuil(ref.nueva.cuil, "CUIL/CUIT") : null;
+  const errCuil = errorCuil(ref.nueva.cuil, "CUIL/CUIT");
   if (errCuil) {
     return { error: errCuil };
   }
@@ -198,7 +198,7 @@ async function resolverPersona(
     nombre: ref.nueva.nombre,
     email: ref.nueva.email.trim().toLowerCase(),
     telefono,
-    cuil: ref.nueva.cuil ? normalizarCuil(ref.nueva.cuil) : null,
+    cuil: normalizarCuil(ref.nueva.cuil),
   };
   const dup = await duplicadoPersona(supabase, tipo, fila);
   if (dup) return { error: dup };

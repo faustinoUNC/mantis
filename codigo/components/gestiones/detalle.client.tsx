@@ -924,18 +924,14 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
   // todos los comprobantes). La resubida de una rechazada no lo vuelve a pedir.
   const terminando = gestion.etapa === "en_ejecucion";
 
-  // STORY-936: para terminar hace falta al menos una nota de avance, y si lo
-  // rendido supera los materiales presupuestados, el exceso debe estar
-  // cubierto por gastos imprevistos (el server valida lo mismo).
+  // STORY-936: para terminar hace falta al menos una nota de avance.
+  // STORY-961: se retiró el bloqueo por "exceso de materiales cubierto por
+  // gastos" — los gastos imprevistos ahora se suman aparte (el técnico rinde
+  // solo materiales), así que no pueden justificar el exceso. El control
+  // anti-inflado queda en la foto obligatoria de todos los comprobantes.
   const sinAvance =
     terminando && !gestion.avances.some((a) => a.tipo === "avance");
-  const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
-  const matPresupuestados = aprobado ? Number(aprobado.monto_materiales) : null;
-  const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
   const [totalRendido, setTotalRendido] = useState(0);
-  const exceso =
-    terminando && matPresupuestados != null ? totalRendido - matPresupuestados : 0;
-  const excesoSinCubrir = exceso > totalGastos + 0.009;
 
   if (esperando) {
     return <p className="text-sm text-muted">Conformidad subida — esperando revisión del gestor.</p>;
@@ -961,7 +957,7 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
             <span className="text-muted/50 font-normal">· con esto se calcula tu liquidación</span>
           </p>
           <Input
-            label="Total gastado en materiales ($)"
+            label="Total gastado en materiales ($) — solo materiales, sin los gastos imprevistos"
             name="materiales_total"
             type="number"
             min="0.01"
@@ -993,16 +989,9 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
           Registrá al menos una nota de avance (arriba) antes de terminar la obra.
         </p>
       )}
-      {!sinAvance && excesoSinCubrir && totalRendido > 0 && (
-        <p className="text-sm text-error bg-error-soft border border-error-soft-border rounded-md px-3 py-2">
-          Estás rindiendo {plata(exceso)} más que los materiales presupuestados
-          ({plata(matPresupuestados ?? 0)}). Cargá gastos imprevistos por el
-          excedente (llevás {plata(totalGastos)}) para poder terminar.
-        </p>
-      )}
       <Button
         type="submit"
-        disabled={cargando || sinAvance || excesoSinCubrir}
+        disabled={cargando || sinAvance}
         className="self-start"
       >
         {terminando ? "Terminar y subir conformidad →" : "Resubir conformidad"}
@@ -1024,8 +1013,10 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   const matPresupuestados = aprobado ? Number(aprobado.monto_materiales) : 0;
   const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
   const rendido = gestion.materiales_total;
-  const sugerido =
-    rendido != null ? rendido + manoObra : matPresupuestados + manoObra + totalGastos;
+  // STORY-961: el costo final se calcula (no se edita) = materiales rendidos +
+  // gastos imprevistos + mano de obra. El server recomputa lo mismo al aprobar.
+  const baseMateriales = rendido != null ? rendido : matPresupuestados;
+  const costoFinal = baseMateriales + totalGastos + manoObra;
   const desvioMat = rendido != null ? rendido - matPresupuestados : null;
 
   if (!subida) {
@@ -1103,27 +1094,34 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
           className="rounded-md max-h-56 border border-border self-start"
         />
       )}
+      {/* STORY-961: costo final calculado, no editable — la suma clara a la vista */}
+      <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
+        <div className="flex justify-between">
+          <span className="text-muted">
+            {rendido != null ? "Materiales rendidos" : "Materiales presupuestados"}
+          </span>
+          <span className="font-mono">{plata(baseMateriales)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted">Gastos imprevistos</span>
+          <span className="font-mono">{plata(totalGastos)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted">Mano de obra (presupuesto aprobado)</span>
+          <span className="font-mono">{plata(manoObra)}</span>
+        </div>
+        <div className="flex justify-between pt-1 border-t border-border font-semibold">
+          <span>Costo final</span>
+          <span className="font-mono">{plata(costoFinal)}</span>
+        </div>
+      </div>
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          const costo = Number(new FormData(e.currentTarget).get("costo_final"));
-          correr(() => resolverConformidad(subida.id, gestion.id, true, { costo_final: costo }));
+          correr(() => resolverConformidad(subida.id, gestion.id, true, {}));
         }}
       >
-        <Input
-          label={
-            rendido != null
-              ? "Costo final ($) — sugerido: rendido + mano de obra"
-              : "Costo final ($)"
-          }
-          name="costo_final"
-          type="number"
-          min="0"
-          step="0.01"
-          defaultValue={sugerido || undefined}
-          required
-        />
         <Button type="submit" disabled={cargando}>
           Aprobar → Cobro
         </Button>

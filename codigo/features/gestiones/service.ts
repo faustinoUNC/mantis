@@ -947,25 +947,12 @@ export async function subirConformidad(
     // STORY-936: sin al menos una nota de avance el gestor estuvo ciego
     // toda la obra — no se termina sin contar qué se hizo.
     const supabaseCheck = await createClient();
-    const [{ data: avances }, { data: gastos }, { data: aprobado }] =
-      await Promise.all([
-        supabaseCheck
-          .from("avances")
-          .select("id")
-          .eq("gestion_id", gestionId)
-          .eq("tipo", "avance")
-          .limit(1),
-        supabaseCheck
-          .from("gastos_imprevistos")
-          .select("monto")
-          .eq("gestion_id", gestionId),
-        supabaseCheck
-          .from("presupuestos")
-          .select("monto_materiales")
-          .eq("gestion_id", gestionId)
-          .eq("estado", "aprobado")
-          .maybeSingle(),
-      ]);
+    const { data: avances } = await supabaseCheck
+      .from("avances")
+      .select("id")
+      .eq("gestion_id", gestionId)
+      .eq("tipo", "avance")
+      .limit(1);
     if (!avances?.length) {
       return {
         ok: false,
@@ -973,22 +960,10 @@ export async function subirConformidad(
       };
     }
 
-    // STORY-936: cada peso rendido por encima de los materiales presupuestados
-    // se justifica con gastos imprevistos (ticket con foto). Sin presupuesto
-    // aprobado (legacy) no hay contra qué comparar.
-    if (aprobado) {
-      const presupuestado = Number(aprobado.monto_materiales);
-      const totalGastos = (gastos ?? []).reduce((s, g) => s + Number(g.monto), 0);
-      const exceso = total - presupuestado;
-      if (exceso > totalGastos + 0.009) {
-        const plata = (n: number) =>
-          `$ ${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
-        return {
-          ok: false,
-          error: `Estás rindiendo ${plata(total)} con ${plata(presupuestado)} presupuestados en materiales: hay ${plata(exceso)} de exceso y solo ${plata(totalGastos)} en gastos imprevistos cargados. Cargá gastos (con ticket) por el excedente antes de terminar.`,
-        };
-      }
-    }
+    // STORY-961: se retiró la validación de "exceso de materiales cubierto por
+    // gastos" (STORY-936) — los gastos imprevistos se suman aparte y ya no
+    // justifican el exceso. La foto obligatoria de todos los comprobantes
+    // queda como control anti-inflado.
     const fotoComprobantes = await subirFoto(
       gestionId,
       "comprobantes",
@@ -1038,17 +1013,10 @@ export async function resolverConformidad(
   conformidadId: string,
   gestionId: string,
   aprobar: boolean,
-  opciones: { motivo?: string; costo_final?: number }
+  opciones: { motivo?: string }
 ): Promise<ActionResult> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
-  if (
-    aprobar &&
-    opciones.costo_final != null &&
-    (!Number.isFinite(opciones.costo_final) || opciones.costo_final < 0)
-  ) {
-    return { ok: false, error: "El costo final no puede ser negativo." };
-  }
 
   // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos veces
   const supabase = await createClient();
@@ -1067,28 +1035,50 @@ export async function resolverConformidad(
     return { ok: false, error: "No se pudo resolver la conformidad (¿ya fue resuelta?)." };
   }
 
-  await supabase.from("eventos_gestion").insert({
-    gestion_id: gestionId,
-    tipo: aprobar ? "conformidad_aprobada" : "conformidad_rechazada",
-    actor_id: actual.id,
-    detalle: aprobar
-      ? { costo_final: opciones.costo_final }
-      : { motivo: opciones.motivo },
-  });
-
-  if (aprobar) {
-    if (opciones.costo_final != null) {
-      await supabase
-        .from("gestiones")
-        .update({ costo_final: opciones.costo_final })
-        .eq("id", gestionId);
-    }
-    await emailEstadoGestion(gestionId, "resuelto");
-    return avanzarEtapa(gestionId, "facturacion_cobro");
+  if (!aprobar) {
+    await supabase.from("eventos_gestion").insert({
+      gestion_id: gestionId,
+      tipo: "conformidad_rechazada",
+      actor_id: actual.id,
+      detalle: { motivo: opciones.motivo },
+    });
+    refrescarTablero(gestionId);
+    return { ok: true };
   }
 
-  refrescarTablero(gestionId);
-  return { ok: true };
+  // STORY-961: el costo final NO lo tipea el gestor — se calcula server-side
+  // (no manipulable) con la fórmula única: materiales rendidos + gastos
+  // imprevistos + mano de obra presupuestada. Fallback a materiales
+  // presupuestados para gestiones viejas sin rendición.
+  const { data: g } = await supabase
+    .from("gestiones")
+    .select(
+      "materiales_total, presupuestos(monto_materiales, monto_mano_obra, estado), gastos_imprevistos(monto)"
+    )
+    .eq("id", gestionId)
+    .single();
+  type Fila = {
+    materiales_total: number | null;
+    presupuestos: { monto_materiales: number; monto_mano_obra: number; estado: string }[];
+    gastos_imprevistos: { monto: number }[];
+  };
+  const fila = g as unknown as Fila | null;
+  const aprobado = fila?.presupuestos.find((p) => p.estado === "aprobado");
+  const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
+  const matPresupuestados = aprobado ? Number(aprobado.monto_materiales) : 0;
+  const gastos = (fila?.gastos_imprevistos ?? []).reduce((s, ga) => s + Number(ga.monto), 0);
+  const rendido = fila?.materiales_total;
+  const costoFinal = (rendido != null ? Number(rendido) : matPresupuestados) + gastos + manoObra;
+
+  await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: "conformidad_aprobada",
+    actor_id: actual.id,
+    detalle: { costo_final: costoFinal },
+  });
+  await supabase.from("gestiones").update({ costo_final: costoFinal }).eq("id", gestionId);
+  await emailEstadoGestion(gestionId, "resuelto");
+  return avanzarEtapa(gestionId, "facturacion_cobro");
 }
 
 // ── Reasignación de gestor (STORY-408, solo admin) ──

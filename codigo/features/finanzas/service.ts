@@ -490,20 +490,26 @@ export async function registrarLiquidacion(
   const supabase = await createClient();
   const { data: g } = await supabase
     .from("gestiones")
-    .select("costo_final, materiales_total, presupuestos(monto_mano_obra, estado)")
+    .select(
+      "costo_final, materiales_total, presupuestos(monto_mano_obra, estado), gastos_imprevistos(monto)"
+    )
     .eq("id", gestionId)
     .single();
   type Fila = {
     costo_final: number | null;
     materiales_total: number | null;
     presupuestos: { monto_mano_obra: number; estado: string }[];
+    gastos_imprevistos: { monto: number }[];
   };
   const fila = g as unknown as Fila | null;
   const aprobado = fila?.presupuestos.find((p) => p.estado === "aprobado");
   const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
+  // STORY-961: los gastos imprevistos se suman aparte (el técnico rinde solo
+  // materiales). Fallback a costo_final para gestiones viejas sin rendición.
+  const gastos = (fila?.gastos_imprevistos ?? []).reduce((s, ga) => s + Number(ga.monto), 0);
   const monto =
     fila?.materiales_total != null
-      ? Number(fila.materiales_total) + manoObra
+      ? Number(fila.materiales_total) + gastos + manoObra
       : Number(fila?.costo_final ?? 0);
   if (!monto || monto <= 0) {
     return { ok: false, error: "No se pudo calcular el monto a liquidar." };
