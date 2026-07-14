@@ -44,4 +44,4 @@ STORY-936 tenía dos guardas: (a) avance obligatorio para terminar y (b) los gas
 
 - **Archivos:** `codigo/features/gestiones/service.ts` (`resolverConformidad` + rendición de `subirConformidad`), `codigo/components/gestiones/detalle.client.tsx` (`AccionConformidadGestor` + `AccionConformidadTecnico`), `codigo/features/finanzas/service.ts` (`registrarLiquidacion`), `codigo/components/gestiones/finanzas.client.tsx` (etapa liquidación).
 - **Verificación:** `tsc --noEmit` + `eslint` verdes. E2E pendiente (una gestión con rendición + gastos imprevistos: verificar que costo final = materiales + gastos + mano de obra, no editable; total a cobrar y a liquidar incluyen los gastos) al pullear.
-- **Commit:** _(pendiente — sin pushear todavía)_.
+- **Commit:** `b071d5f` (junto con STORY-960). E2E pendiente de Fausti.

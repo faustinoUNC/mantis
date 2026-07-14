@@ -34,4 +34,4 @@ STORY-923 unificó el documento en `cuil` y lo dejó **opcional, validado solo s
 
 - **Archivos:** `codigo/components/cartera/persona-campos.client.tsx`, `codigo/features/cartera/service.ts`.
 - **Verificación:** `tsc --noEmit` + `eslint` verdes. E2E pendiente (probar alta/edición de propietario e inquilino sin CUIL → error; con CUIL válido → guarda) al pullear.
-- **Commit:** _(pendiente — sin pushear todavía; falta el push de la otra rama de Fausti)_.
+- **Commit:** `b071d5f` (junto con STORY-961). E2E pendiente de Fausti.
