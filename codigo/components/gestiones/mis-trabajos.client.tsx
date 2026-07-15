@@ -27,6 +27,10 @@ interface DefEtapa {
 }
 
 const ETAPAS_TEC: DefEtapa[] = [
+  // STORY-976: avisó que no puede continuar — sin CTA, la obra está en pausa
+  // hasta que el gestor decida (va primero: pisa a las etapas de acción).
+  { id: "pausa", label: "En pausa", tipo: "seguimiento", cta: null,
+    match: (g) => Boolean(g.aviso_no_continua_en) },
   { id: "responder", label: "Por responder", tipo: "accion", cta: "Responder solicitud",
     match: (g) => g.etapa === "asignacion" && g.asignacion_aceptada === null },
   { id: "presupuestar", label: "A presupuestar", tipo: "accion", cta: "Cargar presupuesto",

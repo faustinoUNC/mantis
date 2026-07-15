@@ -52,6 +52,10 @@ export interface GestionResumen {
   // se setea al desasignar y se limpia cuando un técnico ACEPTA (badge del
   // tablero; nada de estados derivados en runtime).
   desasignada_en: string | null;
+  // STORY-976: aviso "no puedo continuar" del técnico — mientras está seteado
+  // la obra está en pausa para él (banner del gestor + badges). Lo limpia
+  // cualquier transición del funnel o resolverAvisoTecnico().
+  aviso_no_continua_en: string | null;
   creado_en: string;
 }
 
@@ -120,6 +124,8 @@ export interface GestionDetalle extends GestionResumen {
   // esto no se puede aprobar. Y archivado (null = activa, fuera del tablero).
   presupuesto_enviado_en: string | null;
   archivada_en: string | null;
+  // STORY-976: motivo del aviso "no puedo continuar" (solo con aviso activo)
+  aviso_no_continua_motivo: string | null;
   gestor_id: string;
   tecnico_id: string | null;
   propiedad_id: string;

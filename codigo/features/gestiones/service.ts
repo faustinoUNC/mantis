@@ -69,17 +69,18 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     presupuesto_pendiente: presupuestos.some((p) => p.estado === "enviado"),
     conformidad_rechazada: ultimaConformidad?.estado === "rechazada",
     desasignada_en: (g.desasignada_en as string | null) ?? null,
+    aviso_no_continua_en: (g.aviso_no_continua_en as string | null) ?? null,
     creado_en: g.creado_en as string,
   };
 }
 
 const SELECT_RESUMEN =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, creado_en, propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // STORY-938: igual que SELECT_RESUMEN pero con el contacto de propietario/
 // inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
 const SELECT_DETALLE =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // Inquilino si la gestión tiene legajo vigente; si no, el propietario.
 function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_cliente"] {
@@ -237,7 +238,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, nota_emitida_en, presupuesto_enviado_en, archivada_en, aviso_no_continua_motivo, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -283,6 +284,7 @@ export async function obtenerGestion(
     nota_emitida_en: string | null;
     presupuesto_enviado_en: string | null;
     archivada_en: string | null;
+    aviso_no_continua_motivo: string | null;
     gestor_id: string;
     tecnico_id: string | null;
     propiedad_id: string;
@@ -313,6 +315,7 @@ export async function obtenerGestion(
     nota_emitida_en: fila.nota_emitida_en,
     presupuesto_enviado_en: fila.presupuesto_enviado_en,
     archivada_en: fila.archivada_en,
+    aviso_no_continua_motivo: fila.aviso_no_continua_motivo,
     gestor_id: fila.gestor_id,
     tecnico_id: fila.tecnico_id,
     propiedad_id: fila.propiedad_id,
@@ -838,8 +841,11 @@ export async function enviarPresupuesto(
     notas: string;
   }
 ): Promise<ActionResult> {
-  const actual = await obtenerUsuarioActual();
-  if (!actual) return { ok: false, error: "Sin sesión." };
+  // STORY-976: presupuesta solo el técnico asignado, y no con la obra en pausa.
+  const ctx = await exigirTecnicoAsignado(gestionId);
+  if (!ctx) return { ok: false, error: "No tenés permiso." };
+  if (ctx.gestion.aviso_no_continua_en) return { ok: false, error: ERROR_EN_PAUSA };
+  const actual = ctx.actual;
   if (!datos.descripcion_trabajo.trim()) {
     return { ok: false, error: "Describí el trabajo a realizar." };
   }
@@ -1016,17 +1022,24 @@ async function exigirTecnicoAsignado(gestionId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("gestiones")
-    .select("id, etapa, tecnico_id")
+    .select("id, etapa, tecnico_id, aviso_no_continua_en")
     .eq("id", gestionId)
     .eq("tecnico_id", actual.id)
     .single();
   return data ? { actual, gestion: data } : null;
 }
 
+// STORY-976: con el aviso "no puedo continuar" activo, la obra está en pausa
+// para el técnico — la UI ya lo bloquea; esto cubre refresh y carreras.
+const ERROR_EN_PAUSA =
+  "Avisaste que no podés continuar — el trabajo está en pausa hasta que el gestor decida.";
+
 // STORY-971: el técnico no cancela ni se desasigna solo (el funnel y las
 // imputaciones son del gestor) — pero puede AVISAR que no puede continuar.
-// Un evento + la notificación del outbox; el gestor decide con las
-// herramientas de siempre (desasignar/cancelar).
+// STORY-976: el aviso queda como campo explícito en la gestión (pausa la
+// obra para el técnico, banner/badge del gestor); el gestor decide con las
+// herramientas de siempre (desasignar/cancelar) o lo resuelve sin mover el
+// funnel (resolverAvisoTecnico).
 export async function avisarNoPuedoContinuar(
   gestionId: string,
   motivo: string
@@ -1039,6 +1052,22 @@ export async function avisarNoPuedoContinuar(
   if (!["presupuesto", "en_ejecucion", "conformidad"].includes(ctx.gestion.etapa)) {
     return { ok: false, error: "En esta etapa no hace falta avisar — contactá a la administración." };
   }
+  if (ctx.gestion.aviso_no_continua_en) {
+    return { ok: false, error: "Ya avisaste — el gestor está decidiendo cómo sigue." };
+  }
+
+  // Admin client: la RLS de gestiones no da UPDATE al técnico, pero
+  // exigirTecnicoAsignado ya validó que es SU gestión (patrón rendición).
+  const admin = createAdminClient();
+  const { error: errorMarca } = await admin
+    .from("gestiones")
+    .update({
+      aviso_no_continua_en: new Date().toISOString(),
+      aviso_no_continua_motivo: motivo.trim(),
+    })
+    .eq("id", gestionId)
+    .is("aviso_no_continua_en", null);
+  if (errorMarca) return { ok: false, error: "No se pudo enviar el aviso." };
 
   const supabase = await createClient();
   const { error } = await supabase.from("eventos_gestion").insert({
@@ -1047,7 +1076,42 @@ export async function avisarNoPuedoContinuar(
     actor_id: ctx.actual.id,
     detalle: { motivo: motivo.trim() },
   });
-  if (error) return { ok: false, error: "No se pudo enviar el aviso." };
+  if (error) {
+    // Sin evento no hay notificación al gestor — el aviso no debe quedar a medias.
+    await admin
+      .from("gestiones")
+      .update({ aviso_no_continua_en: null, aviso_no_continua_motivo: null })
+      .eq("id", gestionId);
+    return { ok: false, error: "No se pudo enviar el aviso." };
+  }
+
+  refrescarTablero(gestionId);
+  return { ok: true };
+}
+
+// STORY-976: el gestor resuelve el aviso SIN mover el funnel ("al final el
+// técnico continúa"). Limpia la marca (cliente de sesión — la RLS decide
+// quién puede) + evento aviso_resuelto → la matriz le avisa al técnico.
+export async function resolverAvisoTecnico(gestionId: string): Promise<ActionResult> {
+  const actual = await obtenerUsuarioActual();
+  if (!actual) return { ok: false, error: "Sin sesión." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("gestiones")
+    .update({ aviso_no_continua_en: null, aviso_no_continua_motivo: null })
+    .eq("id", gestionId)
+    .not("aviso_no_continua_en", "is", null)
+    .select("id");
+  if (error || !data?.length) {
+    return { ok: false, error: "No se pudo resolver el aviso." };
+  }
+
+  await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: "aviso_resuelto",
+    actor_id: actual.id,
+  });
 
   refrescarTablero(gestionId);
   return { ok: true };
@@ -1059,6 +1123,7 @@ export async function registrarAvance(
 ): Promise<ActionResult> {
   const ctx = await exigirTecnicoAsignado(gestionId);
   if (!ctx) return { ok: false, error: "No tenés permiso." };
+  if (ctx.gestion.aviso_no_continua_en) return { ok: false, error: ERROR_EN_PAUSA };
 
   const nota = String(form.get("nota") ?? "").trim();
   if (!nota) return { ok: false, error: "Escribí una nota." };
@@ -1084,6 +1149,7 @@ export async function subirConformidad(
 ): Promise<ActionResult> {
   const ctx = await exigirTecnicoAsignado(gestionId);
   if (!ctx) return { ok: false, error: "No tenés permiso." };
+  if (ctx.gestion.aviso_no_continua_en) return { ok: false, error: ERROR_EN_PAUSA };
   const terminando = ctx.gestion.etapa === "en_ejecucion";
 
   // STORY-934/964/965: para TERMINAR la obra el técnico rinde UN solo número —

@@ -29,6 +29,7 @@ import {
   cancelarGestion,
   cancelarSolicitudAsignacion,
   avisarNoPuedoContinuar,
+  resolverAvisoTecnico,
   desasignarTecnico,
   enviarPresupuesto,
   reasignarGestor,
@@ -1233,7 +1234,9 @@ function AvisarNoContinua({ gestion }: { gestion: GestionDetalle }) {
   const [abierto, setAbierto] = useState(false);
   const [enviado, setEnviado] = useState(false);
 
-  if (enviado) {
+  // STORY-976: el aviso quedó persistido en la gestión — recargar la página
+  // ya no permite reenviarlo (antes "enviado" era solo estado local).
+  if (enviado || gestion.aviso_no_continua_en) {
     return (
       <Card className="p-4 mt-4 border-dashed">
         <p className="text-[13px] text-muted">
@@ -1292,6 +1295,45 @@ function AvisarNoContinua({ gestion }: { gestion: GestionDetalle }) {
         </div>
         {error && <p className="text-sm font-medium text-error">{error}</p>}
       </form>
+    </Card>
+  );
+}
+
+// ── Aviso activo (STORY-976) — banner del gestor: la obra está en pausa ──
+
+function AvisoNoContinuaBanner({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  // dd/mm/aaaa desde el ISO, determinístico (nada de toLocaleString en SSR —
+  // lección STORY-973).
+  const fecha = gestion.aviso_no_continua_en!.slice(0, 10).split("-").reverse().join("/");
+  return (
+    <Card className="p-4 mt-4 border-urgente-soft-border bg-urgente-soft" role="alert">
+      <div className="flex items-start gap-2.5">
+        <span className="size-2 mt-1.5 rounded-pill bg-urgente shrink-0" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-urgente-fuerte">
+            El técnico avisó que no puede continuar ({fecha})
+          </p>
+          {gestion.aviso_no_continua_motivo && (
+            <p className="text-sm mt-1">“{gestion.aviso_no_continua_motivo}”</p>
+          )}
+          <p className="text-[13px] text-muted mt-2">
+            La obra está en pausa para el técnico hasta que decidas cómo sigue:
+            desasignalo para reasignar, cancelá la gestión (las dos opciones
+            están más abajo) — o, si ya lo resolvieron, marcá que continúa.
+          </p>
+          <div className="flex items-center gap-3 mt-3">
+            <Button
+              variante="secundario"
+              disabled={cargando}
+              onClick={() => correr(() => resolverAvisoTecnico(gestion.id))}
+            >
+              El técnico continúa
+            </Button>
+            {error && <p className="text-sm font-medium text-error">{error}</p>}
+          </div>
+        </div>
+      </div>
     </Card>
   );
 }
@@ -1586,6 +1628,9 @@ export function DetalleGestion({
     esAdmin || (usuario.rol === "gestor_mantenimiento" && gestion.gestor_id === usuario.id);
   const esAdministrativo = esAdmin || usuario.rol === "gestor_administrativo";
   const esTecnicoAsignado = usuario.rol === "tecnico" && gestion.tecnico_id === usuario.id;
+  // STORY-976: avisó que no puede continuar → la obra está en pausa para él
+  // (las server actions también lo rechazan; esto es el espejo visual).
+  const tecnicoEnPausa = esTecnicoAsignado && Boolean(gestion.aviso_no_continua_en);
 
   // STORY-916: se vuelve al lugar de origen (el tablero, de donde se abren las
   // gestiones), no al Inicio. El técnico vuelve a su home (su lista de trabajos).
@@ -1633,6 +1678,10 @@ export function DetalleGestion({
         {gestion.etapa === "asignacion" && gestion.desasignada_en && (
           <Badge tono="urgente">Reasignar técnico</Badge>
         )}
+        {/* STORY-976: aviso "no puedo continuar" activo — obra en pausa. */}
+        {gestion.aviso_no_continua_en && (
+          <Badge tono="urgente">Técnico no continúa</Badge>
+        )}
         {gestion.urgencia === "urgente" && <Badge tono="urgente">Urgente</Badge>}
         <Badge tono="neutro">{gestion.especialidad}</Badge>
         {gestion.archivada_en && <Badge tono="neutro">Archivada</Badge>}
@@ -1640,6 +1689,12 @@ export function DetalleGestion({
       <h1 className="mt-2 text-xl font-semibold tracking-tight leading-snug">
         {gestion.descripcion}
       </h1>
+
+      {/* STORY-976: el aviso del técnico no puede depender de que el gestor
+          baje hasta la Actividad — banner arriba de todo, con las salidas. */}
+      {esGestorOwner && gestion.aviso_no_continua_en && (
+        <AvisoNoContinuaBanner gestion={gestion} />
+      )}
 
       {gestion.etapa !== "cancelada" && <EtapaStepper etapa={gestion.etapa} />}
 
@@ -1664,7 +1719,14 @@ export function DetalleGestion({
         {gestion.etapa === "asignacion" && esTecnicoAsignado && gestion.asignacion_aceptada === null && (
           <AccionResponderAsignacion gestion={gestion} />
         )}
-        {gestion.etapa === "presupuesto" && esTecnicoAsignado && (
+        {tecnicoEnPausa && (
+          <p className="text-sm text-muted">
+            Avisaste que no podés continuar — el trabajo está en pausa hasta que
+            el gestor decida cómo sigue. Si al final podés continuar, avisale al
+            gestor o a la administración.
+          </p>
+        )}
+        {gestion.etapa === "presupuesto" && esTecnicoAsignado && !tecnicoEnPausa && (
           gestion.presupuestos.some((p) => p.estado === "enviado") ? (
             // Presupuesto enviado: al técnico solo le queda esperar al gestor
             <div className="flex flex-col gap-3">
@@ -1693,7 +1755,7 @@ export function DetalleGestion({
         {gestion.etapa === "presupuesto" && esGestorOwner && (
           <EvaluacionPresupuesto gestion={gestion} />
         )}
-        {gestion.etapa === "en_ejecucion" && esTecnicoAsignado && (
+        {gestion.etapa === "en_ejecucion" && esTecnicoAsignado && !tecnicoEnPausa && (
           <div className="flex flex-col gap-6">
             <FormAvance gestion={gestion} />
             <div className="border-t border-border pt-5">
@@ -1709,7 +1771,7 @@ export function DetalleGestion({
         {gestion.etapa === "conformidad" && esGestorOwner && (
           <AccionConformidadGestor gestion={gestion} />
         )}
-        {gestion.etapa === "conformidad" && esTecnicoAsignado && (
+        {gestion.etapa === "conformidad" && esTecnicoAsignado && !tecnicoEnPausa && (
           <AccionConformidadTecnico gestion={gestion} />
         )}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&

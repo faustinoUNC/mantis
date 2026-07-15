@@ -77,6 +77,11 @@ function TarjetaGestion({
             {gestion.etapa === "asignacion" && gestion.desasignada_en && (
               <Badge tono="urgente">Reasignar</Badge>
             )}
+            {/* STORY-976: el técnico avisó que no puede continuar — la obra
+                está en pausa hasta que el gestor decida. */}
+            {gestion.aviso_no_continua_en && (
+              <Badge tono="urgente">Técnico no continúa</Badge>
+            )}
           </div>
           <span className="font-mono text-[11px] text-muted/80 shrink-0">
             {diasEn(gestion.creado_en)}

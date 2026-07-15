@@ -25,6 +25,7 @@ export const LABEL_EVENTO: Record<string, string> = {
   conformidad_rechazada: "Conformidad rechazada",
   materiales_rendidos: "Comprobantes de materiales rendidos",
   tecnico_no_continua: "El técnico avisó que no puede continuar",
+  aviso_resuelto: "El gestor resolvió el aviso — el técnico continúa",
   gestor_reasignado: "Gestor reasignado",
   nota_cobro_enviada: "Nota de cobro enviada",
   cobro_registrado: "Cobro registrado",
