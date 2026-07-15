@@ -896,7 +896,11 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   // obra + mano de obra. El server recomputa lo mismo al aprobar.
   const baseMateriales = rendido != null ? rendido : matPresupuestados;
   const costoFinal = baseMateriales + manoObra;
-  const desvioMat = rendido != null ? rendido - matPresupuestados : null;
+  // "rendido" es todo lo gastado en la obra (materiales + mano de obra, lo
+  // rinde el técnico como un solo total) — el desvío se compara contra el
+  // presupuesto completo, no solo la parte de materiales.
+  const presupuestoTotal = matPresupuestados + manoObra;
+  const desvioMat = rendido != null ? rendido - presupuestoTotal : null;
 
   if (!subida) {
     return <p className="text-sm text-muted">Esperando que el técnico suba la conformidad.</p>;
@@ -951,14 +955,14 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
           )}
           <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
             <div className="flex justify-between">
-              <span className="text-muted">Materiales presupuestados</span>
-              <span className="font-mono">{plata(matPresupuestados)}</span>
+              <span className="text-muted">Presupuesto total (materiales + mano de obra)</span>
+              <span className="font-mono">{plata(presupuestoTotal)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted">Gastado real en la obra</span>
               <span className="font-mono font-semibold">{plata(rendido)}</span>
             </div>
-            {desvioMat != null && matPresupuestados > 0 && (
+            {desvioMat != null && presupuestoTotal > 0 && (
               <div className="flex justify-between pt-1 border-t border-border">
                 <span className="text-muted">Desvío sobre presupuesto</span>
                 <span
@@ -968,7 +972,7 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
                 >
                   {desvioMat >= 0 ? "+" : "−"}{plata(Math.abs(desvioMat))} (
                   {desvioMat >= 0 ? "+" : "−"}
-                  {Math.abs(Math.round((desvioMat / matPresupuestados) * 100))}%)
+                  {Math.abs(Math.round((desvioMat / presupuestoTotal) * 100))}%)
                 </span>
               </div>
             )}
