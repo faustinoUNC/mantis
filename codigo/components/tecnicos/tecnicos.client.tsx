@@ -29,6 +29,9 @@ const LABEL_ESTADO: Record<EstadoTecnico, string> = {
 
 function Fila({ tecnico }: { tecnico: TecnicoResumen }) {
   const [guardando, setGuardando] = useState(false);
+  // STORY-966: la baja puede bloquearse (gestiones en curso) — el resultado
+  // ya no se traga, se muestra (mismo bug de silencio que STORY-924).
+  const [error, setError] = useState<string | null>(null);
   const inactivo = tecnico.esta_activo === false;
 
   return (
@@ -75,12 +78,19 @@ function Fila({ tecnico }: { tecnico: TecnicoResumen }) {
             }`}
             onClick={async () => {
               setGuardando(true);
-              await cambiarEstadoTecnico(tecnico.id, !tecnico.esta_activo);
+              setError(null);
+              const r = await cambiarEstadoTecnico(tecnico.id, !tecnico.esta_activo);
               setGuardando(false);
+              if (!r.ok) setError(r.error);
             }}
           >
             {tecnico.esta_activo ? "Inhabilitar" : "Habilitar"}
           </Button>
+        )}
+        {error && (
+          <p role="alert" className="mt-1.5 max-w-72 text-[12px] font-medium text-error text-right whitespace-normal">
+            {error}
+          </p>
         )}
       </td>
     </tr>

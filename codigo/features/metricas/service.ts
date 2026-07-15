@@ -1,6 +1,7 @@
 "use server";
 
 import { obtenerUsuarioActual } from "@/features/auth/service";
+import { ETAPAS_TERMINALES } from "@/features/gestiones/types";
 import { createClient } from "@/shared/lib/supabase/server";
 
 // STORY-914 — El service entrega datos GRANULARES (una fila por gestión +
@@ -28,6 +29,7 @@ export interface FilaMetrica {
   estrellas: number | null; // calificación de esta gestión, si la hay
   costoFinal: number | null;
   cargoAdmin: number | null; // STORY-917: monto a cobrar = costo_final + cargo_admin
+  cargoCancelacion: number | null; // STORY-967: si está, el monto a cobrar es ESTE
   presupuestoAprobado: number | null; // total del presupuesto aprobado
   plazoDias: number | null; // STORY-921: plazo de obra comprometido (del aprobado)
   // STORY-937: desvío de presupuesto medido SOLO sobre materiales
@@ -60,9 +62,10 @@ export interface Metricas {
   // criterio que la asignación). La card se oculta al gestor administrativo
   // (su RLS no lee usuarios de técnicos y la gestión de técnicos no es su área).
   capacidad: { especialidad: string; tecnicos: number }[];
+  // STORY-966: abandonos por técnico (desasignaciones imputadas al técnico),
+  // leídos de los eventos congelados — el tecnico_id de la gestión se pisa.
+  abandonos: { tecnico: string; n: number }[];
 }
-
-const TERMINALES = new Set(["finalizado", "cancelada"]);
 
 // RLS scopea: el gestor de mantenimiento calcula sobre SUS gestiones, admin y
 // administrativo sobre todas.
@@ -71,11 +74,11 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
   if (!actual || actual.rol === "tecnico") return null;
 
   const supabase = await createClient();
-  const [{ data: gestiones }, { data: eventos }, { data: cobertura }, { data: usuariosTec }] = await Promise.all([
+  const [{ data: gestiones }, { data: eventos }, { data: cobertura }, { data: usuariosTec }, { data: eventosAbandono }] = await Promise.all([
     supabase
       .from("gestiones")
       .select(
-        "id, descripcion, etapa, urgencia, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
+        "id, descripcion, etapa, urgencia, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, cargo_cancelacion, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
       ),
     supabase
       .from("eventos_gestion")
@@ -87,6 +90,14 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       .select("tecnico_id, especialidades(nombre), tecnicos!inner(estado)")
       .eq("tecnicos.estado", "aprobado"),
     supabase.from("usuarios").select("id, esta_activo").eq("rol", "tecnico"),
+    // STORY-966: desasignaciones imputadas al técnico (misma RLS que el resto:
+    // el gestor cuenta abandonos sobre SUS gestiones; admin sobre todas).
+    supabase
+      .from("eventos_gestion")
+      .select("detalle")
+      .eq("tipo", "transicion")
+      .eq("a_etapa", "asignacion")
+      .eq("detalle->>imputado", "tecnico"),
   ]);
 
   type G = {
@@ -99,6 +110,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     propiedad_id: string;
     costo_final: number | null;
     cargo_admin: number | null;
+    cargo_cancelacion: number | null;
     materiales_total: number | null;
     cobrado_monto: number | null;
     cobrado_fee: number | null;
@@ -142,6 +154,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       estrellas: calif?.estrellas ?? null,
       costoFinal: g.costo_final,
       cargoAdmin: g.cargo_admin,
+      cargoCancelacion: g.cargo_cancelacion == null ? null : Number(g.cargo_cancelacion),
       presupuestoAprobado,
       plazoDias: aprob?.plazo_dias ?? null,
       materialesTotal: g.materiales_total == null ? null : Number(g.materiales_total),
@@ -166,8 +179,27 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     tecnicos,
   }));
 
+  // STORY-966: abandonos por técnico, con nombre (los eventos guardan el UUID
+  // del saliente; el nombre sale de la tabla tecnicos).
+  const abandonosPorId = new Map<string, number>();
+  for (const e of (eventosAbandono ?? []) as { detalle: { tecnico_saliente?: string } | null }[]) {
+    const t = e.detalle?.tecnico_saliente;
+    if (t) abandonosPorId.set(t, (abandonosPorId.get(t) ?? 0) + 1);
+  }
+  let abandonos: Metricas["abandonos"] = [];
+  if (abandonosPorId.size > 0) {
+    const { data: nombres } = await supabase
+      .from("tecnicos")
+      .select("id, nombre")
+      .in("id", [...abandonosPorId.keys()]);
+    abandonos = (nombres ?? [])
+      .map((t) => ({ tecnico: t.nombre, n: abandonosPorId.get(t.id) ?? 0 }))
+      .filter((a) => a.n > 0)
+      .sort((a, b) => b.n - a.n);
+  }
+
   // ── Tiles accionables (en vivo, no histórico) ──
-  const activas = filas.filter((f) => !TERMINALES.has(f.etapa)).length;
+  const activas = filas.filter((f) => !ETAPAS_TERMINALES.has(f.etapa)).length;
   // Urgente + todavía sin arrancar (Ingresado o Asignación): el trabajo urgente
   // que aún no entró en presupuesto/ejecución es lo primero a mover.
   const urgentesSinAsignar = gs.filter(
@@ -181,8 +213,14 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     activas,
     urgentesSinAsignar,
     pendientesCobro: porCobrar.length,
+    // STORY-967: una cancelación con cargo en Cobro vale su cargo, no el
+    // costo del trabajo (que quedó anulado).
     montoPorCobrar: porCobrar.reduce(
-      (s, g) => s + Number(g.costo_final ?? 0) + Number(g.cargo_admin ?? 0),
+      (s, g) =>
+        s +
+        (g.cargo_cancelacion != null
+          ? Number(g.cargo_cancelacion)
+          : Number(g.costo_final ?? 0) + Number(g.cargo_admin ?? 0)),
       0
     ),
     pendientesLiquidacion: porLiquidar.length,
@@ -196,5 +234,6 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     })),
     especialidades,
     capacidad,
+    abandonos,
   };
 }

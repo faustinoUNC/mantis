@@ -15,6 +15,13 @@ export type Urgencia = "normal" | "urgente";
 // inmobiliaria en la etapa Presupuesto, con la inspección del técnico a la vista.
 export type Pagador = "inquilino" | "propietario";
 
+// STORY-966: el set de terminales, en UN solo lugar (estaba repetido como
+// literales en métricas y servicios — una terminal nueva rompía por goteo).
+export const ETAPAS_TERMINALES: ReadonlySet<string> = new Set([
+  "finalizado",
+  "cancelada",
+]);
+
 export const ETAPAS: { id: Etapa; label: string }[] = [
   { id: "ingresado", label: "Ingresado" },
   { id: "asignacion", label: "Asignación" },
@@ -41,6 +48,10 @@ export interface GestionResumen {
   // Para que la lista muestre el MISMO estado que el detalle (CTA del técnico)
   presupuesto_pendiente: boolean;
   conformidad_rechazada: boolean;
+  // STORY-966: marca explícita de "volvió a asignación con técnico previo" —
+  // se setea al desasignar y se limpia cuando un técnico ACEPTA (badge del
+  // tablero; nada de estados derivados en runtime).
+  desasignada_en: string | null;
   creado_en: string;
 }
 
@@ -97,6 +108,9 @@ export interface GestionDetalle extends GestionResumen {
   pagador: Pagador | null;
   costo_final: number | null;
   cargo_admin: number | null;
+  // STORY-967: cargo por cancelación tardía — null = cancelación sin cargo.
+  // Con cargo, la gestión pasa por Cobro y cierra en `cancelada`.
+  cargo_cancelacion: number | null;
   // STORY-934/965: rendición del técnico al terminar la ejecución — total
   // gastado en la obra + fotos de los comprobantes (una por ticket)
   materiales_total: number | null;
@@ -128,12 +142,20 @@ export interface StatsTecnico {
   // (Σ reales / Σ presup − 1). La mano de obra es fija y no entra.
   desvioPct: number | null;
   nDesvio: number;
+  // STORY-966: cumplimiento de plazo — mismo cálculo que la card de Informes
+  // (días reales de ejecución vs plazo_dias comprometido, promedio de %).
+  // Nombres consistentes con Informes en toda la UI (pedido Fausti).
+  desvioPlazoPct: number | null;
+  nPlazo: number;
   obrasActivas: number; // gestiones activas asignadas (carga actual)
   obrasRealizadas: number; // gestiones finalizadas (track record; canceladas NO cuentan)
   pctRechazoAsig: number | null; // % de asignaciones que rechazó
   nAsig: number; // asignaciones respondidas (acept + rech)
-  pctCancelacion: number | null; // % de sus gestiones TERMINADAS que fueron canceladas
-  nTerminadas: number; // terminadas = finalizadas + canceladas
+  // STORY-966: trabajos que dejó a mitad de camino (desasignación imputada al
+  // técnico). Sale de los eventos congelados — el tecnico_id de la gestión se
+  // pisa al reasignar. Reemplaza al % de canceladas del picker: la cancelación
+  // muchas veces no es culpa del técnico; el abandono sí (decisión Fausti).
+  abandonos: number;
 }
 
 export interface TecnicoDisponible {

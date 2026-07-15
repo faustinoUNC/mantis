@@ -18,6 +18,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import type { Metricas } from "@/features/metricas/service";
+import { ETAPAS_TERMINALES } from "@/features/gestiones/types";
+import { ultimaEjecucionDias } from "@/features/gestiones/ejecucion";
 
 // STORY-914/919 — Dashboard de métricas graficadas, organizado en bloques
 // temáticos (las relacionadas, juntas). Desktop-first (no lo ve el técnico).
@@ -332,7 +334,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   // ── Hoy: Gestiones estancadas (solo las paradas ≥1 día en su etapa) ──
   const estancadas = useMemo(() => {
     const lista = filasEsp
-      .filter((f) => f.etapa !== "finalizado" && f.etapa !== "cancelada")
+      .filter((f) => !ETAPAS_TERMINALES.has(f.etapa))
       .map((f) => ({
         id: f.id,
         direccion: f.direccion ?? f.descripcion,
@@ -354,7 +356,9 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           id: f.id,
           direccion: f.direccion ?? f.descripcion,
           descripcion: f.descripcion,
-          monto: Number(f.costoFinal ?? 0) + Number(f.cargoAdmin ?? 0),
+          // STORY-967: una cancelación con cargo vale su cargo, no el trabajo.
+          monto:
+            f.cargoCancelacion ?? Number(f.costoFinal ?? 0) + Number(f.cargoAdmin ?? 0),
           dias: diasEnEtapa(f, ultimaTransicion, ahora),
         }))
         .sort((a, b) => b.dias - a.dias),
@@ -368,7 +372,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   const porFee = useMemo(
     () =>
       filasEsp
-        .filter((f) => f.etapa !== "finalizado" && f.etapa !== "cancelada" && Number(f.cargoAdmin ?? 0) > 0)
+        .filter((f) => !ETAPAS_TERMINALES.has(f.etapa) && Number(f.cargoAdmin ?? 0) > 0)
         .map((f) => ({
           id: f.id,
           direccion: f.direccion ?? f.descripcion,
@@ -408,10 +412,16 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     for (const e of evs) porGestion.get(e.gestionId)?.push({ etapa: e.aEtapa!, at: new Date(e.creadoEn).getTime() });
     const acum = new Map<string, { total: number; n: number }>();
     for (const linea of porGestion.values()) {
+      // STORY-966: con desasignación una gestión puede repetir etapa — cuenta
+      // solo la ÚLTIMA visita de cada una (antes se sumaban todas y el cuello
+      // se inflaba; ya pasaba con el retroceso presupuesto→asignación).
+      const ultimaVisita = new Map<string, number>();
       for (let k = 0; k < linea.length - 1; k++) {
-        const dias = (linea[k + 1].at - linea[k].at) / 86400000;
-        const cur = acum.get(linea[k].etapa) ?? { total: 0, n: 0 };
-        acum.set(linea[k].etapa, { total: cur.total + dias, n: cur.n + 1 });
+        ultimaVisita.set(linea[k].etapa, (linea[k + 1].at - linea[k].at) / 86400000);
+      }
+      for (const [etapa, dias] of ultimaVisita) {
+        const cur = acum.get(etapa) ?? { total: 0, n: 0 };
+        acum.set(etapa, { total: cur.total + dias, n: cur.n + 1 });
       }
     }
     // Se excluye "en_ejecucion": su duración es el trabajo físico (depende del
@@ -426,17 +436,20 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   // de los eventos. Base para excluir el tiempo de obra del ciclo y para el
   // cumplimiento de plazo. El tiempo físico depende del tamaño de la obra. ──
   const ejecucionPorGestion = useMemo(() => {
-    const entrada = new Map<string, number>();
-    const salida = new Map<string, number>();
+    // STORY-966: última visita COMPLETA a en_ejecucion (con desasignación el
+    // span primer-entrada→última-salida se tragaba etapas intermedias e
+    // inflaba el desvío de plazo del técnico nuevo).
+    const porGestion = new Map<string, { aEtapa: string | null; deEtapa: string | null; t: number }[]>();
     for (const e of metricas.eventos) {
-      const t = new Date(e.creadoEn).getTime();
-      if (e.aEtapa === "en_ejecucion" && t < (entrada.get(e.gestionId) ?? Infinity)) entrada.set(e.gestionId, t);
-      if (e.deEtapa === "en_ejecucion" && t > (salida.get(e.gestionId) ?? 0)) salida.set(e.gestionId, t);
+      if (e.aEtapa !== "en_ejecucion" && e.deEtapa !== "en_ejecucion") continue;
+      const lista = porGestion.get(e.gestionId) ?? [];
+      lista.push({ aEtapa: e.aEtapa, deEtapa: e.deEtapa, t: new Date(e.creadoEn).getTime() });
+      porGestion.set(e.gestionId, lista);
     }
     const dur = new Map<string, number>();
-    for (const [id, ent] of entrada) {
-      const sal = salida.get(id);
-      if (sal != null && sal > ent) dur.set(id, (sal - ent) / 86400000);
+    for (const [id, evs] of porGestion) {
+      const dias = ultimaEjecucionDias(evs);
+      if (dias != null) dur.set(id, dias);
     }
     return dur;
   }, [metricas.eventos]);
@@ -485,11 +498,24 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       if (f.etapa === "finalizado") cur.obras += 1;
       acum.set(f.tecnicoNombre, cur);
     }
+    // STORY-966: los abandonos vienen de los eventos congelados (el técnico
+    // que abandonó ya no figura como tecnico_id de ninguna fila) — un técnico
+    // solo-abandonos también debe aparecer en la lista.
+    const abandonosPor = new Map(metricas.abandonos.map((a) => [a.tecnico, a.n]));
+    for (const t of abandonosPor.keys()) {
+      if (!acum.has(t)) acum.set(t, { total: 0, n: 0, obras: 0 });
+    }
     return [...acum.entries()]
-      .map(([tecnico, { total, n, obras }]) => ({ tecnico, promedio: n ? Math.round((total / n) * 10) / 10 : null, n, obras }))
-      .filter((r) => r.obras > 0 || r.n > 0)
+      .map(([tecnico, { total, n, obras }]) => ({
+        tecnico,
+        promedio: n ? Math.round((total / n) * 10) / 10 : null,
+        n,
+        obras,
+        abandonos: abandonosPor.get(tecnico) ?? 0,
+      }))
+      .filter((r) => r.obras > 0 || r.n > 0 || r.abandonos > 0)
       .sort((a, b) => (b.promedio ?? -1) - (a.promedio ?? -1));
-  }, [filasEsp]);
+  }, [filasEsp, metricas.abandonos]);
   const nCalificadas = ranking.reduce((s, r) => s + r.n, 0);
 
   // ── Técnicos: Cumplimiento de presupuesto (desvío) por técnico ──
@@ -610,7 +636,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   const presion = useMemo(() => {
     const demanda = new Map<string, number>();
     for (const f of filasEsp) {
-      if (f.etapa === "finalizado" || f.etapa === "cancelada") continue;
+      if (ETAPAS_TERMINALES.has(f.etapa)) continue;
       demanda.set(f.especialidad, (demanda.get(f.especialidad) ?? 0) + 1);
     }
     const tecnicos = new Map(metricas.capacidad.map((c) => [c.especialidad, c.tecnicos]));
@@ -829,7 +855,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       <section className="mb-8">
         <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted mb-3">Histórico · desempeño de técnicos</h3>
         <div className="grid gap-4 grid-cols-1 mb-4">
-        <MetricCard titulo="Calificación de técnicos" ayuda="Promedio de estrellas y obras finalizadas por técnico — quién resuelve mejor y cuánto hizo." n={nCalificadas} unidad="calificaciones" alcance="historico">
+        <MetricCard titulo="Calificación de técnicos" ayuda="Promedio de estrellas y obras finalizadas por técnico — quién resuelve mejor y cuánto hizo. Si dejó obras a mitad de camino (abandonos), se marca al lado." n={nCalificadas} unidad="calificaciones" alcance="historico">
           {ranking.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Todavía no hay técnicos con obra registrada.</p>
           ) : (
@@ -840,9 +866,12 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
                   <div className="flex-1 h-2.5 rounded-full bg-surface-2 overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${((r.promedio ?? 0) / 5) * 100}%`, background: BRAND }} />
                   </div>
-                  <span className="text-sm font-medium tabular-nums w-32 text-right">
+                  <span className="text-sm font-medium tabular-nums w-40 text-right">
                     {r.promedio != null ? (<>{r.promedio.toFixed(1)} <span className="text-urgente">★</span></>) : (<span className="text-muted text-[12px]">sin calificar</span>)}
                     <span className="text-muted font-normal text-[12px]"> · {r.obras} obra{r.obras === 1 ? "" : "s"}</span>
+                    {r.abandonos > 0 && (
+                      <span className="text-urgente-fuerte font-medium text-[12px]"> · {r.abandonos} abandono{r.abandonos === 1 ? "" : "s"}</span>
+                    )}
                   </span>
                 </li>
               ))}
@@ -872,7 +901,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           )}
         </MetricCard>
 
-        <MetricCard titulo="Se pasaron del plazo" ayuda="Técnicos que tardaron más de lo que comprometieron y cuánto — a quién seguirle los tiempos (los que cumplen o se adelantan no se listan)." n={nDesvioPlazo} alcance="historico">
+        <MetricCard titulo="Cumplimiento de plazo" ayuda="Técnicos que tardaron más de lo que comprometieron y cuánto — a quién seguirle los tiempos (los que cumplen o se adelantan no se listan)." n={nDesvioPlazo} alcance="historico">
           {desvioPlazo.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Ningún técnico se pasó del plazo que comprometió.</p>
           ) : (

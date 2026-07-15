@@ -796,6 +796,32 @@ export async function cambiarEstadoTecnico(
   if (!permiso.ok) return permiso;
 
   const admin = createAdminClient();
+
+  // STORY-966: con gestiones operativas asignadas la baja se BLOQUEA (doctrina
+  // STORY-924: nada de "continuar igual") — primero desasignar o cancelar.
+  // Cobro/liquidación no bloquean: ahí el técnico ya no opera (el comprobante
+  // le llega por email). Admin client a propósito: el gestor solo ve las suyas
+  // por RLS y dejaría pasar gestiones de otros gestores.
+  if (!activo) {
+    const { data: enCurso } = await admin
+      .from("gestiones")
+      .select("id, propiedades(direccion)")
+      .eq("tecnico_id", id)
+      .in("etapa", ["asignacion", "presupuesto", "en_ejecucion", "conformidad"]);
+    if (enCurso && enCurso.length > 0) {
+      const direcciones = (enCurso as unknown as { propiedades: { direccion: string } | null }[])
+        .map((g) => g.propiedades?.direccion)
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(", ");
+      const n = enCurso.length;
+      return {
+        ok: false,
+        error: `No se puede inhabilitar: tiene ${n} ${n === 1 ? "gestión" : "gestiones"} en curso (${direcciones}${n > 3 ? "…" : ""}). ${n === 1 ? "Desasignala o cancelala" : "Desasignalas o cancelalas"} primero.`,
+      };
+    }
+  }
+
   const { error } = await admin
     .from("usuarios")
     .update({ esta_activo: activo })

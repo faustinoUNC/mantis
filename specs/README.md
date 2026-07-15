@@ -37,6 +37,8 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-967](STORY-967.md) | Cancelación con cargo: post-aceptación del técnico, cargo opcional y libre que pasa por el circuito de Cobro existente y cierra en `cancelada` (cards #22/#93, party mode) | ✅ done |
+| [STORY-966](STORY-966.md) | Desasignar técnico a mitad del flujo: retroceso total a Asignación (reasignación y abandono imputado), baja de técnico bloqueada con gestiones operativas, marca de urgencia y fixes de métricas (cards #12/#13/#93, party mode) | ✅ done |
 | [STORY-965](STORY-965.md) | Fuera los gastos imprevistos (tabla, UI, evento, notificación): la rendición única es todo el control — total real + fotos MÚLTIPLES de comprobantes (una por ticket) con galería y desvío del lado gestor. Decidida en party mode | ✅ done |
 | [STORY-964](STORY-964.md) | Rendición: el técnico rinde un solo total real de la obra (imprevistos incluidos); los gastos imprevistos son evidencia con ticket, no se re-suman; desvío real. Supersede la decisión #1 de STORY-961 — card #88 de Trello | ✅ done |
 | [STORY-963](STORY-963.md) | Un CUIL no puede ser de dos personas distintas entre propietarios e inquilinos (bloqueo cruzado inteligente: bloquea si es otro nombre, permite la misma persona en ambos roles) — card #85 de Trello | ✅ done |

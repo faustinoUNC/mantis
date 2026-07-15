@@ -435,12 +435,16 @@ export async function registrarCobro(
   // posterior de costo_final/cargo_admin no reescribe el pasado.
   const { data: g } = await supabase
     .from("gestiones")
-    .select("costo_final, cargo_admin")
+    .select("costo_final, cargo_admin, cargo_cancelacion")
     .eq("id", gestionId)
     .single();
+  // STORY-967: una cancelación con cargo se cobra por este mismo circuito —
+  // el total es el cargo y es 100% de la casa (no hay técnico que liquidar).
+  const cargoCancelacion =
+    g?.cargo_cancelacion == null ? null : Number(g.cargo_cancelacion);
   const costoFinal = Number(g?.costo_final ?? 0);
-  const cargoAdmin = Number(g?.cargo_admin ?? 0);
-  const total = costoFinal + cargoAdmin;
+  const cargoAdmin = cargoCancelacion ?? Number(g?.cargo_admin ?? 0);
+  const total = cargoCancelacion ?? costoFinal + cargoAdmin;
 
   let medioCobro2: string | null = null;
   let montoCobro2: number | null = null;
@@ -483,6 +487,13 @@ export async function registrarCobro(
     medio2: medioCobro2,
     monto2: montoCobro2,
   });
+  // STORY-967: el cobro de una cancelación cierra la gestión en `cancelada`
+  // (no hay nada que liquidarle al técnico — se salta esa etapa).
+  if (cargoCancelacion != null) {
+    return avanzarEtapa(gestionId, "cancelada", {
+      motivo: "Cargo por cancelación cobrado",
+    });
+  }
   return avanzarEtapa(gestionId, "liquidacion_tecnico");
 }
 

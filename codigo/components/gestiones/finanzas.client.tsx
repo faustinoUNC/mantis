@@ -34,11 +34,14 @@ function FormCobro({
   cargando,
   error,
   onSubmit,
+  // STORY-967: el cobro de una cancelación no va a Liquidación — el CTA no miente.
+  cta = "Registrar cobro → Liquidación",
 }: {
   total: number;
   cargando: string | null;
   error: string | null;
   onSubmit: (datos: { medio: MedioCobro; medio2?: MedioCobro; monto2?: number }) => void;
+  cta?: string;
 }) {
   const [combinado, setCombinado] = useState(false);
   const [medio, setMedio] = useState<MedioCobro>("transferencia");
@@ -121,7 +124,7 @@ function FormCobro({
         )}
 
         <Button type="submit" disabled={cargando !== null || seExcede || mismoMedio}>
-          {cargando === "cobro" ? "Registrando…" : "Registrar cobro → Liquidación"}
+          {cargando === "cobro" ? "Registrando…" : cta}
         </Button>
       </div>
 
@@ -163,6 +166,35 @@ export function FinanzasAcciones({
     setCargando(null);
     if (!r.ok) setError(r.error ?? "Error");
     return r.ok;
+  }
+
+  // STORY-967: cancelación con cargo — se cobra SOLO el cargo (sin nota de
+  // cobro ni desglose trabajo+fee) y al registrar el cobro la gestión cierra
+  // en cancelada (no pasa por liquidación: no hay técnico que liquidar).
+  if (gestion.etapa === "facturacion_cobro" && gestion.cargo_cancelacion != null) {
+    const cargo = Number(gestion.cargo_cancelacion);
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="max-w-md">
+          <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
+            <div className="flex justify-between font-semibold">
+              <span>Cargo por cancelación a cobrar al {gestion.pagador ?? "responsable"}</span>
+              <span className="font-mono">{plata(cargo)}</span>
+            </div>
+            <p className="text-[12px] text-muted">
+              Al registrar el cobro, la gestión queda cancelada.
+            </p>
+          </div>
+        </div>
+        <FormCobro
+          total={cargo}
+          cargando={cargando}
+          error={error}
+          onSubmit={(datos) => correr("cobro", () => registrarCobro(gestion.id, datos))}
+          cta="Registrar cobro → Cancelada"
+        />
+      </div>
+    );
   }
 
   if (gestion.etapa === "facturacion_cobro") {

@@ -15,6 +15,8 @@ import type {
   TecnicoDisponible,
   Urgencia,
 } from "./types";
+import { ETAPAS_TERMINALES } from "./types";
+import { ultimaEjecucionDias, type TransicionEjecucion } from "./ejecucion";
 
 const BUCKET = "gestiones";
 const MIME_FOTOS: Record<string, string> = {
@@ -65,17 +67,18 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     asignacion_aceptada: (g.asignacion_aceptada as boolean | null) ?? null,
     presupuesto_pendiente: presupuestos.some((p) => p.estado === "enviado"),
     conformidad_rechazada: ultimaConformidad?.estado === "rechazada",
+    desasignada_en: (g.desasignada_en as string | null) ?? null,
     creado_en: g.creado_en as string,
   };
 }
 
 const SELECT_RESUMEN =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, creado_en, propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // STORY-938: igual que SELECT_RESUMEN pero con el contacto de propietario/
 // inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
 const SELECT_DETALLE =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // Inquilino si la gestión tiene legajo vigente; si no, el propietario.
 function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_cliente"] {
@@ -233,7 +236,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, materiales_total, materiales_fotos_paths, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -273,6 +276,7 @@ export async function obtenerGestion(
     pagador: Pagador | null;
     costo_final: number | null;
     cargo_admin: number | null;
+    cargo_cancelacion: number | null;
     materiales_total: number | null;
     materiales_fotos_paths: string[] | null;
     nota_emitida_en: string | null;
@@ -299,6 +303,8 @@ export async function obtenerGestion(
     pagador: fila.pagador,
     costo_final: fila.costo_final,
     cargo_admin: fila.cargo_admin,
+    cargo_cancelacion:
+      fila.cargo_cancelacion == null ? null : Number(fila.cargo_cancelacion),
     materiales_total: fila.materiales_total == null ? null : Number(fila.materiales_total),
     materiales_fotos_urls: (
       await Promise.all((fila.materiales_fotos_paths ?? []).map(fotoConUrl))
@@ -360,19 +366,51 @@ export async function avanzarEtapa(
 }
 
 // STORY-914: cancelar una gestión (estado terminal con motivo obligatorio).
+// STORY-967: post-aceptación del técnico admite un cargo opcional y libre —
+// con cargo la gestión pasa por Cobro marcada como cancelación y recién ahí
+// cierra en `cancelada` (el cobro la termina). Sin cargo, directo a cancelada.
 // La validación de etapa/permiso/motivo vive en avanzar_etapa (Postgres).
 export async function cancelarGestion(
   gestionId: string,
-  motivo: string
+  motivo: string,
+  cargo?: number
 ): Promise<ActionResult> {
   if (!motivo?.trim()) return { ok: false, error: "Indicá el motivo de la cancelación." };
   const supabase = await createClient();
+
+  const conCargo = Number(cargo) > 0;
+  if (conCargo) {
+    if (!Number.isFinite(Number(cargo))) {
+      return { ok: false, error: "El cargo por cancelación no es un monto válido." };
+    }
+    // RLS (admin o gestor owner) decide quién puede; el guard de etapa evita
+    // marcar cargo donde no corresponde (el técnico aceptó = presupuesto+).
+    const { data, error } = await supabase
+      .from("gestiones")
+      .update({ cargo_cancelacion: Number(cargo) })
+      .eq("id", gestionId)
+      .in("etapa", ["presupuesto", "en_ejecucion", "conformidad"])
+      .select("id");
+    if (error || !data?.length) {
+      return { ok: false, error: "No se pudo registrar el cargo de cancelación en esta etapa." };
+    }
+  }
+
   const { error } = await supabase.rpc("avanzar_etapa", {
     p_gestion: gestionId,
-    p_nueva: "cancelada",
-    p_detalle: { motivo: motivo.trim() },
+    p_nueva: conCargo ? "facturacion_cobro" : "cancelada",
+    p_detalle: conCargo
+      ? { motivo: motivo.trim(), cancelacion: "true", cargo: Number(cargo) }
+      : { motivo: motivo.trim() },
   });
   if (error) {
+    // Si el avance falló, el cargo marcado no debe quedar colgado.
+    if (conCargo) {
+      await supabase
+        .from("gestiones")
+        .update({ cargo_cancelacion: null })
+        .eq("id", gestionId);
+    }
     const mensajes: Record<string, string> = {
       motivo_requerido: "Indicá el motivo de la cancelación.",
       transicion_invalida: "Esta gestión ya no se puede cancelar.",
@@ -381,6 +419,59 @@ export async function cancelarGestion(
     const clave = Object.keys(mensajes).find((k) => error.message.includes(k));
     return { ok: false, error: clave ? mensajes[clave] : "No se pudo cancelar." };
   }
+  refrescarTablero(gestionId);
+  return { ok: true };
+}
+
+// STORY-966: desasignar al técnico — la gestión vuelve a Asignación con
+// retroceso TOTAL (presupuesto rechazado, rendición limpia; el nuevo técnico
+// rehace su evaluación). El historial y los avances del saliente se conservan.
+// Postgres congela {motivo, imputado, tecnico_saliente} en el evento; si fue
+// abandono, el contador del picker lo lee de ahí (el tecnico_id se pisa).
+export async function desasignarTecnico(
+  gestionId: string,
+  motivo: string,
+  abandonoTecnico: boolean
+): Promise<ActionResult> {
+  if (!motivo?.trim()) {
+    return { ok: false, error: "Indicá el motivo de la desasignación." };
+  }
+  const supabase = await createClient();
+  const { data: g } = await supabase
+    .from("gestiones")
+    .select("tecnico_id")
+    .eq("id", gestionId)
+    .single();
+  if (!g?.tecnico_id) {
+    return { ok: false, error: "La gestión no tiene técnico asignado." };
+  }
+
+  const { error } = await supabase.rpc("avanzar_etapa", {
+    p_gestion: gestionId,
+    p_nueva: "asignacion",
+    p_detalle: {
+      motivo: motivo.trim(),
+      imputado: abandonoTecnico ? "tecnico" : "gestor",
+    },
+  });
+  if (error) {
+    const mensajes: Record<string, string> = {
+      motivo_requerido: "Indicá el motivo de la desasignación.",
+      transicion_invalida: "En esta etapa no se puede desasignar al técnico.",
+      sin_permiso: "No tenés permiso para desasignar en esta gestión.",
+    };
+    const clave = Object.keys(mensajes).find((k) => error.message.includes(k));
+    return { ok: false, error: clave ? mensajes[clave] : "No se pudo desasignar." };
+  }
+
+  // La RLS deja de mostrarle la gestión al saliente: sus notificaciones
+  // quedarían linkeando a un 404 desde la campanita (patrón STORY-951).
+  await createAdminClient()
+    .from("notificaciones")
+    .delete()
+    .eq("usuario_id", g.tecnico_id)
+    .eq("gestion_id", gestionId);
+
   refrescarTablero(gestionId);
   return { ok: true };
 }
@@ -479,26 +570,66 @@ async function estadisticasTecnicos(
   if (ids.length === 0) return salida;
 
   const admin = createAdminClient();
-  const [{ data: califs }, { data: gestiones }] = await Promise.all([
+  const [{ data: califs }, { data: gestiones }, { data: desasignaciones }] = await Promise.all([
     admin.from("calificaciones").select("tecnico_id, estrellas").in("tecnico_id", ids),
     admin
       .from("gestiones")
       .select(
-        "tecnico_id, etapa, asignacion_aceptada, costo_final, materiales_total, presupuestos(estado, monto_materiales, monto_mano_obra)"
+        "id, tecnico_id, etapa, asignacion_aceptada, costo_final, materiales_total, presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias)"
       )
       .in("tecnico_id", ids),
+    // STORY-966: abandonos desde los eventos congelados — el tecnico_id de la
+    // gestión se pisa al reasignar; el evento guarda al saliente para siempre.
+    admin
+      .from("eventos_gestion")
+      .select("detalle")
+      .eq("tipo", "transicion")
+      .eq("a_etapa", "asignacion")
+      .eq("detalle->>imputado", "tecnico")
+      .in("detalle->>tecnico_saliente", ids),
   ]);
+  const abandonosPorTecnico = new Map<string, number>();
+  for (const e of (desasignaciones ?? []) as { detalle: { tecnico_saliente?: string } | null }[]) {
+    const t = e.detalle?.tecnico_saliente;
+    if (t) abandonosPorTecnico.set(t, (abandonosPorTecnico.get(t) ?? 0) + 1);
+  }
 
   type GFila = {
+    id: string;
     tecnico_id: string;
     etapa: string;
     asignacion_aceptada: boolean | null;
     costo_final: number | null;
     materiales_total: number | null;
-    presupuestos: { estado: string; monto_materiales: number; monto_mano_obra: number }[] | null;
+    presupuestos: {
+      estado: string;
+      monto_materiales: number;
+      monto_mano_obra: number;
+      plazo_dias: number | null;
+    }[] | null;
   };
-  const terminales = new Set(["finalizado", "cancelada"]);
 
+  // STORY-966: cumplimiento de plazo del picker — días reales de la ÚLTIMA
+  // ejecución completa (mismo criterio que Informes) vs plazo comprometido.
+  const idsGestiones = ((gestiones ?? []) as unknown as GFila[]).map((g) => g.id);
+  const ejecucionDias = new Map<string, number>();
+  if (idsGestiones.length > 0) {
+    const { data: transiciones } = await admin
+      .from("eventos_gestion")
+      .select("gestion_id, de_etapa, a_etapa, creado_en")
+      .eq("tipo", "transicion")
+      .in("gestion_id", idsGestiones);
+    const porGestion = new Map<string, TransicionEjecucion[]>();
+    for (const e of transiciones ?? []) {
+      const lista = porGestion.get(e.gestion_id) ?? [];
+      lista.push({ aEtapa: e.a_etapa, deEtapa: e.de_etapa, t: new Date(e.creado_en).getTime() });
+      porGestion.set(e.gestion_id, lista);
+    }
+    for (const [gid, evs] of porGestion) {
+      const dias = ultimaEjecucionDias(evs);
+      if (dias != null) ejecucionDias.set(gid, dias);
+    }
+  }
   for (const id of ids) {
     const gs = ((gestiones ?? []) as unknown as GFila[]).filter((g) => g.tecnico_id === id);
     const estrellasArr = (califs ?? [])
@@ -507,7 +638,6 @@ async function estadisticasTecnicos(
 
     const respondidas = gs.filter((g) => g.asignacion_aceptada !== null);
     const rechazadas = gs.filter((g) => g.asignacion_aceptada === false);
-    const terminadas = gs.filter((g) => terminales.has(g.etapa));
 
     // STORY-937: desvío SOLO de materiales (la mano de obra es fija por
     // diseño), ponderado por plata: Σ reales / Σ presupuestados − 1.
@@ -515,19 +645,31 @@ async function estadisticasTecnicos(
     let matReales = 0;
     let matPresupuestados = 0;
     let nDesvio = 0;
+    // STORY-966: cumplimiento de plazo (promedio de % de desvío por obra,
+    // mismo cálculo que la card homónima de Informes).
+    let plazoTotalPct = 0;
+    let nPlazo = 0;
     for (const g of gs) {
       const aprob = (g.presupuestos ?? []).find((p) => p.estado === "aprobado");
-      if (!aprob || Number(aprob.monto_materiales) <= 0) continue;
+      if (!aprob) continue;
       const real =
-        g.materiales_total != null
-          ? Number(g.materiales_total)
-          : g.costo_final != null
-            ? Number(g.costo_final) - Number(aprob.monto_mano_obra)
-            : null;
-      if (real == null || real < 0) continue;
-      matReales += real;
-      matPresupuestados += Number(aprob.monto_materiales);
-      nDesvio += 1;
+        Number(aprob.monto_materiales) <= 0
+          ? null
+          : g.materiales_total != null
+            ? Number(g.materiales_total)
+            : g.costo_final != null
+              ? Number(g.costo_final) - Number(aprob.monto_mano_obra)
+              : null;
+      if (real != null && real >= 0) {
+        matReales += real;
+        matPresupuestados += Number(aprob.monto_materiales);
+        nDesvio += 1;
+      }
+      const diasReales = ejecucionDias.get(g.id);
+      if (aprob.plazo_dias && aprob.plazo_dias > 0 && diasReales != null) {
+        plazoTotalPct += ((diasReales - aprob.plazo_dias) / aprob.plazo_dias) * 100;
+        nPlazo += 1;
+      }
     }
 
     const prom = (arr: number[]) =>
@@ -540,20 +682,16 @@ async function estadisticasTecnicos(
         ? Math.round((matReales / matPresupuestados - 1) * 1000) / 10
         : null,
       nDesvio,
-      obrasActivas: gs.filter((g) => !terminales.has(g.etapa)).length,
+      desvioPlazoPct: nPlazo ? Math.round((plazoTotalPct / nPlazo) * 10) / 10 : null,
+      nPlazo,
+      obrasActivas: gs.filter((g) => !ETAPAS_TERMINALES.has(g.etapa)).length,
       // Realizadas = solo finalizadas (una cancelada no es un trabajo hecho).
       obrasRealizadas: gs.filter((g) => g.etapa === "finalizado").length,
       pctRechazoAsig: respondidas.length
         ? Math.round((rechazadas.length / respondidas.length) * 100)
         : null,
       nAsig: respondidas.length,
-      // Sobre terminadas (finalizadas + canceladas): las activas no diluyen la señal.
-      pctCancelacion: terminadas.length
-        ? Math.round(
-            (terminadas.filter((g) => g.etapa === "cancelada").length / terminadas.length) * 100
-          )
-        : null,
-      nTerminadas: terminadas.length,
+      abandonos: abandonosPorTecnico.get(id) ?? 0,
     });
   }
   return salida;

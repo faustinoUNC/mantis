@@ -72,6 +72,11 @@ function TarjetaGestion({
             {gestion.urgencia === "urgente" && (
               <Badge tono="urgente">Urgente</Badge>
             )}
+            {/* STORY-966: volvió a Asignación con técnico previo (baja,
+                abandono o reasignación) — hay que reasignar cuanto antes. */}
+            {gestion.etapa === "asignacion" && gestion.desasignada_en && (
+              <Badge tono="urgente">Reasignar</Badge>
+            )}
           </div>
           <span className="font-mono text-[11px] text-muted/80 shrink-0">
             {diasEn(gestion.creado_en)}

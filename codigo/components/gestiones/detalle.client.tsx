@@ -28,6 +28,7 @@ import {
   calificarTecnico,
   cancelarGestion,
   cancelarSolicitudAsignacion,
+  desasignarTecnico,
   enviarPresupuesto,
   reasignarGestor,
   registrarAvance,
@@ -80,6 +81,7 @@ function plata(n: number) {
 }
 
 function etiquetaEtapa(id: string | null) {
+  if (id === "cancelada") return "Cancelada"; // terminal fuera del stepper
   return ETAPAS.find((e) => e.id === id)?.label ?? id ?? "";
 }
 
@@ -306,6 +308,15 @@ function ScorecardTecnico({
           valor: `${s.desvioPct > 0 ? "+" : ""}${s.desvioPct}%`,
           tono: s.desvioPct > 10 ? ("alerta" as const) : ("bien" as const),
         };
+  // STORY-966: mismo dato y mismo nombre que la card "Cumplimiento de plazo"
+  // de Informes — "Desvío" a secas confundía (¿presupuesto o plazo?).
+  const plazo =
+    s?.desvioPlazoPct == null
+      ? { valor: "s/d", tono: "neutro" as const }
+      : {
+          valor: `${s.desvioPlazoPct > 0 ? "+" : ""}${s.desvioPlazoPct}%`,
+          tono: s.desvioPlazoPct > 10 ? ("alerta" as const) : ("bien" as const),
+        };
   return (
     <button
       type="button"
@@ -344,17 +355,23 @@ function ScorecardTecnico({
           tono={s?.estrellas != null && s.estrellas >= 4 ? "bien" : "neutro"}
         />
         <ChipStat
-          label="Desvío"
+          label="Presupuesto"
           valor={desvio.valor}
-          ayuda="Suma de los materiales que rindió al terminar sus obras vs. los que había presupuestado (en $). Ej.: +20% = cada $100 presupuestados salieron $120. La mano de obra no entra (es fija)."
+          ayuda="Cumplimiento de presupuesto (igual que en Informes): materiales que rindió vs. los que presupuestó, en $. Ej.: +20% = cada $100 presupuestados salieron $120. La mano de obra no entra (es fija)."
           tono={desvio.tono}
+        />
+        <ChipStat
+          label="Plazo"
+          valor={plazo.valor}
+          ayuda="Cumplimiento de plazo (igual que en Informes): días reales de obra vs. el plazo que comprometió en el presupuesto. Ej.: +30% = una obra de 10 días le llevó 13."
+          tono={plazo.tono}
+          align="der"
         />
         <ChipStat
           label="Hechas"
           valor={s ? String(s.obrasRealizadas) : "0"}
           ayuda="Trabajos que ya finalizó (su experiencia acumulada). Las canceladas no cuentan."
           tono={s && s.obrasRealizadas > 0 ? "bien" : "neutro"}
-          align="der"
         />
         <ChipStat
           label="En curso"
@@ -369,11 +386,10 @@ function ScorecardTecnico({
           tono={s?.pctRechazoAsig != null && s.pctRechazoAsig >= 30 ? "alerta" : "neutro"}
         />
         <ChipStat
-          label="Cancela"
-          valor={s?.pctCancelacion != null ? `${s.pctCancelacion}%` : "s/d"}
-          ayuda="De sus gestiones terminadas, qué porcentaje terminó cancelada."
-          tono={s?.pctCancelacion != null && s.pctCancelacion >= 20 ? "alerta" : "neutro"}
-          align="der"
+          label="Abandonó"
+          valor={s ? String(s.abandonos) : "0"}
+          ayuda="Trabajos que dejó a mitad de camino (el gestor tuvo que desasignarlo y otro técnico rehízo la obra)."
+          tono={s && s.abandonos > 0 ? "alerta" : "neutro"}
         />
       </div>
     </button>
@@ -644,18 +660,9 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
   const inspecciones = gestion.avances.filter((a) => a.tipo === "inspeccion");
 
   if (!enviado) {
-    return (
-      <div className="flex items-center gap-3">
-        <p className="text-sm text-muted">Esperando presupuesto del técnico.</p>
-        <Button
-          variante="secundario"
-          disabled={cargando}
-          onClick={() => correr(() => avanzarEtapa(gestion.id, "asignacion", { motivo: "reasignar" }))}
-        >
-          ← Volver a Asignación
-        </Button>
-      </div>
-    );
+    // STORY-966: el botón "Volver a Asignación" que vivía acá se unificó en la
+    // card "Desasignar técnico" (abajo) — un solo camino, con motivo.
+    return <p className="text-sm text-muted">Esperando presupuesto del técnico.</p>;
   }
 
   return (
@@ -1105,10 +1112,14 @@ function CalificarTecnico({ gestion }: { gestion: GestionDetalle }) {
 }
 
 // ── Cancelar gestión (STORY-914) — estado terminal con motivo obligatorio ──
+// STORY-967: post-aceptación del técnico admite un cargo opcional y libre —
+// con cargo, la gestión pasa por Cobro y recién ahí cierra en cancelada.
 
 function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const [abierto, setAbierto] = useState(false);
+  // El técnico aceptó = la gestión pasó de Asignación (ahí se ancla el cargo).
+  const admiteCargo = ["presupuesto", "en_ejecucion", "conformidad"].includes(gestion.etapa);
 
   if (!abierto) {
     return (
@@ -1129,20 +1140,106 @@ function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
         className="flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          const motivo = String(new FormData(e.currentTarget).get("motivo"));
-          correr(() => cancelarGestion(gestion.id, motivo));
+          const form = new FormData(e.currentTarget);
+          const motivo = String(form.get("motivo"));
+          const cargo = admiteCargo ? Number(form.get("cargo") || 0) : 0;
+          correr(() => cancelarGestion(gestion.id, motivo, cargo));
         }}
       >
         <p className="text-[13px] font-medium text-muted">
           Cancelar la gestión — queda registrada con su motivo (no se borra).
         </p>
         <Input label="Motivo de la cancelación" name="motivo" required placeholder="Por qué no continúa" />
+        {admiteCargo && (
+          <div className="max-w-xs">
+            <Input
+              label="Cargo por cancelación ($) — opcional"
+              name="cargo"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0 = sin cargo"
+            />
+            <p className="mt-1 text-[12px] text-muted">
+              Con cargo, la gestión pasa por Cobro (lo registra la administración) y
+              recién ahí queda cancelada. Sin cargo, se cancela ahora.
+            </p>
+          </div>
+        )}
         <div className="flex gap-2">
           <Button type="submit" variante="secundario" disabled={cargando}>
             Confirmar cancelación
           </Button>
           <Button type="button" variante="fantasma" onClick={() => setAbierto(false)}>
             No cancelar
+          </Button>
+        </div>
+        {error && <p className="text-sm font-medium text-error">{error}</p>}
+      </form>
+    </Card>
+  );
+}
+
+// ── Desasignar técnico (STORY-966) — retroceso total a Asignación ──
+// Un solo camino para reasignar/abandono: motivo obligatorio; si fue el
+// técnico el que dejó el trabajo, queda imputado a él (métricas).
+
+function DesasignarTecnico({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  const [abierto, setAbierto] = useState(false);
+
+  if (!abierto) {
+    return (
+      <Card className="p-4 mt-4 border-dashed">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[13px] text-muted">
+            ¿{gestion.tecnico_nombre ?? "El técnico"} no puede seguir con la obra?
+          </p>
+          <Button variante="fantasma" onClick={() => setAbierto(true)}>
+            Desasignar técnico
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-4 mt-4 border-dashed border-error-soft-border">
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const form = new FormData(e.currentTarget);
+          correr(() =>
+            desasignarTecnico(
+              gestion.id,
+              String(form.get("motivo")),
+              form.get("abandono") === "on"
+            )
+          );
+        }}
+      >
+        <p className="text-[13px] font-medium text-muted">
+          La gestión vuelve a Asignación y el nuevo técnico hace su propia
+          evaluación, presupuesto y rendición. El historial y las fotos de{" "}
+          {gestion.tecnico_nombre ?? "el técnico saliente"} se conservan.
+        </p>
+        <Input label="Motivo de la desasignación" name="motivo" required placeholder="Por qué no sigue este técnico" />
+        <label className="flex items-start gap-2 text-sm cursor-pointer">
+          <input type="checkbox" name="abandono" className="mt-0.5 accent-[var(--color-brand)]" />
+          <span>
+            El técnico abandonó el trabajo
+            <span className="block text-[12px] text-muted">
+              Queda registrado en sus estadísticas (chip &quot;Abandonó&quot; e Informes).
+            </span>
+          </span>
+        </label>
+        <div className="flex gap-2">
+          <Button type="submit" variante="secundario" disabled={cargando}>
+            Confirmar desasignación
+          </Button>
+          <Button type="button" variante="fantasma" onClick={() => setAbierto(false)}>
+            No desasignar
           </Button>
         </div>
         {error && <p className="text-sm font-medium text-error">{error}</p>}
@@ -1241,6 +1338,10 @@ function detalleLegible(detalle: Record<string, unknown> | null): string | null 
   if (detalle.medio) partes.push(`Medio: ${detalle.medio}`);
   if (detalle.factura_ref) partes.push(`Factura: ${detalle.factura_ref}`);
   if (detalle.para) partes.push(`Para: ${detalle.para}`);
+  // STORY-967: el cargo de la cancelación, con nombre propio.
+  if (detalle.cargo != null) partes.push(`Cargo: ${plataD(detalle.cargo)}`);
+  // STORY-966: la desasignación imputada al técnico se dice con todas las letras.
+  if (detalle.imputado === "tecnico") partes.push("Abandonada por el técnico");
   if (detalle.motivo && detalle.motivo !== "reasignar") partes.push(String(detalle.motivo));
   return partes.length ? partes.join(" · ") : null;
 }
@@ -1266,6 +1367,27 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
         ? {
             clase: "evento",
             texto: "Gestión cancelada",
+            detalle: detalleLegible(e.detalle),
+            actor: e.actor?.nombre ?? null,
+            fecha: e.creado_en,
+          }
+        : // STORY-967: la cancelación con cargo pasa por Cobro — que el
+          // historial diga por qué está ahí, no un "→ Cobro" mudo.
+          e.tipo === "transicion" && e.detalle?.cancelacion
+        ? {
+            clase: "evento",
+            texto: "Cancelación con cargo — pasó a Cobro",
+            detalle: detalleLegible(e.detalle),
+            actor: e.actor?.nombre ?? null,
+            fecha: e.creado_en,
+          }
+        : // STORY-966: el retroceso a Asignación con técnico saliente es una
+          // desasignación — se cuenta como evento con su motivo, no como un
+          // simple cambio de etapa.
+          e.tipo === "transicion" && e.a_etapa === "asignacion" && e.detalle?.tecnico_saliente
+        ? {
+            clase: "evento",
+            texto: "Técnico desasignado — la gestión volvió a Asignación",
             detalle: detalleLegible(e.detalle),
             actor: e.actor?.nombre ?? null,
             fecha: e.creado_en,
@@ -1443,6 +1565,15 @@ export function DetalleGestion({
         ) : (
           <Badge tono="brand">{etiquetaEtapa(gestion.etapa)}</Badge>
         )}
+        {/* STORY-967: en Cobro con cargo de cancelación, que se note que ya
+            no es una obra — solo falta cobrar el cargo para cerrarla. */}
+        {gestion.etapa === "facturacion_cobro" && gestion.cargo_cancelacion != null && (
+          <Badge tono="urgente">Cancelación — cobro del cargo pendiente</Badge>
+        )}
+        {/* STORY-966: volvió a Asignación con técnico previo — reasignar YA. */}
+        {gestion.etapa === "asignacion" && gestion.desasignada_en && (
+          <Badge tono="urgente">Reasignar técnico</Badge>
+        )}
         {gestion.urgencia === "urgente" && <Badge tono="urgente">Urgente</Badge>}
         <Badge tono="neutro">{gestion.especialidad}</Badge>
         {gestion.archivada_en && <Badge tono="neutro">Archivada</Badge>}
@@ -1554,6 +1685,15 @@ export function DetalleGestion({
         )}
       </Card>
       </PresenciaGestion>
+
+      {/* STORY-966: desasignar solo con técnico que ya aceptó (en asignación
+          pendiente ya existe "Cancelar y elegir otro técnico"). */}
+      {esGestorOwner &&
+        gestion.tecnico_id &&
+        gestion.asignacion_aceptada === true &&
+        ["presupuesto", "en_ejecucion", "conformidad"].includes(gestion.etapa) && (
+          <DesasignarTecnico gestion={gestion} />
+        )}
 
       {esGestorOwner &&
         ["ingresado", "asignacion", "presupuesto", "en_ejecucion", "conformidad"].includes(
