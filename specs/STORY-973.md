@@ -29,3 +29,4 @@ Sin migraciones ni pantallas nuevas (Regla #0): el historial que ya existe cuent
 
 - **Archivos:** `features/finanzas/service.ts` (evento con `total`), `components/gestiones/detalle.client.tsx` (labels + 2º medio en `detalleLegible`), `components/auditoria/auditoria.client.tsx` (ídem en `resumenDetalle`).
 - **Verificación:** `tsc`+`eslint` verdes. E2E local (2026-07-15): cobro combinado efectivo + transferencia $5.000 sobre gestión de prueba → Actividad y Auditoría muestran `Total · Medio: Efectivo · 2º medio: Transferencia ($ 5.000)`.
+- **v1.1 (mismo día):** hydration mismatch preexistente detectado durante la verificación — la celda de fecha de Auditoría usaba `toLocaleString("es-AR")`, que difiere entre Node y el navegador en espacios unicode (U+202F). Fix: `fechaHora` determinístico propio (mismo patrón que el del detalle), formato `dd/mm/aa, hh:mm` 24 h. Consola limpia verificada.

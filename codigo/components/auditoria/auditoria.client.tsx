@@ -47,6 +47,19 @@ const etapaLegible = (id: string | null) => (id ? (ETIQUETA_ETAPA[id] ?? id) : "
 const plata = (n: unknown) =>
   `$ ${Number(n).toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
 
+// Formato manual determinístico (patrón fechaHora del detalle): toLocaleString
+// mete un espacio invisible (U+202F) distinto entre Node y el navegador →
+// error de hidratación.
+function fechaHora(f: string) {
+  const d = new Date(f);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const aa = String(d.getFullYear() % 100).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${aa}, ${hh}:${mi}`;
+}
+
 // STORY-973: labels de cobro y liquidación en un solo mapa (las claves
 // compartidas, ej. "efectivo", tienen el mismo label en ambos).
 const MEDIO_LABEL: Record<string, string> = {
@@ -178,13 +191,7 @@ export function Auditoria({ eventos }: { eventos: EventoAuditoria[] }) {
                   </td>
                   <td className="px-4 py-2.5 text-muted">{e.actor_nombre}</td>
                   <td className="px-4 py-2.5 font-mono text-[12px] text-muted whitespace-nowrap">
-                    {new Date(e.creado_en).toLocaleString("es-AR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {fechaHora(e.creado_en)}
                   </td>
                 </tr>
               );
