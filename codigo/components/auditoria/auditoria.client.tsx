@@ -7,6 +7,10 @@ import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { Paginador } from "@/components/ui/paginador.client";
 import { Select } from "@/components/ui/select";
 import type { EventoAuditoria } from "@/features/auditoria/service";
+import {
+  MEDIO_COBRO_LABEL,
+  MEDIO_LIQUIDACION_LABEL,
+} from "@/features/finanzas/medios";
 import { ETAPAS } from "@/features/gestiones/types";
 import { usePaginado } from "@/shared/hooks/use-paginado";
 import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
@@ -43,6 +47,13 @@ const etapaLegible = (id: string | null) => (id ? (ETIQUETA_ETAPA[id] ?? id) : "
 const plata = (n: unknown) =>
   `$ ${Number(n).toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
 
+// STORY-973: labels de cobro y liquidación en un solo mapa (las claves
+// compartidas, ej. "efectivo", tienen el mismo label en ambos).
+const MEDIO_LABEL: Record<string, string> = {
+  ...MEDIO_LIQUIDACION_LABEL,
+  ...MEDIO_COBRO_LABEL,
+};
+
 // Resumen humano del JSON `detalle` — la mitad del valor de auditoría vive ahí.
 function resumenDetalle(d: Record<string, unknown> | null): string {
   if (!d) return "";
@@ -56,7 +67,12 @@ function resumenDetalle(d: Record<string, unknown> | null): string {
   if (d.costo_final != null) partes.push(`costo final ${plata(d.costo_final)}`);
   if (d.cargo_admin != null) partes.push(`cargo adm. ${plata(d.cargo_admin)}`);
   if (d.plazo_dias != null) partes.push(`${d.plazo_dias} día${Number(d.plazo_dias) === 1 ? "" : "s"}`);
-  if (d.medio) partes.push(String(d.medio));
+  if (d.medio) partes.push(MEDIO_LABEL[String(d.medio)] ?? String(d.medio));
+  // STORY-973: el cobro combinado (STORY-950) se cuenta completo.
+  if (d.medio2) {
+    const label = MEDIO_LABEL[String(d.medio2)] ?? String(d.medio2);
+    partes.push(d.monto2 != null ? `2º medio: ${label} (${plata(d.monto2)})` : `2º medio: ${label}`);
+  }
   if (d.factura_ref) partes.push(`fact. ${d.factura_ref}`);
   if (d.motivo) partes.push(`“${d.motivo}”`);
   return partes.join(" · ");

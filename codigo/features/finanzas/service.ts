@@ -494,10 +494,13 @@ export async function registrarCobro(
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo registrar el cobro." };
 
+  // STORY-973: el total viaja en el evento — la Actividad cuenta el cobro
+  // completo (cuánto y con qué medios) sin leer campos de la gestión.
   await registrarEvento(gestionId, "cobro_registrado", actual.id, {
     medio: datos.medio,
     medio2: medioCobro2,
     monto2: montoCobro2,
+    total,
   });
   // STORY-967: el cobro de una cancelación cierra la gestión en `cancelada`
   // (no hay nada que liquidarle al técnico — se salta esa etapa).

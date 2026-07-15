@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-973](STORY-973.md) | El cobro combinado se ve completo: Actividad y Auditoría muestran total, medio con label y 2º medio con su monto (`medio_cobro_2` no se leía en ninguna pantalla) — card #6, error de la prueba de STORY-950 | ✅ done |
 | [STORY-972](STORY-972.md) | Nota de cobro para la cancelación con cargo: mismo circuito de nota (vista previa + email), total = cargo, PDF "Trabajo cancelado" — supersede la decisión #3 de STORY-967 (card #93, error 9 de la prueba) | ✅ done |
 | [STORY-971](STORY-971.md) | El técnico avisa que no puede continuar: evento `tecnico_no_continua` + notificación al gestor vía outbox; el gestor decide con desasignar/cancelar — sin estados nuevos (card #93, error 2 de la prueba) | ✅ done |
 | [STORY-970](STORY-970.md) | El chip "Rechaza" cuenta desde eventos (el rechazo pisa `tecnico_id` y el estado vivo no puede contarlo) + la desasignación anula `presupuesto_enviado_en`: el presupuesto del técnico nuevo exige su propio envío y el botón vuelve a "Enviar" (card #93, errores 1/7/8) | ✅ done |

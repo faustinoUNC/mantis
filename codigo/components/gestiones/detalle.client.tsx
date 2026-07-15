@@ -18,6 +18,10 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { UsuarioActual } from "@/features/auth/types";
 import {
+  MEDIO_COBRO_LABEL,
+  MEDIO_LIQUIDACION_LABEL,
+} from "@/features/finanzas/medios";
+import {
   descargarPresupuestoPDF,
   enviarPresupuestoEmail,
 } from "@/features/finanzas/service";
@@ -1395,6 +1399,13 @@ const SELLO_NOTA: Record<string, string> = {
   avance: "Avance de obra",
 };
 
+// STORY-973: labels de cobro y liquidación en un solo mapa (las claves
+// compartidas, ej. "efectivo", tienen el mismo label en ambos).
+const MEDIO_LABEL: Record<string, string> = {
+  ...MEDIO_LIQUIDACION_LABEL,
+  ...MEDIO_COBRO_LABEL,
+};
+
 // Datos pertinentes del evento, legibles ("Técnico: X · Total: $ Y")
 function detalleLegible(detalle: Record<string, unknown> | null): string | null {
   if (!detalle) return null;
@@ -1407,7 +1418,14 @@ function detalleLegible(detalle: Record<string, unknown> | null): string | null 
   if (detalle.monto != null) partes.push(`Monto: ${plataD(detalle.monto)}`);
   if (detalle.plazo_dias != null) partes.push(`Plazo: ${detalle.plazo_dias} día${Number(detalle.plazo_dias) === 1 ? "" : "s"}`);
   if (detalle.pagador) partes.push(`Paga: ${detalle.pagador}`);
-  if (detalle.medio) partes.push(`Medio: ${detalle.medio}`);
+  if (detalle.medio) partes.push(`Medio: ${MEDIO_LABEL[String(detalle.medio)] ?? detalle.medio}`);
+  // STORY-973: el cobro combinado (STORY-950) se cuenta completo.
+  if (detalle.medio2) {
+    const label = MEDIO_LABEL[String(detalle.medio2)] ?? detalle.medio2;
+    partes.push(
+      detalle.monto2 != null ? `2º medio: ${label} (${plataD(detalle.monto2)})` : `2º medio: ${label}`
+    );
+  }
   if (detalle.factura_ref) partes.push(`Factura: ${detalle.factura_ref}`);
   if (detalle.para) partes.push(`Para: ${detalle.para}`);
   // STORY-967: el cargo de la cancelación, con nombre propio.
