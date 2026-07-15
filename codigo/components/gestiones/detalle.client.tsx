@@ -156,6 +156,13 @@ function DatosGestion({ gestion }: { gestion: GestionDetalle }) {
             <span className="font-mono text-[13px] text-muted">{fechaHora(gestion.creado_en)}</span>
           )}
         </Dato>
+        {/* STORY-977: visible para TODOS los roles (incl. el técnico) — es
+            plata que ya recibió, se refleja en su propia gestión. */}
+        {Boolean(gestion.adelanto_materiales) && (
+          <Dato label="Adelanto de materiales">
+            <span className="font-mono text-[14px]">{plata(gestion.adelanto_materiales!)}</span>
+          </Dato>
+        )}
       </div>
     </Card>
   );
@@ -1774,6 +1781,13 @@ export function DetalleGestion({
         {gestion.etapa === "conformidad" && esTecnicoAsignado && !tecnicoEnPausa && (
           <AccionConformidadTecnico gestion={gestion} />
         )}
+        {/* STORY-977: única acción del administrativo antes de Cobro — cargar
+            el adelanto de materiales (presupuesto ya aprobado en esta altura). */}
+        {["en_ejecucion", "conformidad"].includes(gestion.etapa) && esAdministrativo && (
+          <div className="border-t border-border pt-5">
+            <FinanzasAcciones gestion={gestion} />
+          </div>
+        )}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
           esAdministrativo && <FinanzasAcciones gestion={gestion} />}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
@@ -1794,9 +1808,10 @@ export function DetalleGestion({
             Gestión cancelada — el motivo quedó registrado en la actividad.
           </p>
         )}
-        {/* Gestor administrativo antes de Cobro: sin acciones todavía */}
+        {/* Gestor administrativo antes de Cobro: sin acciones todavía (en
+            ejecución/conformidad ya tiene el adelanto de materiales arriba) */}
         {esAdministrativo && !esGestorOwner && !esTecnicoAsignado &&
-          !["facturacion_cobro", "liquidacion_tecnico", "finalizado"].includes(gestion.etapa) && (
+          !["en_ejecucion", "conformidad", "facturacion_cobro", "liquidacion_tecnico", "finalizado"].includes(gestion.etapa) && (
             <p className="text-sm text-muted">
               Sin acciones para tu rol en esta etapa — interviene en Cobro, cuando se apruebe la conformidad.
             </p>

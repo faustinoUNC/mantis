@@ -119,6 +119,9 @@ export interface GestionDetalle extends GestionResumen {
   // gastado en la obra + fotos de los comprobantes (una por ticket)
   materiales_total: number | null;
   materiales_fotos_urls: string[];
+  // STORY-977: plata entregada al técnico para materiales ANTES de rendir —
+  // se descuenta del monto a liquidar al final.
+  adelanto_materiales: number | null;
   nota_emitida_en: string | null;
   // STORY-935: marca persistida del envío del presupuesto por email — sin
   // esto no se puede aprobar. Y archivado (null = activa, fuera del tablero).

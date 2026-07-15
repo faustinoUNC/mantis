@@ -46,6 +46,9 @@ export interface DatosDocumento {
   materialesRendidos?: boolean;
   // STORY-972: nota de una cancelación con cargo — el total ES el cargo
   cancelacion?: boolean;
+  // STORY-977: adelanto de materiales ya entregado al técnico — solo en el
+  // comprobante (nunca en la nota al pagador, no le corresponde verlo).
+  adelantoMateriales?: number | null;
 }
 
 function monto(n: number) {
@@ -135,6 +138,12 @@ function Documento({ datos }: { datos: DatosDocumento }) {
                 <Text>Mano de obra (presupuesto aprobado)</Text>
                 <Text>{monto(datos.presupuesto.manoObra)}</Text>
               </View>
+              {Boolean(datos.adelantoMateriales) && (
+                <View style={s.filaTabla}>
+                  <Text>Adelanto de materiales (ya entregado)</Text>
+                  <Text>− {monto(datos.adelantoMateriales!)}</Text>
+                </View>
+              )}
             </>
           )}
           <View style={s.total}>

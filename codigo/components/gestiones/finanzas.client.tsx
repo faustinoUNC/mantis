@@ -16,6 +16,7 @@ import {
 import {
   descargarDocumento,
   emitirNotaCobro,
+  registrarAdelantoMateriales,
   registrarCobro,
   registrarLiquidacion,
 } from "@/features/finanzas/service";
@@ -190,6 +191,55 @@ function FormCobro({
   );
 }
 
+// STORY-977: un solo campo editable (no una tabla de entregas) — el
+// administrativo carga/corrige cuánto le adelantó al técnico para
+// materiales, con el tope de lo presupuestado a la vista.
+function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
+  const [monto, setMonto] = useState(
+    gestion.adelanto_materiales != null ? String(gestion.adelanto_materiales) : ""
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(false);
+
+  const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
+  const tope = aprobado ? Number(aprobado.monto_materiales) : 0;
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setCargando(true);
+    const r = await registrarAdelantoMateriales(gestion.id, Number(monto) || 0);
+    setCargando(false);
+    if (!r.ok) setError(r.error ?? "Error");
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-[13px] font-medium text-muted">
+        Adelanto de materiales{" "}
+        <span className="text-muted/50 font-normal">
+          · tope {plata(tope)} (materiales del presupuesto aprobado)
+        </span>
+      </p>
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
+        <div className="w-40">
+          <Input
+            label="Monto adelantado"
+            inputMode="decimal"
+            value={monto}
+            onChange={(e) => setMonto(e.target.value.replace(/[^\d.]/g, ""))}
+            placeholder="0"
+          />
+        </div>
+        <Button type="submit" disabled={cargando}>
+          {cargando ? "Guardando…" : "Guardar adelanto"}
+        </Button>
+      </form>
+      {error && <p className="text-sm font-medium text-error">{error}</p>}
+    </div>
+  );
+}
+
 export function FinanzasAcciones({
   gestion,
 }: {
@@ -204,6 +254,13 @@ export function FinanzasAcciones({
   // lectura (el pagador aprobó conociendo ese total; no se corrige a último
   // momento).
   const cargoAdmin = Number(gestion.cargo_admin ?? 0);
+
+  // STORY-977: en ejecución/conformidad el administrativo todavía no tiene
+  // cobro ni liquidación que registrar — su única acción posible acá es
+  // cargar/corregir el adelanto de materiales.
+  if (["en_ejecucion", "conformidad"].includes(gestion.etapa)) {
+    return <AdelantoMateriales gestion={gestion} />;
+  }
 
   async function correr(
     clave: string,
@@ -262,6 +319,9 @@ export function FinanzasAcciones({
     const trabajo = Number(gestion.costo_final ?? 0);
     return (
       <div className="flex flex-col gap-5">
+        <div className="border-b border-border pb-5">
+          <AdelantoMateriales gestion={gestion} />
+        </div>
         {/* Composición de la nota: trabajo + fee anclado en el presupuesto */}
         <div className="max-w-md">
           <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
@@ -309,10 +369,15 @@ export function FinanzasAcciones({
     const rendido = gestion.materiales_total;
     // STORY-964: al técnico se le liquida el total real que rindió de la obra
     // + su mano de obra. Fallback: costo_final (gestiones viejas).
-    const liqTotal =
-      rendido != null ? rendido + manoObra : Number(gestion.costo_final ?? 0);
+    const base = rendido != null ? rendido + manoObra : Number(gestion.costo_final ?? 0);
+    // STORY-977: lo ya adelantado se resta — puede llegar a $0 sin bloquear el cierre.
+    const adelanto = Number(gestion.adelanto_materiales ?? 0);
+    const liqTotal = Math.max(base - adelanto, 0);
     return (
       <div className="flex flex-col gap-4">
+        <div className="border-b border-border pb-4">
+          <AdelantoMateriales gestion={gestion} />
+        </div>
         <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
           {rendido != null && (
             <>
@@ -326,13 +391,13 @@ export function FinanzasAcciones({
               </div>
             </>
           )}
-          <div
-            className={
-              rendido != null
-                ? "flex justify-between pt-1 border-t border-border font-semibold"
-                : "flex justify-between font-semibold"
-            }
-          >
+          {adelanto > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted">Adelanto ya entregado</span>
+              <span className="font-mono">− {plata(adelanto)}</span>
+            </div>
+          )}
+          <div className="flex justify-between pt-1 border-t border-border font-semibold">
             <span>A liquidar al técnico</span>
             <span className="font-mono">{plata(liqTotal)}</span>
           </div>

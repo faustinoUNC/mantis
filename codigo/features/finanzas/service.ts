@@ -1,10 +1,11 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { obtenerUsuarioActual } from "@/features/auth/service";
 import { enviarEmailDocumento } from "@/features/email/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { avanzarEtapa } from "@/features/gestiones/service";
-import type { Pagador } from "@/features/gestiones/types";
+import { ETAPAS_TERMINALES, type Pagador } from "@/features/gestiones/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 import {
@@ -64,7 +65,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, descripcion, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, adelanto_materiales, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -195,6 +196,10 @@ async function datosDocumento(
           : null,
       plazoDias: tipo === "presupuesto" ? vigente?.plazo_dias ?? null : null,
       materialesRendidos: tipo !== "presupuesto" && materialesRendidos,
+      // STORY-977: el adelanto es un ajuste entre inmobiliaria↔técnico — solo
+      // se muestra en el comprobante del técnico, nunca en la nota al pagador.
+      adelantoMateriales:
+        tipo === "comprobante" ? Number(g.adelanto_materiales ?? 0) : null,
     },
   };
 }
@@ -549,6 +554,59 @@ export async function registrarCobro(
   return avanzarEtapa(gestionId, "liquidacion_tecnico");
 }
 
+// STORY-977: adelanto de materiales al técnico ANTES de rendir la obra — un
+// solo campo (no una tabla de entregas: revive STORY-933, descartada por
+// complejidad, con el diseño más simple posible). Tope: no puede superar los
+// materiales del presupuesto APROBADO (ese es su techo propio, la mano de
+// obra no entra). Editable hasta que se registre la liquidación.
+export async function registrarAdelantoMateriales(
+  gestionId: string,
+  monto: number
+): Promise<ActionResult> {
+  const actual = await exigirAdministrativo();
+  if (!actual) return { ok: false, error: "No tenés permiso." };
+  if (!Number.isFinite(monto) || monto < 0) {
+    return { ok: false, error: "Ingresá un monto válido." };
+  }
+
+  const supabase = await createClient();
+  const { data: g } = await supabase
+    .from("gestiones")
+    .select("etapa, liq_pagada_en, presupuestos(monto_materiales, estado)")
+    .eq("id", gestionId)
+    .single();
+  type Fila = {
+    etapa: string;
+    liq_pagada_en: string | null;
+    presupuestos: { monto_materiales: number; estado: string }[];
+  };
+  const fila = g as unknown as Fila | null;
+  if (!fila || ETAPAS_TERMINALES.has(fila.etapa)) {
+    return { ok: false, error: "La gestión ya no admite cambios de adelanto." };
+  }
+  if (fila.liq_pagada_en) {
+    return { ok: false, error: "La gestión ya fue liquidada." };
+  }
+  const aprobado = fila.presupuestos.find((p) => p.estado === "aprobado");
+  const tope = aprobado ? Number(aprobado.monto_materiales) : 0;
+  if (monto > tope) {
+    return {
+      ok: false,
+      error: `El adelanto no puede superar los materiales presupuestados ($ ${tope.toLocaleString("es-AR")}).`,
+    };
+  }
+
+  const { error } = await supabase
+    .from("gestiones")
+    .update({ adelanto_materiales: monto || null })
+    .eq("id", gestionId);
+  if (error) return { ok: false, error: "No se pudo guardar el adelanto." };
+
+  await registrarEvento(gestionId, "adelanto_materiales_registrado", actual.id, { monto });
+  revalidatePath(`/gestiones/${gestionId}`);
+  return { ok: true };
+}
+
 // STORY-946: la administración ya no tipea el monto — lo calcula el sistema
 // (mismo criterio que el sugerido de STORY-934: materiales rendidos + mano
 // de obra presupuestada, con fallback a costo_final para gestiones viejas
@@ -566,12 +624,13 @@ export async function registrarLiquidacion(
   const supabase = await createClient();
   const { data: g } = await supabase
     .from("gestiones")
-    .select("costo_final, materiales_total, presupuestos(monto_mano_obra, estado)")
+    .select("costo_final, materiales_total, adelanto_materiales, presupuestos(monto_mano_obra, estado)")
     .eq("id", gestionId)
     .single();
   type Fila = {
     costo_final: number | null;
     materiales_total: number | null;
+    adelanto_materiales: number | null;
     presupuestos: { monto_mano_obra: number; estado: string }[];
   };
   const fila = g as unknown as Fila | null;
@@ -579,13 +638,17 @@ export async function registrarLiquidacion(
   const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
   // STORY-964: el técnico rinde el total real de la obra,
   // así que no se suman aparte. Fallback a costo_final para gestiones viejas.
-  const monto =
+  const base =
     fila?.materiales_total != null
       ? Number(fila.materiales_total) + manoObra
       : Number(fila?.costo_final ?? 0);
-  if (!monto || monto <= 0) {
+  if (!base || base <= 0) {
     return { ok: false, error: "No se pudo calcular el monto a liquidar." };
   }
+  // STORY-977: la plata ya entregada como adelanto se resta acá — puede dar
+  // $0 (adelanto cubrió todo) sin bloquear el cierre de la gestión.
+  const adelanto = Number(fila?.adelanto_materiales ?? 0);
+  const monto = Math.max(base - adelanto, 0);
 
   const { error } = await supabase
     .from("gestiones")
