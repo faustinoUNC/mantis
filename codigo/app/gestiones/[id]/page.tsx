@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DetalleGestion } from "@/components/gestiones/detalle.client";
 import { obtenerUsuarioActual } from "@/features/auth/service";
 import { listarEmpleados } from "@/features/empleados/service";
@@ -17,6 +17,10 @@ export default async function GestionPage({
     obtenerGestion(id),
     obtenerUsuarioActual(),
   ]);
+  // STORY-968: para el técnico, una gestión que no ve es (casi siempre) una
+  // que le acaban de desasignar — a su home, no a un 404. La campanita le
+  // explica qué pasó.
+  if (!gestion && usuario?.rol === "tecnico") redirect("/tecnico");
   if (!gestion || !usuario) notFound();
 
   const necesitaTecnicos =

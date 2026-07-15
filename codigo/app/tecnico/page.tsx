@@ -8,5 +8,11 @@ export default async function TecnicoPage() {
     obtenerUsuarioActual(),
     tableroGestiones(),
   ]);
-  return <MisTrabajos gestiones={gestiones} nombre={usuario!.nombre} />;
+  return (
+    <MisTrabajos
+      gestiones={gestiones}
+      nombre={usuario!.nombre}
+      usuarioId={usuario!.id}
+    />
+  );
 }

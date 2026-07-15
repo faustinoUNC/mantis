@@ -439,7 +439,7 @@ export async function desasignarTecnico(
   const supabase = await createClient();
   const { data: g } = await supabase
     .from("gestiones")
-    .select("tecnico_id")
+    .select("tecnico_id, descripcion")
     .eq("id", gestionId)
     .single();
   if (!g?.tecnico_id) {
@@ -466,11 +466,24 @@ export async function desasignarTecnico(
 
   // La RLS deja de mostrarle la gestión al saliente: sus notificaciones
   // quedarían linkeando a un 404 desde la campanita (patrón STORY-951).
-  await createAdminClient()
+  const admin = createAdminClient();
+  await admin
     .from("notificaciones")
     .delete()
     .eq("usuario_id", g.tecnico_id)
     .eq("gestion_id", gestionId);
+
+  // STORY-968: el aviso al saliente no puede salir del trigger outbox
+  // (cuando corre, tecnico_id ya está en NULL) — se crea acá con el id
+  // capturado antes. Sin gestion_id ni ruta: no hay link que pueda dar
+  // 404 y la limpieza de arriba nunca la alcanza. Este INSERT es además
+  // la señal realtime que refresca las vistas del técnico (el UPDATE de
+  // gestiones no le llega: la fila salió de su alcance RLS).
+  await admin.from("notificaciones").insert({
+    usuario_id: g.tecnico_id,
+    titulo: "Ya no estás asignado a esta gestión",
+    cuerpo: (g.descripcion as string | null)?.slice(0, 120) ?? null,
+  });
 
   refrescarTablero(gestionId);
   return { ok: true };

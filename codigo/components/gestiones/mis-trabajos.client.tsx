@@ -322,9 +322,11 @@ const CAMPOS_BUSQUEDA: CampoBusqueda<GestionResumen>[] = [
 export function MisTrabajos({
   gestiones,
   nombre,
+  usuarioId,
 }: {
   gestiones: GestionResumen[];
   nombre: string;
+  usuarioId: string;
 }) {
   const [consulta, setConsulta] = useState("");
   const [campo, setCampo] = useState("todo");
@@ -379,6 +381,11 @@ export function MisTrabajos({
   return (
     <div className="animate-aparecer max-w-lg">
       <RefrescoVivo tabla="gestiones" />
+      {/* STORY-968: cuando lo desasignan, el UPDATE de gestiones no le llega
+          (la fila sale de su alcance RLS) — la señal es la notificación que
+          le crea el service. También cubre el rechazo de presupuesto, que
+          solo toca la tabla presupuestos. */}
+      <RefrescoVivo tabla="notificaciones" filtro={`usuario_id=eq.${usuarioId}`} />
       <p className="text-[13px] font-medium text-muted">{fecha}</p>
       <h1 className="text-2xl font-semibold tracking-tight mt-0.5">
         Hola, {nombre.split(" ")[0]}

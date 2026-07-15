@@ -1549,6 +1549,14 @@ export function DetalleGestion({
       <RefrescoVivo tabla="avances" filtro={`gestion_id=eq.${gestion.id}`} />
       <RefrescoVivo tabla="presupuestos" filtro={`gestion_id=eq.${gestion.id}`} />
       <RefrescoVivo tabla="conformidades" filtro={`gestion_id=eq.${gestion.id}`} />
+      {/* STORY-968: si lo desasignan mientras mira el detalle, el UPDATE de
+          gestiones no le llega (la fila salió de su alcance RLS). Su propia
+          notificación sí: refresca, la gestión ya no está y la página lo
+          devuelve a /tecnico. Solo técnico: al gestor le refrescaría el
+          detalle por notificaciones de otras gestiones. */}
+      {usuario.rol === "tecnico" && (
+        <RefrescoVivo tabla="notificaciones" filtro={`usuario_id=eq.${usuario.id}`} />
+      )}
 
       <div className="flex items-center justify-between gap-3">
         <Link href={volver} className="text-sm font-medium text-muted hover:text-foreground">
