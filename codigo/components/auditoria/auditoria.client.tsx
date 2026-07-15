@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Card } from "@/components/ui/card";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
+import { Icono } from "@/components/ui/iconos";
 import { Input } from "@/components/ui/input";
 import { Paginador } from "@/components/ui/paginador.client";
 import { Select } from "@/components/ui/select";
@@ -54,31 +55,34 @@ export function Auditoria({
   const [abiertoId, setAbiertoId] = useState<string | null>(null);
   const [pendiente, startTransition] = useTransition();
 
-  // La primera página ya viene renderizada del server; el efecto solo corre
-  // ante cambios. `pedido` descarta respuestas viejas que lleguen tarde.
+  // `pedido` descarta respuestas viejas que lleguen tarde.
   const primera = useRef(true);
   const pedido = useRef(0);
+  const cargar = useCallback(() => {
+    const id = ++pedido.current;
+    startTransition(async () => {
+      const res = await historialGlobal({
+        busqueda: busqueda || undefined,
+        actorId: actorId || undefined,
+        tipo: tipo || undefined,
+        desde: desde || undefined,
+        hasta: hasta || undefined,
+        pagina,
+      });
+      if (id === pedido.current) setDatos(res);
+    });
+  }, [busqueda, actorId, tipo, desde, hasta, pagina]);
+
+  // La primera página ya viene renderizada del server; el efecto solo corre
+  // ante cambios de filtros/página, con debounce para el tipeo.
   useEffect(() => {
     if (primera.current) {
       primera.current = false;
       return;
     }
-    const id = ++pedido.current;
-    const t = setTimeout(() => {
-      startTransition(async () => {
-        const res = await historialGlobal({
-          busqueda: busqueda || undefined,
-          actorId: actorId || undefined,
-          tipo: tipo || undefined,
-          desde: desde || undefined,
-          hasta: hasta || undefined,
-          pagina,
-        });
-        if (id === pedido.current) setDatos(res);
-      });
-    }, 300);
+    const t = setTimeout(cargar, 300);
     return () => clearTimeout(t);
-  }, [busqueda, actorId, tipo, desde, hasta, pagina]);
+  }, [cargar]);
 
   // Cambiar un filtro vuelve a página 1 (mismo render: React batchea).
   const filtrar = <T,>(setter: (v: T) => void) => (v: T) => {
@@ -156,9 +160,25 @@ export function Auditoria({
       />
 
       {/* Denominador siempre visible: el resultado dice cuán completo es. */}
-      <p className="text-[13px] text-muted tabular-nums mb-2">
-        {datos.total} evento{datos.total === 1 ? "" : "s"}
-      </p>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[13px] text-muted tabular-nums">
+          {datos.total} evento{datos.total === 1 ? "" : "s"}
+        </p>
+        {/* v1.1: refresh manual a pedido de Fausti — trae lo nuevo sin perder
+            los filtros (se descartó el realtime, no la actualización). */}
+        <button
+          type="button"
+          onClick={cargar}
+          disabled={pendiente}
+          aria-label="Actualizar"
+          title="Actualizar"
+          className="grid place-items-center h-9 w-9 rounded-lg border border-border text-muted hover:text-foreground hover:bg-surface-2/60 transition-colors disabled:opacity-50"
+        >
+          <span className={pendiente ? "animate-spin" : ""}>
+            <Icono id="refrescar" size={15} />
+          </span>
+        </button>
+      </div>
 
       <Card className={`overflow-x-auto transition-opacity ${pendiente ? "opacity-60" : ""}`}>
         <table className="w-full text-[15px]">
