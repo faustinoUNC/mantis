@@ -925,13 +925,17 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
   const terminando = gestion.etapa === "en_ejecucion";
 
   // STORY-936: para terminar hace falta al menos una nota de avance.
-  // STORY-961: se retiró el bloqueo por "exceso de materiales cubierto por
-  // gastos" — los gastos imprevistos ahora se suman aparte (el técnico rinde
-  // solo materiales), así que no pueden justificar el exceso. El control
-  // anti-inflado queda en la foto obligatoria de todos los comprobantes.
+  // STORY-964: el técnico rinde UN total real de la obra (imprevistos incluidos);
+  // no se le pide restar nada. Control anti-inflado: foto obligatoria de todos
+  // los comprobantes + el desvío visible al gestor.
   const sinAvance =
     terminando && !gestion.avances.some((a) => a.tipo === "avance");
   const [totalRendido, setTotalRendido] = useState(0);
+  // STORY-964: el total no puede ser menor que los imprevistos ya cargados
+  // (esos gastos son parte del total, no algo aparte).
+  const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
+  const rendidoInsuficiente =
+    terminando && totalRendido > 0 && totalRendido < totalGastos;
 
   if (esperando) {
     return <p className="text-sm text-muted">Conformidad subida — esperando revisión del gestor.</p>;
@@ -953,11 +957,11 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
       {terminando && (
         <>
           <p className="text-[13px] font-medium text-muted">
-            Rendición de materiales{" "}
+            Rendición de la obra{" "}
             <span className="text-muted/50 font-normal">· con esto se calcula tu liquidación</span>
           </p>
           <Input
-            label="Total gastado en materiales ($) — solo materiales, sin los gastos imprevistos"
+            label="Total gastado en la obra ($) — todo lo que gastaste, incluidos los gastos imprevistos"
             name="materiales_total"
             type="number"
             min="0.01"
@@ -966,6 +970,16 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
             value={totalRendido || ""}
             onChange={(e) => setTotalRendido(Number(e.target.value) || 0)}
           />
+          {totalGastos > 0 && (
+            <p
+              className={`text-[13px] ${
+                rendidoInsuficiente ? "text-error" : "text-muted"
+              }`}
+            >
+              Ya cargaste {plata(totalGastos)} en gastos imprevistos con ticket — incluilos en este
+              total.
+            </p>
+          )}
           <InputArchivo
             label={
               gestion.gastos.length > 0
@@ -991,7 +1005,7 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
       )}
       <Button
         type="submit"
-        disabled={cargando || sinAvance}
+        disabled={cargando || sinAvance || rendidoInsuficiente}
         className="self-start"
       >
         {terminando ? "Terminar y subir conformidad →" : "Resubir conformidad"}
@@ -1013,10 +1027,12 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   const matPresupuestados = aprobado ? Number(aprobado.monto_materiales) : 0;
   const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
   const rendido = gestion.materiales_total;
-  // STORY-961: el costo final se calcula (no se edita) = materiales rendidos +
-  // gastos imprevistos + mano de obra. El server recomputa lo mismo al aprobar.
+  // STORY-964: el costo final se calcula (no se edita) = total gastado en la
+  // obra (imprevistos ya incluidos) + mano de obra. Los gastos imprevistos NO
+  // se re-suman — son la evidencia con ticket dentro del total. El server
+  // recomputa lo mismo al aprobar.
   const baseMateriales = rendido != null ? rendido : matPresupuestados;
-  const costoFinal = baseMateriales + totalGastos + manoObra;
+  const costoFinal = baseMateriales + manoObra;
   const desvioMat = rendido != null ? rendido - matPresupuestados : null;
 
   if (!subida) {
@@ -1066,12 +1082,12 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
               <span className="font-mono">{plata(matPresupuestados)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted">Gastado real (rendido)</span>
+              <span className="text-muted">Gastado real en la obra</span>
               <span className="font-mono font-semibold">{plata(rendido)}</span>
             </div>
             {desvioMat != null && matPresupuestados > 0 && (
               <div className="flex justify-between pt-1 border-t border-border">
-                <span className="text-muted">Desvío de materiales</span>
+                <span className="text-muted">Desvío sobre presupuesto</span>
                 <span
                   className={`font-mono font-semibold ${
                     desvioMat > 0 ? "text-urgente-fuerte" : "text-brand"
@@ -1094,18 +1110,21 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
           className="rounded-md max-h-56 border border-border self-start"
         />
       )}
-      {/* STORY-961: costo final calculado, no editable — la suma clara a la vista */}
+      {/* STORY-964: costo final calculado, no editable = total gastado en la
+          obra (imprevistos incluidos) + mano de obra. Los imprevistos NO se
+          re-suman: se muestran como sub-línea informativa del total. */}
       <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
         <div className="flex justify-between">
           <span className="text-muted">
-            {rendido != null ? "Materiales rendidos" : "Materiales presupuestados"}
+            {rendido != null ? "Total gastado en la obra (rendido)" : "Materiales presupuestados"}
           </span>
           <span className="font-mono">{plata(baseMateriales)}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted">Gastos imprevistos</span>
-          <span className="font-mono">{plata(totalGastos)}</span>
-        </div>
+        {rendido != null && totalGastos > 0 && (
+          <div className="flex justify-between text-[13px] text-muted/60">
+            <span>· incluye {plata(totalGastos)} de imprevistos con ticket</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-muted">Mano de obra (presupuesto aprobado)</span>
           <span className="font-mono">{plata(manoObra)}</span>

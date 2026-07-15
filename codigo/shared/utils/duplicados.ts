@@ -49,3 +49,30 @@ export async function duplicadoPersona(
 // chequeo previo y el insert — lo atrapa el índice UNIQUE (código 23505).
 export const ERROR_DUPLICADO_DB =
   "Ese email, CUIL o teléfono ya está en uso — revisá los datos.";
+
+const normalizarNombre = (n: string) => n.trim().toLowerCase().replace(/\s+/g, " ");
+
+// STORY-963: el CUIL identifica a una persona — no puede pertenecer a dos
+// personas DISTINTAS entre propietarios e inquilinos. Pero una MISMA persona
+// sí puede ser propietaria de un inmueble e inquilina de otro. Por eso el
+// bloqueo es "inteligente": choca solo si el CUIL ya existe en la otra tabla
+// con OTRO nombre (otra persona); si el nombre coincide, es la misma persona
+// en su otro rol y se permite. `duplicadoPersona` sigue cubriendo la unicidad
+// intra-tabla; esto agrega la dimensión cruzada que las tablas separadas no dan.
+export async function cuilCruzadoOtraPersona(
+  supabase: SupabaseClient,
+  tablaActual: "propietarios" | "inquilinos",
+  cuil: string | null | undefined,
+  nombre: string,
+  excluirId?: string
+): Promise<string | null> {
+  if (!cuil) return null;
+  const otraTabla = tablaActual === "propietarios" ? "inquilinos" : "propietarios";
+  let query = supabase.from(otraTabla).select("id, nombre").eq("cuil", cuil).limit(1);
+  if (excluirId) query = query.neq("id", excluirId);
+  const { data } = await query;
+  const existente = data?.[0] as { id: string; nombre: string } | undefined;
+  if (!existente) return null;
+  if (normalizarNombre(existente.nombre) === normalizarNombre(nombre)) return null;
+  return `Ese CUIL ya pertenece a ${existente.nombre} (registrado como ${NOMBRE_TABLA[otraTabla]}). Un CUIL no puede ser de dos personas distintas.`;
+}

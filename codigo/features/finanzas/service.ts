@@ -119,16 +119,24 @@ async function datosDocumento(
   } else if (pagador === "inquilino" && g.legajo_id) {
     const { data: legajo } = await admin
       .from("legajos")
-      .select("inquilinos(nombre, email)")
+      .select("fecha_fin, inquilinos(nombre, email)")
       .eq("id", g.legajo_id)
       .single();
-    const inq = legajo?.inquilinos as unknown as {
-      nombre: string;
-      email: string;
-    } | null;
-    destinatarioNombre = inq?.nombre ?? "—";
-    destinatarioRotulo = "Inquilino";
-    emailDestinatario = inq?.email ?? null;
+    // STORY-962: si el legajo está cerrado el inquilino ya no habita — el
+    // documento cae al propietario (defensa por si una pestaña vieja llega acá).
+    const inq =
+      legajo && legajo.fecha_fin == null
+        ? (legajo.inquilinos as unknown as { nombre: string; email: string } | null)
+        : null;
+    if (inq) {
+      destinatarioNombre = inq.nombre ?? "—";
+      destinatarioRotulo = "Inquilino";
+      emailDestinatario = inq.email ?? null;
+    } else {
+      destinatarioNombre = j.propiedades?.propietarios?.nombre ?? "—";
+      destinatarioRotulo = "Propietario";
+      emailDestinatario = j.propiedades?.propietarios?.email ?? null;
+    }
   }
 
   const cargoAdmin = Number(overrides?.cargoAdmin ?? g.cargo_admin ?? 0);
@@ -210,13 +218,18 @@ async function errorPagador(
   const admin = createAdminClient();
   const { data: g } = await admin
     .from("gestiones")
-    .select("pagador, legajo_id")
+    .select("pagador, legajo_id, legajos(fecha_fin)")
     .eq("id", gestionId)
     .single();
   const efectivo = pagador ?? g?.pagador ?? null;
   if (!efectivo) return "Elegí quién paga la obra.";
-  if (efectivo === "inquilino" && !g?.legajo_id) {
-    return "La propiedad no tiene inquilino — el pago solo puede ser del propietario.";
+  // STORY-962: "inquilino" solo si el legajo sigue vigente (fecha_fin null);
+  // un legajo cerrado = el inquilino se fue → paga el propietario.
+  const legajoVigente =
+    g?.legajo_id != null &&
+    (g.legajos as unknown as { fecha_fin: string | null } | null)?.fecha_fin == null;
+  if (efectivo === "inquilino" && !legajoVigente) {
+    return "La propiedad no tiene inquilino vigente — el pago solo puede ser del propietario.";
   }
   return null;
 }
@@ -490,26 +503,22 @@ export async function registrarLiquidacion(
   const supabase = await createClient();
   const { data: g } = await supabase
     .from("gestiones")
-    .select(
-      "costo_final, materiales_total, presupuestos(monto_mano_obra, estado), gastos_imprevistos(monto)"
-    )
+    .select("costo_final, materiales_total, presupuestos(monto_mano_obra, estado)")
     .eq("id", gestionId)
     .single();
   type Fila = {
     costo_final: number | null;
     materiales_total: number | null;
     presupuestos: { monto_mano_obra: number; estado: string }[];
-    gastos_imprevistos: { monto: number }[];
   };
   const fila = g as unknown as Fila | null;
   const aprobado = fila?.presupuestos.find((p) => p.estado === "aprobado");
   const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
-  // STORY-961: los gastos imprevistos se suman aparte (el técnico rinde solo
-  // materiales). Fallback a costo_final para gestiones viejas sin rendición.
-  const gastos = (fila?.gastos_imprevistos ?? []).reduce((s, ga) => s + Number(ga.monto), 0);
+  // STORY-964: el técnico rinde el total real de la obra (imprevistos incluidos),
+  // así que no se suman aparte. Fallback a costo_final para gestiones viejas.
   const monto =
     fila?.materiales_total != null
-      ? Number(fila.materiales_total) + gastos + manoObra
+      ? Number(fila.materiales_total) + manoObra
       : Number(fila?.costo_final ?? 0);
   if (!monto || monto <= 0) {
     return { ok: false, error: "No se pudo calcular el monto a liquidar." };

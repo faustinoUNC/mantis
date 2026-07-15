@@ -35,7 +35,13 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     direccion: string;
     propietarios?: { nombre: string } | null;
   } | null;
-  const legajo = g.legajos as { inquilinos: { nombre: string } | null } | null;
+  // STORY-962: el inquilino solo cuenta si su legajo sigue vigente (fecha_fin
+  // null). Un legajo cerrado se trata como "sin inquilino, solo propietario",
+  // igual que la cartera — la gestión no puede resucitar al inquilino que se fue.
+  const legajo = g.legajos as
+    | { fecha_fin: string | null; inquilinos: { nombre: string } | null }
+    | null;
+  const inquilinoVigente = legajo?.fecha_fin == null ? legajo?.inquilinos : null;
   const especialidad = g.especialidades as { nombre: string } | null;
   const gestor = g.gestor as { nombre: string } | null;
   const tecnico = g.tecnico as { nombre: string } | null;
@@ -53,7 +59,7 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     especialidad: especialidad?.nombre ?? "—",
     direccion: propiedad?.direccion ?? "—",
     propietario_nombre: propiedad?.propietarios?.nombre ?? null,
-    inquilino_nombre: legajo?.inquilinos?.nombre ?? null,
+    inquilino_nombre: inquilinoVigente?.nombre ?? null,
     gestor_nombre: gestor?.nombre ?? "—",
     tecnico_nombre: tecnico?.nombre ?? null,
     asignacion_aceptada: (g.asignacion_aceptada as boolean | null) ?? null,
@@ -64,12 +70,12 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
 }
 
 const SELECT_RESUMEN =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre)), legajos(inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // STORY-938: igual que SELECT_RESUMEN pero con el contacto de propietario/
 // inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
 const SELECT_DETALLE =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // Inquilino si la gestión tiene legajo vigente; si no, el propietario.
 function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_cliente"] {
@@ -77,9 +83,12 @@ function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_
     propietarios?: { nombre: string; email: string | null; telefono: string | null } | null;
   } | null;
   const legajo = g.legajos as {
+    fecha_fin: string | null;
     inquilinos: { nombre: string; email: string | null; telefono: string | null } | null;
   } | null;
-  const inquilino = legajo?.inquilinos;
+  // STORY-962: legajo cerrado (fecha_fin ≠ null) → el inquilino ya no habita;
+  // el contacto vigente pasa a ser el propietario.
+  const inquilino = legajo?.fecha_fin == null ? legajo?.inquilinos : null;
   const propietario = propiedad?.propietarios;
   if (inquilino) {
     return { tipo: "inquilino", nombre: inquilino.nombre, telefono: inquilino.telefono, email: inquilino.email };
@@ -764,7 +773,7 @@ export async function resolverPresupuesto(
   if (aprobar) {
     const { data: g } = await supabase
       .from("gestiones")
-      .select("presupuesto_enviado_en, legajo_id")
+      .select("presupuesto_enviado_en, legajo_id, legajos(fecha_fin)")
       .eq("id", gestionId)
       .single();
     if (!g?.presupuesto_enviado_en) {
@@ -773,10 +782,15 @@ export async function resolverPresupuesto(
         error: "Enviá el presupuesto al pagador por email antes de aprobar.",
       };
     }
-    if (opciones.pagador === "inquilino" && !g.legajo_id) {
+    // STORY-962: "inquilino" solo vale si el legajo está vigente (fecha_fin
+    // null). Un legajo cerrado = el inquilino se fue → paga el propietario.
+    const legajoVigente =
+      g.legajo_id != null &&
+      (g.legajos as unknown as { fecha_fin: string | null } | null)?.fecha_fin == null;
+    if (opciones.pagador === "inquilino" && !legajoVigente) {
       return {
         ok: false,
-        error: "La propiedad no tiene inquilino — el pago solo puede ser del propietario.",
+        error: "La propiedad no tiene inquilino vigente — el pago solo puede ser del propietario.",
       };
     }
   }
@@ -939,14 +953,32 @@ export async function subirConformidad(
   // resubida de una conformidad rechazada no la vuelve a pedir.
   let rendicion: { total: number; foto: string } | null = null;
   if (terminando) {
+    // STORY-964: el técnico rinde UN solo número — el total real gastado en la
+    // obra, con los gastos imprevistos incluidos (no se le pide restar nada).
     const total = Number(form.get("materiales_total"));
     if (!Number.isFinite(total) || total <= 0) {
-      return { ok: false, error: "Indicá el total gastado en materiales." };
+      return { ok: false, error: "Indicá el total gastado en la obra." };
+    }
+
+    const supabaseCheck = await createClient();
+
+    // STORY-964: el total de la obra no puede ser menor que los gastos
+    // imprevistos ya cargados con ticket — serían una inconsistencia (esos
+    // gastos son parte del total, no algo aparte).
+    const { data: gastos } = await supabaseCheck
+      .from("gastos_imprevistos")
+      .select("monto")
+      .eq("gestion_id", gestionId);
+    const totalGastos = (gastos ?? []).reduce((s, ga) => s + Number(ga.monto), 0);
+    if (total < totalGastos) {
+      return {
+        ok: false,
+        error: `El total de la obra ($${total}) no puede ser menor que los gastos imprevistos ya cargados ($${totalGastos}) — incluilos en el total.`,
+      };
     }
 
     // STORY-936: sin al menos una nota de avance el gestor estuvo ciego
     // toda la obra — no se termina sin contar qué se hizo.
-    const supabaseCheck = await createClient();
     const { data: avances } = await supabaseCheck
       .from("avances")
       .select("id")
@@ -960,10 +992,9 @@ export async function subirConformidad(
       };
     }
 
-    // STORY-961: se retiró la validación de "exceso de materiales cubierto por
-    // gastos" (STORY-936) — los gastos imprevistos se suman aparte y ya no
-    // justifican el exceso. La foto obligatoria de todos los comprobantes
-    // queda como control anti-inflado.
+    // STORY-961/964: no hay validación de "exceso cubierto por gastos" — el
+    // técnico rinde el total real de la obra. La foto obligatoria de todos los
+    // comprobantes + el desvío visible al gestor son el control anti-inflado.
     const fotoComprobantes = await subirFoto(
       gestionId,
       "comprobantes",
@@ -1046,29 +1077,26 @@ export async function resolverConformidad(
     return { ok: true };
   }
 
-  // STORY-961: el costo final NO lo tipea el gestor — se calcula server-side
-  // (no manipulable) con la fórmula única: materiales rendidos + gastos
-  // imprevistos + mano de obra presupuestada. Fallback a materiales
-  // presupuestados para gestiones viejas sin rendición.
+  // STORY-961/964: el costo final NO lo tipea el gestor — se calcula server-side
+  // (no manipulable). STORY-964: el técnico rinde el TOTAL real de la obra
+  // (imprevistos incluidos), así que la fórmula es total rendido + mano de obra
+  // presupuestada; los gastos imprevistos ya están dentro del total (no se
+  // re-suman). Fallback a materiales presupuestados para gestiones viejas.
   const { data: g } = await supabase
     .from("gestiones")
-    .select(
-      "materiales_total, presupuestos(monto_materiales, monto_mano_obra, estado), gastos_imprevistos(monto)"
-    )
+    .select("materiales_total, presupuestos(monto_materiales, monto_mano_obra, estado)")
     .eq("id", gestionId)
     .single();
   type Fila = {
     materiales_total: number | null;
     presupuestos: { monto_materiales: number; monto_mano_obra: number; estado: string }[];
-    gastos_imprevistos: { monto: number }[];
   };
   const fila = g as unknown as Fila | null;
   const aprobado = fila?.presupuestos.find((p) => p.estado === "aprobado");
   const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
   const matPresupuestados = aprobado ? Number(aprobado.monto_materiales) : 0;
-  const gastos = (fila?.gastos_imprevistos ?? []).reduce((s, ga) => s + Number(ga.monto), 0);
   const rendido = fila?.materiales_total;
-  const costoFinal = (rendido != null ? Number(rendido) : matPresupuestados) + gastos + manoObra;
+  const costoFinal = (rendido != null ? Number(rendido) : matPresupuestados) + manoObra;
 
   await supabase.from("eventos_gestion").insert({
     gestion_id: gestionId,

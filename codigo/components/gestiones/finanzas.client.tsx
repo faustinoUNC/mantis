@@ -213,26 +213,26 @@ export function FinanzasAcciones({
     const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
     const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
     const rendido = gestion.materiales_total;
-    // STORY-961: los gastos imprevistos se suman aparte (el técnico rinde solo
-    // materiales), y se reembolsan al técnico junto con materiales + mano de obra.
+    // STORY-964: al técnico se le liquida el total real que rindió de la obra
+    // (imprevistos incluidos) + su mano de obra. Los gastos NO se suman aparte —
+    // ya están dentro del total rendido. Fallback: costo_final (gestiones viejas).
     const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
     const liqTotal =
-      rendido != null
-        ? rendido + totalGastos + manoObra
-        : Number(gestion.costo_final ?? 0);
+      rendido != null ? rendido + manoObra : Number(gestion.costo_final ?? 0);
     return (
       <div className="flex flex-col gap-4">
         <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
           {rendido != null && (
             <>
               <div className="flex justify-between">
-                <span className="text-muted">Materiales rendidos</span>
+                <span className="text-muted">Total gastado en la obra (rendido)</span>
                 <span className="font-mono">{plata(rendido)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted">Gastos imprevistos</span>
-                <span className="font-mono">{plata(totalGastos)}</span>
-              </div>
+              {totalGastos > 0 && (
+                <div className="flex justify-between text-[13px] text-muted/60">
+                  <span>· incluye {plata(totalGastos)} de imprevistos con ticket</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted">Mano de obra (presupuesto aprobado)</span>
                 <span className="font-mono">{plata(manoObra)}</span>

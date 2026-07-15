@@ -119,10 +119,9 @@ function Documento({ datos }: { datos: DatosDocumento }) {
             <>
               <View style={s.filaTabla}>
                 <Text>
-                  Materiales
                   {datos.materialesRendidos
-                    ? " (rendidos por el técnico)"
-                    : " (presupuesto aprobado)"}
+                    ? "Gastado en la obra (rendido por el técnico)"
+                    : "Materiales (presupuesto aprobado)"}
                 </Text>
                 <Text>{monto(datos.presupuesto.materiales)}</Text>
               </View>

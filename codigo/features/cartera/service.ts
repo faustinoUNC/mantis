@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/features/empleados/types";
 import { createClient } from "@/shared/lib/supabase/server";
 import { errorCuil, normalizarCuil } from "@/shared/utils/cuil";
-import { duplicadoPersona, ERROR_DUPLICADO_DB } from "@/shared/utils/duplicados";
+import {
+  cuilCruzadoOtraPersona,
+  duplicadoPersona,
+  ERROR_DUPLICADO_DB,
+} from "@/shared/utils/duplicados";
 import { normalizarTelefono } from "@/shared/utils/telefono";
 import type { Legajo, Persona, Propiedad, RefPersona, TipoPersona } from "./types";
 
@@ -62,6 +66,9 @@ export async function guardarPersona(
   };
   const dup = await duplicadoPersona(supabase, tipo, fila, id);
   if (dup) return { ok: false, error: dup };
+  // STORY-963: el mismo CUIL no puede ser de otra persona en la otra tabla.
+  const cruzado = await cuilCruzadoOtraPersona(supabase, tipo, fila.cuil, fila.nombre, id);
+  if (cruzado) return { ok: false, error: cruzado };
   const { error } = id
     ? await supabase.from(tipo).update(fila).eq("id", id)
     : await supabase.from(tipo).insert(fila);
@@ -202,6 +209,9 @@ async function resolverPersona(
   };
   const dup = await duplicadoPersona(supabase, tipo, fila);
   if (dup) return { error: dup };
+  // STORY-963: el mismo CUIL no puede ser de otra persona en la otra tabla.
+  const cruzado = await cuilCruzadoOtraPersona(supabase, tipo, fila.cuil, fila.nombre);
+  if (cruzado) return { error: cruzado };
   const { data, error } = await supabase.from(tipo).insert(fila).select("id").single();
   if (error || !data) {
     return {
