@@ -25,12 +25,20 @@ function plata(n: number) {
   return `$ ${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
 }
 
+// STORY-975: formatea en vivo lo que se va tipeando (separador de miles),
+// manteniendo el estado interno como dígitos crudos — mismo criterio simple
+// que "plata()", sin librerías de máscara de input.
+function formatearPesos(digitos: string) {
+  return digitos ? Number(digitos).toLocaleString("es-AR") : "";
+}
+
 // STORY-950: registrar el cobro con un solo medio (100%) o combinar 2 — el
 // caso real de "mitad efectivo, mitad transferencia". Combinado: la
 // administración tipea el monto de un medio y el otro se autocompleta con
 // el resto; no deja escribir de más (el submit se bloquea si se pasa).
 function FormCobro({
   total,
+  pagador,
   cargando,
   error,
   onSubmit,
@@ -38,26 +46,48 @@ function FormCobro({
   cta = "Registrar cobro → Liquidación",
 }: {
   total: number;
+  pagador?: string | null;
   cargando: string | null;
   error: string | null;
-  onSubmit: (datos: { medio: MedioCobro; medio2?: MedioCobro; monto2?: number }) => void;
+  onSubmit: (datos: {
+    medio: MedioCobro;
+    medio2?: MedioCobro;
+    monto2?: number;
+    recargoPct?: number;
+  }) => void;
   cta?: string;
 }) {
   const [combinado, setCombinado] = useState(false);
   const [medio, setMedio] = useState<MedioCobro>("transferencia");
   const [medio2, setMedio2] = useState<MedioCobro>("efectivo");
   const [monto2, setMonto2] = useState("");
+  const [recargoPct, setRecargoPct] = useState("");
 
   const monto2Num = Number(monto2) || 0;
   const monto1Num = Math.max(total - monto2Num, 0);
   const seExcede = combinado && monto2Num > 0 && monto2Num >= total;
   const mismoMedio = combinado && medio === medio2;
 
+  // STORY-975: recargo por tarjeta de crédito — lo tipea la administración
+  // cada vez (varía según financiera/promo) y se calcula solo sobre la
+  // porción efectivamente pagada con tarjeta, no sobre el total combinado.
+  const montoTarjeta =
+    medio === "tarjeta_credito"
+      ? monto1Num
+      : combinado && medio2 === "tarjeta_credito"
+        ? monto2Num
+        : 0;
+  const hayTarjeta = montoTarjeta > 0;
+  const recargoPctNum = Number(recargoPct) || 0;
+  const recargoMonto = hayTarjeta ? Math.round(montoTarjeta * recargoPctNum) / 100 : 0;
+
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!combinado) return onSubmit({ medio });
-    if (seExcede || mismoMedio || monto2Num <= 0) return;
-    onSubmit({ medio, medio2, monto2: monto2Num });
+    if (mismoMedio) return;
+    const recargo = hayTarjeta && recargoPctNum > 0 ? recargoPctNum : undefined;
+    if (!combinado) return onSubmit({ medio, recargoPct: recargo });
+    if (seExcede || monto2Num <= 0) return;
+    onSubmit({ medio, medio2, monto2: monto2Num, recargoPct: recargo });
   }
 
   return (
@@ -115,12 +145,24 @@ function FormCobro({
               <Input
                 label="Monto medio 2"
                 inputMode="decimal"
-                value={monto2}
-                onChange={(e) => setMonto2(e.target.value.replace(/[^\d.]/g, ""))}
+                value={formatearPesos(monto2)}
+                onChange={(e) => setMonto2(e.target.value.replace(/\D/g, ""))}
                 placeholder="0"
               />
             </div>
           </>
+        )}
+
+        {hayTarjeta && (
+          <div className="w-32">
+            <Input
+              label="Recargo tarjeta (%)"
+              inputMode="decimal"
+              value={recargoPct}
+              onChange={(e) => setRecargoPct(e.target.value.replace(/[^\d.]/g, ""))}
+              placeholder="0"
+            />
+          </div>
         )}
 
         <Button type="submit" disabled={cargando !== null || seExcede || mismoMedio}>
@@ -128,6 +170,13 @@ function FormCobro({
         </Button>
       </div>
 
+      {hayTarjeta && recargoMonto > 0 && (
+        <p className="text-sm text-muted">
+          Recargo tarjeta: <span className="font-mono text-foreground">{plata(recargoMonto)}</span>
+          {" — "}Total a cobrar al {pagador ?? "pagador"}:{" "}
+          <span className="font-mono font-semibold text-foreground">{plata(total + recargoMonto)}</span>
+        </p>
+      )}
       {combinado && seExcede && (
         <p className="text-sm font-medium text-error">
           El monto del medio 2 no puede ser mayor o igual al total a cobrar ({plata(total)}).
@@ -199,6 +248,7 @@ export function FinanzasAcciones({
 
         <FormCobro
           total={cargo}
+          pagador={gestion.pagador}
           cargando={cargando}
           error={error}
           onSubmit={(datos) => correr("cobro", () => registrarCobro(gestion.id, datos))}
@@ -240,6 +290,7 @@ export function FinanzasAcciones({
 
         <FormCobro
           total={trabajo + cargoAdmin}
+          pagador={gestion.pagador}
           cargando={cargando}
           error={error}
           onSubmit={(datos) => correr("cobro", () => registrarCobro(gestion.id, datos))}

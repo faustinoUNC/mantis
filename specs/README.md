@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-975](STORY-975.md) | Recargo por tarjeta de crédito al cobrar (% que tipea la administración, se suma al total) + UX del formulario de cobro (resumen en vivo, medio 2 formateado a currency) — migración pendiente: `recargo_tarjeta_pct`/`recargo_tarjeta_monto` | 🚧 en desarrollo |
 | [STORY-974](STORY-974.md) | Auditoría con filtros server-side que no mienten (persona con rol, tipo, dirección/descripción, rango de fechas; paginación + count real — muere el límite 200) + datos invisibles afuera (labels centralizados en `eventos.ts`, imputado y saliente nombrado, detalle expandible) + separadores por día — party mode 2026-07-15 | ✅ done |
 | [STORY-973](STORY-973.md) | El cobro combinado se ve completo: Actividad y Auditoría muestran total, medio con label y 2º medio con su monto (`medio_cobro_2` no se leía en ninguna pantalla) — card #6, error de la prueba de STORY-950 | ✅ done |
 | [STORY-972](STORY-972.md) | Nota de cobro para la cancelación con cargo: mismo circuito de nota (vista previa + email), total = cargo, PDF "Trabajo cancelado" — supersede la decisión #3 de STORY-967 (card #93, error 9 de la prueba) | ✅ done |

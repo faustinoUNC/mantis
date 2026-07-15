@@ -433,7 +433,12 @@ export async function enviarPresupuestoEmail(
 // resto (se calcula acá, nunca confiando en lo que mande el cliente).
 export async function registrarCobro(
   gestionId: string,
-  datos: { medio: MedioCobro; medio2?: MedioCobro; monto2?: number }
+  datos: {
+    medio: MedioCobro;
+    medio2?: MedioCobro;
+    monto2?: number;
+    recargoPct?: number;
+  }
 ): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
@@ -481,15 +486,45 @@ export async function registrarCobro(
     montoCobro2 = monto2;
   }
 
+  // STORY-975: recargo por tarjeta de crédito — lo tipea la administración en
+  // el momento del cobro (varía según financiera/promo del día, no es un %
+  // fijo) y se calcula SOLO sobre la porción que efectivamente se paga con
+  // tarjeta (relevante en un cobro combinado). Nunca se confía en un monto
+  // calculado del lado del cliente: acá se recalcula desde cero.
+  const montoTarjeta =
+    datos.medio === "tarjeta_credito"
+      ? total - (montoCobro2 ?? 0)
+      : medioCobro2 === "tarjeta_credito"
+        ? (montoCobro2 ?? 0)
+        : 0;
+  let recargoPct: number | null = null;
+  let recargoMonto: number | null = null;
+  if (montoTarjeta > 0 && datos.recargoPct) {
+    const pct = Number(datos.recargoPct);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      return {
+        ok: false,
+        error: "El recargo por tarjeta tiene que ser un porcentaje entre 0 y 100.",
+      };
+    }
+    if (pct > 0) {
+      recargoPct = pct;
+      recargoMonto = Math.round(montoTarjeta * pct) / 100;
+    }
+  }
+  const totalFinal = total + (recargoMonto ?? 0);
+
   const { error } = await supabase
     .from("gestiones")
     .update({
       cobrado_en: new Date().toISOString(),
       medio_cobro: datos.medio,
       medio_cobro_2: medioCobro2,
-      cobrado_monto: total,
+      cobrado_monto: totalFinal,
       cobrado_monto_2: montoCobro2,
       cobrado_fee: cargoAdmin,
+      recargo_tarjeta_pct: recargoPct,
+      recargo_tarjeta_monto: recargoMonto,
     })
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo registrar el cobro." };
@@ -500,7 +535,9 @@ export async function registrarCobro(
     medio: datos.medio,
     medio2: medioCobro2,
     monto2: montoCobro2,
-    total,
+    recargoPct,
+    recargoMonto,
+    total: totalFinal,
   });
   // STORY-967: el cobro de una cancelación cierra la gestión en `cancelada`
   // (no hay nada que liquidarle al técnico — se salta esa etapa).
