@@ -24,7 +24,6 @@ const LABEL: Record<string, string> = {
   presupuesto_rechazado: "Presupuesto rechazado",
   conformidad_aprobada: "Conformidad aprobada",
   conformidad_rechazada: "Conformidad rechazada",
-  gasto_enviado: "Gasto imprevisto registrado",
   materiales_rendidos: "Comprobantes de materiales rendidos",
   gestor_reasignado: "Gestor reasignado",
   nota_cobro_enviada: "Nota de cobro enviada",

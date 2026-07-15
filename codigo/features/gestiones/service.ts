@@ -233,7 +233,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, materiales_total, materiales_foto_path, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, materiales_total, materiales_fotos_paths, nota_emitida_en, presupuesto_enviado_en, archivada_en, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -244,7 +244,6 @@ export async function obtenerGestion(
     { data: presupuestos },
     { data: avances },
     { data: conformidades },
-    { data: gastos },
   ] =
     await Promise.all([
       supabase
@@ -267,11 +266,6 @@ export async function obtenerGestion(
         .select("id, foto_path, estado, motivo_rechazo, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
-      supabase
-        .from("gastos_imprevistos")
-        .select("id, monto, descripcion, foto_path, creado_en")
-        .eq("gestion_id", id)
-        .order("creado_en", { ascending: false }),
     ]);
 
   const base = normalizarFila(g as unknown as Record<string, unknown>);
@@ -280,7 +274,7 @@ export async function obtenerGestion(
     costo_final: number | null;
     cargo_admin: number | null;
     materiales_total: number | null;
-    materiales_foto_path: string | null;
+    materiales_fotos_paths: string[] | null;
     nota_emitida_en: string | null;
     presupuesto_enviado_en: string | null;
     archivada_en: string | null;
@@ -306,7 +300,9 @@ export async function obtenerGestion(
     costo_final: fila.costo_final,
     cargo_admin: fila.cargo_admin,
     materiales_total: fila.materiales_total == null ? null : Number(fila.materiales_total),
-    materiales_foto_url: await fotoConUrl(fila.materiales_foto_path),
+    materiales_fotos_urls: (
+      await Promise.all((fila.materiales_fotos_paths ?? []).map(fotoConUrl))
+    ).filter((u): u is string => u != null),
     nota_emitida_en: fila.nota_emitida_en,
     presupuesto_enviado_en: fila.presupuesto_enviado_en,
     archivada_en: fila.archivada_en,
@@ -335,15 +331,6 @@ export async function obtenerGestion(
         motivo_rechazo: c.motivo_rechazo,
         foto_url: await fotoConUrl(c.foto_path),
         creado_en: c.creado_en,
-      }))
-    ),
-    gastos: await Promise.all(
-      (gastos ?? []).map(async (ga) => ({
-        id: ga.id,
-        monto: Number(ga.monto),
-        descripcion: ga.descripcion,
-        foto_url: await fotoConUrl(ga.foto_path),
-        creado_en: ga.creado_en,
       }))
     ),
   };
@@ -893,53 +880,6 @@ export async function registrarAvance(
   return { ok: true };
 }
 
-// ── Gastos imprevistos (STORY-932/934) ──
-// El técnico registra el gasto con foto de la factura obligatoria. Es un
-// hecho informativo, sin aprobación: el control vive en el costo final que
-// fija el gestor al aprobar la conformidad, viendo los gastos.
-
-export async function registrarGastoImprevisto(
-  gestionId: string,
-  form: FormData
-): Promise<ActionResult> {
-  const ctx = await exigirTecnicoAsignado(gestionId);
-  if (!ctx) return { ok: false, error: "No tenés permiso." };
-  if (ctx.gestion.etapa !== "en_ejecucion") {
-    return { ok: false, error: "Los gastos se registran durante la ejecución." };
-  }
-
-  const monto = Number(form.get("monto"));
-  const descripcion = String(form.get("descripcion") ?? "").trim();
-  if (!Number.isFinite(monto) || monto <= 0) {
-    return { ok: false, error: "Indicá el monto del gasto." };
-  }
-  if (!descripcion) return { ok: false, error: "Contá qué compraste y por qué." };
-  const foto = await subirFoto(gestionId, "gasto", form.get("foto") as File | null);
-  if (!foto) {
-    return { ok: false, error: "Subí la foto del ticket (JPG/PNG/WebP, máx 8MB) — sin evidencia no hay gasto." };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.from("gastos_imprevistos").insert({
-    gestion_id: gestionId,
-    tecnico_id: ctx.actual.id,
-    monto,
-    descripcion,
-    foto_path: foto,
-  });
-  if (error) return { ok: false, error: "No se pudo registrar el gasto." };
-
-  await supabase.from("eventos_gestion").insert({
-    gestion_id: gestionId,
-    tipo: "gasto_enviado",
-    actor_id: ctx.actual.id,
-    detalle: { monto },
-  });
-
-  refrescarTablero(gestionId);
-  return { ok: true };
-}
-
 export async function subirConformidad(
   gestionId: string,
   form: FormData
@@ -948,37 +888,20 @@ export async function subirConformidad(
   if (!ctx) return { ok: false, error: "No tenés permiso." };
   const terminando = ctx.gestion.etapa === "en_ejecucion";
 
-  // STORY-934: para TERMINAR la obra el técnico rinde los materiales — total
-  // gastado + foto general de todos los comprobantes (obligatoria). La
-  // resubida de una conformidad rechazada no la vuelve a pedir.
-  let rendicion: { total: number; foto: string } | null = null;
+  // STORY-934/964/965: para TERMINAR la obra el técnico rinde UN solo número —
+  // el total real gastado en la obra — más las fotos de los comprobantes (una
+  // por ticket, al menos una). La resubida de una conformidad rechazada no la
+  // vuelve a pedir.
+  let rendicion: { total: number; fotos: string[] } | null = null;
   if (terminando) {
-    // STORY-964: el técnico rinde UN solo número — el total real gastado en la
-    // obra, con los gastos imprevistos incluidos (no se le pide restar nada).
     const total = Number(form.get("materiales_total"));
     if (!Number.isFinite(total) || total <= 0) {
       return { ok: false, error: "Indicá el total gastado en la obra." };
     }
 
-    const supabaseCheck = await createClient();
-
-    // STORY-964: el total de la obra no puede ser menor que los gastos
-    // imprevistos ya cargados con ticket — serían una inconsistencia (esos
-    // gastos son parte del total, no algo aparte).
-    const { data: gastos } = await supabaseCheck
-      .from("gastos_imprevistos")
-      .select("monto")
-      .eq("gestion_id", gestionId);
-    const totalGastos = (gastos ?? []).reduce((s, ga) => s + Number(ga.monto), 0);
-    if (total < totalGastos) {
-      return {
-        ok: false,
-        error: `El total de la obra ($${total}) no puede ser menor que los gastos imprevistos ya cargados ($${totalGastos}) — incluilos en el total.`,
-      };
-    }
-
     // STORY-936: sin al menos una nota de avance el gestor estuvo ciego
     // toda la obra — no se termina sin contar qué se hizo.
+    const supabaseCheck = await createClient();
     const { data: avances } = await supabaseCheck
       .from("avances")
       .select("id")
@@ -992,18 +915,23 @@ export async function subirConformidad(
       };
     }
 
-    // STORY-961/964: no hay validación de "exceso cubierto por gastos" — el
-    // técnico rinde el total real de la obra. La foto obligatoria de todos los
-    // comprobantes + el desvío visible al gestor son el control anti-inflado.
-    const fotoComprobantes = await subirFoto(
-      gestionId,
-      "comprobantes",
-      form.get("foto_comprobantes") as File | null
-    );
-    if (!fotoComprobantes) {
-      return { ok: false, error: "Subí la foto con todos los comprobantes de materiales (JPG/PNG/WebP, máx 8MB)." };
+    // STORY-965: las fotos de los comprobantes (una por ticket) + el desvío
+    // visible al gestor son el control anti-inflado.
+    const archivos = form
+      .getAll("fotos_comprobantes")
+      .filter((f): f is File => f instanceof File && f.size > 0);
+    const fotos: string[] = [];
+    for (const archivo of archivos) {
+      const path = await subirFoto(gestionId, "comprobantes", archivo);
+      if (!path) {
+        return { ok: false, error: `No se pudo subir "${archivo.name}" (JPG/PNG/WebP, máx 8MB por foto).` };
+      }
+      fotos.push(path);
     }
-    rendicion = { total, foto: fotoComprobantes };
+    if (fotos.length === 0) {
+      return { ok: false, error: "Subí las fotos de los comprobantes de la obra (al menos una)." };
+    }
+    rendicion = { total, fotos };
   }
 
   const foto = await subirFoto(gestionId, "conformidad", form.get("foto") as File | null);
@@ -1016,7 +944,7 @@ export async function subirConformidad(
     const admin = createAdminClient();
     const { error } = await admin
       .from("gestiones")
-      .update({ materiales_total: rendicion.total, materiales_foto_path: rendicion.foto })
+      .update({ materiales_total: rendicion.total, materiales_fotos_paths: rendicion.fotos })
       .eq("id", gestionId);
     if (error) return { ok: false, error: "No se pudo guardar la rendición de materiales." };
     await supabase.from("eventos_gestion").insert({
@@ -1078,10 +1006,8 @@ export async function resolverConformidad(
   }
 
   // STORY-961/964: el costo final NO lo tipea el gestor — se calcula server-side
-  // (no manipulable). STORY-964: el técnico rinde el TOTAL real de la obra
-  // (imprevistos incluidos), así que la fórmula es total rendido + mano de obra
-  // presupuestada; los gastos imprevistos ya están dentro del total (no se
-  // re-suman). Fallback a materiales presupuestados para gestiones viejas.
+  // (no manipulable): total real rendido por el técnico + mano de obra
+  // presupuestada. Fallback a materiales presupuestados para gestiones viejas.
   const { data: g } = await supabase
     .from("gestiones")
     .select("materiales_total, presupuestos(monto_materiales, monto_mano_obra, estado)")

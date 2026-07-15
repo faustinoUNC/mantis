@@ -31,14 +31,12 @@ import {
   enviarPresupuesto,
   reasignarGestor,
   registrarAvance,
-  registrarGastoImprevisto,
   resolverConformidad,
   resolverPresupuesto,
   responderAsignacion,
   subirConformidad,
 } from "@/features/gestiones/service";
 import type {
-  GastoImprevisto,
   GestionDetalle,
   Pagador,
   Presupuesto,
@@ -59,7 +57,6 @@ const LABEL_EVENTO: Record<string, string> = {
   presupuesto_enviado_pagador: "Presupuesto enviado por email al pagador",
   conformidad_aprobada: "Conformidad aprobada",
   conformidad_rechazada: "Conformidad rechazada",
-  gasto_enviado: "Gasto imprevisto registrado",
   materiales_rendidos: "Comprobantes de materiales rendidos",
   gestor_reasignado: "Gestor reasignado",
   nota_cobro_enviada: "Nota de cobro enviada",
@@ -818,124 +815,18 @@ function FormAvance({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
-// ── Gastos imprevistos (STORY-932/934) — evidencia del técnico, sin
-// aprobación: el control vive en el costo final que fija el gestor. ──
-
-function FichaGasto({ gasto }: { gasto: GastoImprevisto }) {
-  return (
-    <div className="rounded-md border border-border bg-surface-2/50 p-3 flex flex-col gap-2">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm leading-relaxed min-w-0">{gasto.descripcion}</p>
-        <span className="font-mono text-sm font-semibold shrink-0">{plata(gasto.monto)}</span>
-      </div>
-      {gasto.foto_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={gasto.foto_url}
-          alt="Factura del gasto"
-          className="rounded-md max-h-40 border border-border self-start"
-        />
-      )}
-    </div>
-  );
-}
-
-// Vista técnico (mobile): sus gastos + alta con foto de la factura.
-function GastosTecnico({ gestion }: { gestion: GestionDetalle }) {
-  const { error, cargando, correr } = useAccion();
-  const [agregando, setAgregando] = useState(false);
-
-  return (
-    <div className="flex flex-col gap-3 max-w-md">
-      <p className="text-[13px] font-medium text-muted">
-        Gastos imprevistos{" "}
-        <span className="text-muted/50 font-normal">· materiales extra que no estaban en el presupuesto</span>
-      </p>
-      {gestion.gastos.map((ga) => (
-        <FichaGasto key={ga.id} gasto={ga} />
-      ))}
-      {agregando ? (
-        <form
-          className="flex flex-col gap-3 rounded-md border border-border p-3"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-            const ok = await correr(() =>
-              registrarGastoImprevisto(gestion.id, new FormData(form))
-            );
-            if (ok) setAgregando(false);
-          }}
-        >
-          <Input
-            label="Monto ($)"
-            name="monto"
-            type="number"
-            min="0.01"
-            step="0.01"
-            required
-          />
-          <Input
-            label="Qué compraste y por qué"
-            name="descripcion"
-            required
-            placeholder="Ej: caño de 40 que apareció roto al abrir la pared"
-          />
-          <InputArchivo label="Foto de la factura (obligatoria)" name="foto" capture="environment" required />
-          <div className="flex gap-2">
-            <Button type="submit" disabled={cargando} className="flex-1 sm:flex-none">
-              Enviar gasto
-            </Button>
-            <Button type="button" variante="fantasma" onClick={() => setAgregando(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <Button variante="secundario" onClick={() => setAgregando(true)} className="self-start">
-          + Agregar gasto imprevisto
-        </Button>
-      )}
-      {error && <p className="text-sm font-medium text-error">{error}</p>}
-    </div>
-  );
-}
-
-// Vista gestor: lista informativa de lo que el técnico fue gastando.
-function GastosGestor({ gestion }: { gestion: GestionDetalle }) {
-  if (gestion.gastos.length === 0) return null;
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-[13px] font-medium text-muted">
-        Gastos imprevistos del técnico{" "}
-        <span className="text-muted/50 font-normal">· informativo — el costo final lo fijás vos en la conformidad</span>
-      </p>
-      {gestion.gastos.map((ga) => (
-        <FichaGasto key={ga.id} gasto={ga} />
-      ))}
-    </div>
-  );
-}
-
 function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const ultima = gestion.conformidades[0];
   const esperando = ultima?.estado === "subida";
-  // STORY-934: al TERMINAR la obra se rinden los materiales (total + foto de
-  // todos los comprobantes). La resubida de una rechazada no lo vuelve a pedir.
+  // STORY-934/964/965: al TERMINAR la obra se rinde el total real gastado +
+  // las fotos de los comprobantes (una por ticket). La resubida de una
+  // rechazada no lo vuelve a pedir.
   const terminando = gestion.etapa === "en_ejecucion";
 
   // STORY-936: para terminar hace falta al menos una nota de avance.
-  // STORY-964: el técnico rinde UN total real de la obra (imprevistos incluidos);
-  // no se le pide restar nada. Control anti-inflado: foto obligatoria de todos
-  // los comprobantes + el desvío visible al gestor.
   const sinAvance =
     terminando && !gestion.avances.some((a) => a.tipo === "avance");
-  const [totalRendido, setTotalRendido] = useState(0);
-  // STORY-964: el total no puede ser menor que los imprevistos ya cargados
-  // (esos gastos son parte del total, no algo aparte).
-  const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
-  const rendidoInsuficiente =
-    terminando && totalRendido > 0 && totalRendido < totalGastos;
 
   if (esperando) {
     return <p className="text-sm text-muted">Conformidad subida — esperando revisión del gestor.</p>;
@@ -961,33 +852,19 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
             <span className="text-muted/50 font-normal">· con esto se calcula tu liquidación</span>
           </p>
           <Input
-            label="Total gastado en la obra ($) — todo lo que gastaste, incluidos los gastos imprevistos"
+            label="Total gastado en la obra ($) — todo lo que gastaste"
             name="materiales_total"
             type="number"
             min="0.01"
             step="0.01"
             required
-            value={totalRendido || ""}
-            onChange={(e) => setTotalRendido(Number(e.target.value) || 0)}
           />
-          {totalGastos > 0 && (
-            <p
-              className={`text-[13px] ${
-                rendidoInsuficiente ? "text-error" : "text-muted"
-              }`}
-            >
-              Ya cargaste {plata(totalGastos)} en gastos imprevistos con ticket — incluilos en este
-              total.
-            </p>
-          )}
+          {/* STORY-965: una foto por ticket — sin capture para que el celular
+              deje elegir varias del rollo de la cámara */}
           <InputArchivo
-            label={
-              gestion.gastos.length > 0
-                ? "Foto de todos los comprobantes, incluidos los de gastos imprevistos (obligatoria)"
-                : "Foto de todos los comprobantes (obligatoria)"
-            }
-            name="foto_comprobantes"
-            capture="environment"
+            label="Fotos de los comprobantes — una por ticket (al menos una)"
+            name="fotos_comprobantes"
+            multiple
             required
           />
         </>
@@ -1003,11 +880,7 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
           Registrá al menos una nota de avance (arriba) antes de terminar la obra.
         </p>
       )}
-      <Button
-        type="submit"
-        disabled={cargando || sinAvance || rendidoInsuficiente}
-        className="self-start"
-      >
+      <Button type="submit" disabled={cargando || sinAvance} className="self-start">
         {terminando ? "Terminar y subir conformidad →" : "Resubir conformidad"}
       </Button>
       {error && <p className="text-sm font-medium text-error">{error}</p>}
@@ -1025,12 +898,9 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   // pagador y lo que se liquida al técnico son el mismo número (+ el fee).
   const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
   const matPresupuestados = aprobado ? Number(aprobado.monto_materiales) : 0;
-  const totalGastos = gestion.gastos.reduce((s, ga) => s + Number(ga.monto), 0);
   const rendido = gestion.materiales_total;
   // STORY-964: el costo final se calcula (no se edita) = total gastado en la
-  // obra (imprevistos ya incluidos) + mano de obra. Los gastos imprevistos NO
-  // se re-suman — son la evidencia con ticket dentro del total. El server
-  // recomputa lo mismo al aprobar.
+  // obra + mano de obra. El server recomputa lo mismo al aprobar.
   const baseMateriales = rendido != null ? rendido : matPresupuestados;
   const costoFinal = baseMateriales + manoObra;
   const desvioMat = rendido != null ? rendido - matPresupuestados : null;
@@ -1064,17 +934,27 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Rendición de materiales (STORY-934): lo real vs lo presupuestado */}
+      {/* Rendición (STORY-934/965): lo real vs lo presupuestado, con la
+          galería de comprobantes (una foto por ticket) como evidencia */}
       {rendido != null && (
         <div className="max-w-md flex flex-col gap-2">
-          <p className="text-[13px] font-medium text-muted">Rendición de materiales del técnico</p>
-          {gestion.materiales_foto_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={gestion.materiales_foto_url}
-              alt="Comprobantes de materiales"
-              className="rounded-md max-h-56 border border-border self-start"
-            />
+          <p className="text-[13px] font-medium text-muted">
+            Rendición del técnico{" "}
+            <span className="text-muted/50 font-normal">· comprobantes de lo gastado en la obra</span>
+          </p>
+          {gestion.materiales_fotos_urls.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {gestion.materiales_fotos_urls.map((url, i) => (
+                <a key={url} href={url} target="_blank" rel="noreferrer" className="shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`Comprobante ${i + 1}`}
+                    className="rounded-md h-28 border border-border object-cover"
+                  />
+                </a>
+              ))}
+            </div>
           )}
           <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
             <div className="flex justify-between">
@@ -1111,8 +991,7 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
         />
       )}
       {/* STORY-964: costo final calculado, no editable = total gastado en la
-          obra (imprevistos incluidos) + mano de obra. Los imprevistos NO se
-          re-suman: se muestran como sub-línea informativa del total. */}
+          obra + mano de obra. */}
       <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
         <div className="flex justify-between">
           <span className="text-muted">
@@ -1120,11 +999,6 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
           </span>
           <span className="font-mono">{plata(baseMateriales)}</span>
         </div>
-        {rendido != null && totalGastos > 0 && (
-          <div className="flex justify-between text-[13px] text-muted/60">
-            <span>· incluye {plata(totalGastos)} de imprevistos con ticket</span>
-          </div>
-        )}
         <div className="flex justify-between">
           <span className="text-muted">Mano de obra (presupuesto aprobado)</span>
           <span className="font-mono">{plata(manoObra)}</span>
@@ -1553,7 +1427,6 @@ export function DetalleGestion({
       <RefrescoVivo tabla="avances" filtro={`gestion_id=eq.${gestion.id}`} />
       <RefrescoVivo tabla="presupuestos" filtro={`gestion_id=eq.${gestion.id}`} />
       <RefrescoVivo tabla="conformidades" filtro={`gestion_id=eq.${gestion.id}`} />
-      <RefrescoVivo tabla="gastos_imprevistos" filtro={`gestion_id=eq.${gestion.id}`} />
 
       <div className="flex items-center justify-between gap-3">
         <Link href={volver} className="text-sm font-medium text-muted hover:text-foreground">
@@ -1634,26 +1507,17 @@ export function DetalleGestion({
           <div className="flex flex-col gap-6">
             <FormAvance gestion={gestion} />
             <div className="border-t border-border pt-5">
-              <GastosTecnico gestion={gestion} />
-            </div>
-            <div className="border-t border-border pt-5">
               <AccionConformidadTecnico gestion={gestion} />
             </div>
           </div>
         )}
         {gestion.etapa === "en_ejecucion" && esGestorOwner && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm text-muted">
-              El técnico está trabajando — los avances aparecen abajo apenas los registra.
-            </p>
-            <GastosGestor gestion={gestion} />
-          </div>
+          <p className="text-sm text-muted">
+            El técnico está trabajando — los avances aparecen abajo apenas los registra.
+          </p>
         )}
         {gestion.etapa === "conformidad" && esGestorOwner && (
-          <div className="flex flex-col gap-5">
-            <GastosGestor gestion={gestion} />
-            <AccionConformidadGestor gestion={gestion} />
-          </div>
+          <AccionConformidadGestor gestion={gestion} />
         )}
         {gestion.etapa === "conformidad" && esTecnicoAsignado && (
           <AccionConformidadTecnico gestion={gestion} />

@@ -514,7 +514,7 @@ export async function registrarLiquidacion(
   const fila = g as unknown as Fila | null;
   const aprobado = fila?.presupuestos.find((p) => p.estado === "aprobado");
   const manoObra = aprobado ? Number(aprobado.monto_mano_obra) : 0;
-  // STORY-964: el técnico rinde el total real de la obra (imprevistos incluidos),
+  // STORY-964: el técnico rinde el total real de la obra,
   // así que no se suman aparte. Fallback a costo_final para gestiones viejas.
   const monto =
     fila?.materiales_total != null

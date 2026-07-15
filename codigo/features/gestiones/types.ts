@@ -75,17 +75,6 @@ export interface Avance {
   creado_en: string;
 }
 
-// STORY-932/934: gasto imprevisto que registra el técnico en ejecución, con
-// foto de la factura obligatoria. Es un hecho informativo (sin aprobación):
-// el control vive en el costo final que fija el gestor en la conformidad.
-export interface GastoImprevisto {
-  id: string;
-  monto: number;
-  descripcion: string;
-  foto_url: string | null;
-  creado_en: string;
-}
-
 export interface Conformidad {
   id: string;
   foto_url: string | null;
@@ -108,9 +97,10 @@ export interface GestionDetalle extends GestionResumen {
   pagador: Pagador | null;
   costo_final: number | null;
   cargo_admin: number | null;
-  // STORY-934: rendición de materiales del técnico al terminar la ejecución
+  // STORY-934/965: rendición del técnico al terminar la ejecución — total
+  // gastado en la obra + fotos de los comprobantes (una por ticket)
   materiales_total: number | null;
-  materiales_foto_url: string | null;
+  materiales_fotos_urls: string[];
   nota_emitida_en: string | null;
   // STORY-935: marca persistida del envío del presupuesto por email — sin
   // esto no se puede aprobar. Y archivado (null = activa, fuera del tablero).
@@ -124,7 +114,6 @@ export interface GestionDetalle extends GestionResumen {
   presupuestos: Presupuesto[];
   avances: Avance[];
   conformidades: Conformidad[];
-  gastos: GastoImprevisto[];
   // STORY-914: calificación del técnico (una por gestión, se carga al finalizar)
   calificacion: { estrellas: number; comentario: string | null } | null;
   contacto_cliente: ContactoCliente | null;
