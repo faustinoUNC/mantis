@@ -1,119 +1,94 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Card } from "@/components/ui/card";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
+import { Input } from "@/components/ui/input";
 import { Paginador } from "@/components/ui/paginador.client";
 import { Select } from "@/components/ui/select";
-import type { EventoAuditoria } from "@/features/auditoria/service";
+import { historialGlobal } from "@/features/auditoria/service";
 import {
-  MEDIO_COBRO_LABEL,
-  MEDIO_LIQUIDACION_LABEL,
-} from "@/features/finanzas/medios";
-import { ETAPAS } from "@/features/gestiones/types";
-import { usePaginado } from "@/shared/hooks/use-paginado";
-import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
+  AUDITORIA_POR_PAGINA,
+  type ActorAuditoria,
+  type PaginaAuditoria,
+} from "@/features/auditoria/types";
+import { NOMBRE_ROL } from "@/features/auth/types";
+import {
+  LABEL_EVENTO,
+  detalleLegible,
+  etiquetaEtapa,
+} from "@/features/gestiones/eventos";
 
-const LABEL: Record<string, string> = {
-  creada: "Gestión creada",
-  transicion: "Cambio de etapa",
-  asignacion_solicitada: "Asignación enviada",
-  asignacion_aceptada: "Asignación aceptada",
-  asignacion_rechazada: "Asignación rechazada",
-  asignacion_cancelada: "Asignación cancelada",
-  presupuesto_enviado: "Presupuesto enviado",
-  presupuesto_enviado_pagador: "Presupuesto enviado al pagador",
-  presupuesto_aprobado: "Presupuesto aprobado",
-  presupuesto_rechazado: "Presupuesto rechazado",
-  conformidad_aprobada: "Conformidad aprobada",
-  conformidad_rechazada: "Conformidad rechazada",
-  materiales_rendidos: "Comprobantes de materiales rendidos",
-  gestor_reasignado: "Gestor reasignado",
-  nota_cobro_enviada: "Nota de cobro enviada",
-  cobro_registrado: "Cobro registrado",
-  liquidacion_registrada: "Liquidación registrada",
-  archivada: "Gestión archivada",
-  desarchivada: "Gestión desarchivada",
-};
+// Formato manual determinístico (doctrina STORY-973): toLocaleString difiere
+// entre Node y el navegador → error de hidratación.
+const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-// Cancelada está fuera del funnel (STORY-914) pero aparece en transiciones.
-const ETIQUETA_ETAPA: Record<string, string> = {
-  ...Object.fromEntries(ETAPAS.map((e) => [e.id, e.label])),
-  cancelada: "Cancelada",
-};
-const etapaLegible = (id: string | null) => (id ? (ETIQUETA_ETAPA[id] ?? id) : "");
-
-const plata = (n: unknown) =>
-  `$ ${Number(n).toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
-
-// Formato manual determinístico (patrón fechaHora del detalle): toLocaleString
-// mete un espacio invisible (U+202F) distinto entre Node y el navegador →
-// error de hidratación.
-function fechaHora(f: string) {
+function diaLegible(f: string) {
   const d = new Date(f);
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const aa = String(d.getFullYear() % 100).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}/${mm}/${aa}, ${hh}:${mi}`;
+  return `${DIAS[d.getDay()]} ${dd}/${mm}/${aa}`;
 }
 
-// STORY-973: labels de cobro y liquidación en un solo mapa (las claves
-// compartidas, ej. "efectivo", tienen el mismo label en ambos).
-const MEDIO_LABEL: Record<string, string> = {
-  ...MEDIO_LIQUIDACION_LABEL,
-  ...MEDIO_COBRO_LABEL,
-};
-
-// Resumen humano del JSON `detalle` — la mitad del valor de auditoría vive ahí.
-function resumenDetalle(d: Record<string, unknown> | null): string {
-  if (!d) return "";
-  const partes: string[] = [];
-  if (d.tecnico) partes.push(String(d.tecnico));
-  if (d.nuevo_gestor) partes.push(`nuevo gestor: ${d.nuevo_gestor}`);
-  if (d.para) partes.push(`al ${d.para}`);
-  if (d.pagador) partes.push(`paga ${d.pagador}`);
-  if (d.total != null) partes.push(plata(d.total));
-  if (d.monto != null) partes.push(plata(d.monto));
-  if (d.costo_final != null) partes.push(`costo final ${plata(d.costo_final)}`);
-  if (d.cargo_admin != null) partes.push(`cargo adm. ${plata(d.cargo_admin)}`);
-  if (d.plazo_dias != null) partes.push(`${d.plazo_dias} día${Number(d.plazo_dias) === 1 ? "" : "s"}`);
-  if (d.medio) partes.push(MEDIO_LABEL[String(d.medio)] ?? String(d.medio));
-  // STORY-973: el cobro combinado (STORY-950) se cuenta completo.
-  if (d.medio2) {
-    const label = MEDIO_LABEL[String(d.medio2)] ?? String(d.medio2);
-    partes.push(d.monto2 != null ? `2º medio: ${label} (${plata(d.monto2)})` : `2º medio: ${label}`);
-  }
-  if (d.factura_ref) partes.push(`fact. ${d.factura_ref}`);
-  if (d.motivo) partes.push(`“${d.motivo}”`);
-  return partes.join(" · ");
+function hora(f: string) {
+  const d = new Date(f);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-const CAMPOS_BUSQUEDA: CampoBusqueda<EventoAuditoria>[] = [
-  { id: "direccion", label: "Dirección", de: (e) => [e.direccion] },
-  { id: "descripcion", label: "Descripción", de: (e) => [e.gestion_descripcion] },
-  { id: "persona", label: "Persona", de: (e) => [e.actor_nombre] },
-];
-
-export function Auditoria({ eventos }: { eventos: EventoAuditoria[] }) {
-  const [tipo, setTipo] = useState("");
+export function Auditoria({
+  inicial,
+  actores,
+}: {
+  inicial: PaginaAuditoria;
+  actores: ActorAuditoria[];
+}) {
   const [busqueda, setBusqueda] = useState("");
-  const [campo, setCampo] = useState("todo");
+  const [actorId, setActorId] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const [datos, setDatos] = useState(inicial);
+  const [abiertoId, setAbiertoId] = useState<string | null>(null);
+  const [pendiente, startTransition] = useTransition();
 
-  const filtrados = useMemo(
-    () =>
-      eventos.filter(
-        (e) =>
-          (!tipo || e.tipo === tipo) &&
-          coincideCampo(busqueda, campo, CAMPOS_BUSQUEDA, e)
-      ),
-    [eventos, tipo, busqueda, campo]
-  );
+  // La primera página ya viene renderizada del server; el efecto solo corre
+  // ante cambios. `pedido` descarta respuestas viejas que lleguen tarde.
+  const primera = useRef(true);
+  const pedido = useRef(0);
+  useEffect(() => {
+    if (primera.current) {
+      primera.current = false;
+      return;
+    }
+    const id = ++pedido.current;
+    const t = setTimeout(() => {
+      startTransition(async () => {
+        const res = await historialGlobal({
+          busqueda: busqueda || undefined,
+          actorId: actorId || undefined,
+          tipo: tipo || undefined,
+          desde: desde || undefined,
+          hasta: hasta || undefined,
+          pagina,
+        });
+        if (id === pedido.current) setDatos(res);
+      });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [busqueda, actorId, tipo, desde, hasta, pagina]);
 
-  const { pageItems, setPagina, paginadorProps } = usePaginado(filtrados);
-  useEffect(() => setPagina(1), [tipo, busqueda, campo, setPagina]);
+  // Cambiar un filtro vuelve a página 1 (mismo render: React batchea).
+  const filtrar = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setPagina(1);
+  };
+
+  const totalPaginas = Math.max(1, Math.ceil(datos.total / AUDITORIA_POR_PAGINA));
+  const desdeFila = datos.total === 0 ? 0 : (pagina - 1) * AUDITORIA_POR_PAGINA + 1;
+  const hastaFila = Math.min(pagina * AUDITORIA_POR_PAGINA, datos.total);
 
   return (
     <div className="animate-aparecer">
@@ -123,34 +98,73 @@ export function Auditoria({ eventos }: { eventos: EventoAuditoria[] }) {
       </h1>
       <p className="text-sm text-muted mb-5">
         Quién hizo qué y cuándo — los timestamps del event log sirven como
-        evidencia de plazos. Últimos 200 eventos.
+        evidencia de plazos.
       </p>
 
       <FiltrosLista
         consulta={busqueda}
-        onConsulta={setBusqueda}
-        campos={CAMPOS_BUSQUEDA}
-        campo={campo}
-        onCampo={setCampo}
+        onConsulta={filtrar(setBusqueda)}
+        placeholder="Dirección o descripción…"
         extra={
-          <div className="w-52">
-            <Select label="Tipo de evento" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-              <option value="">Todos</option>
-              {Object.entries(LABEL).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <>
+            <div className="w-56">
+              <Select
+                label="Persona"
+                value={actorId}
+                onChange={(e) => filtrar(setActorId)(e.target.value)}
+              >
+                <option value="">Todas</option>
+                {actores.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.nombre} — {NOMBRE_ROL[a.rol]}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="w-56">
+              <Select
+                label="Tipo de evento"
+                value={tipo}
+                onChange={(e) => filtrar(setTipo)(e.target.value)}
+              >
+                <option value="">Todos</option>
+                {Object.entries(LABEL_EVENTO).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="w-38">
+              <Input
+                label="Desde"
+                type="date"
+                value={desde}
+                onChange={(e) => filtrar(setDesde)(e.target.value)}
+              />
+            </div>
+            <div className="w-38">
+              <Input
+                label="Hasta"
+                type="date"
+                value={hasta}
+                onChange={(e) => filtrar(setHasta)(e.target.value)}
+              />
+            </div>
+          </>
         }
       />
 
-      <Card className="overflow-x-auto">
+      {/* Denominador siempre visible: el resultado dice cuán completo es. */}
+      <p className="text-[13px] text-muted tabular-nums mb-2">
+        {datos.total} evento{datos.total === 1 ? "" : "s"}
+      </p>
+
+      <Card className={`overflow-x-auto transition-opacity ${pendiente ? "opacity-60" : ""}`}>
         <table className="w-full text-[15px]">
           <thead>
             <tr className="border-b border-border text-left">
-              {["Evento", "Gestión", "Quién", "Cuándo"].map((h) => (
+              {["Evento", "Gestión", "Quién", "Hora"].map((h) => (
                 <th key={h} className="px-4 py-3 text-[13px] font-medium text-muted">
                   {h}
                 </th>
@@ -158,49 +172,102 @@ export function Auditoria({ eventos }: { eventos: EventoAuditoria[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtrados.length === 0 && (
+            {datos.eventos.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-muted text-sm">
                   Sin eventos para ese filtro.
                 </td>
               </tr>
             )}
-            {pageItems.map((e) => {
-              const detalle = resumenDetalle(e.detalle);
+            {datos.eventos.map((e, i) => {
+              const detalle = detalleLegible(e.detalle);
+              const abierto = abiertoId === e.id;
+              const dia = diaLegible(e.creado_en);
+              const separador =
+                i === 0 || dia !== diaLegible(datos.eventos[i - 1].creado_en);
               return (
-                <tr key={e.id} className="border-b border-border last:border-0 hover:bg-surface-2/60 transition-colors">
-                  <td className="px-4 py-2.5 max-w-72">
-                    {LABEL[e.tipo] ?? e.tipo}
-                    {e.tipo === "transicion" && (
-                      <span className="text-muted text-[13px]">
-                        {" "}· {etapaLegible(e.de_etapa)} → {etapaLegible(e.a_etapa)}
-                      </span>
-                    )}
-                    {detalle && (
-                      <span className="block text-[13px] text-muted line-clamp-1">
-                        {detalle}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 max-w-64">
-                    {/* Dirección primero: misma jerarquía que las cards del tablero y el Inicio */}
-                    <Link href={`/gestiones/${e.gestion_id}`} className="text-brand font-medium hover:text-brand-hover">
-                      <span className="line-clamp-1">{e.direccion}</span>
-                    </Link>
-                    <span className="text-[13px] text-muted line-clamp-1">{e.gestion_descripcion}</span>
-                  </td>
-                  <td className="px-4 py-2.5 text-muted">{e.actor_nombre}</td>
-                  <td className="px-4 py-2.5 font-mono text-[12px] text-muted whitespace-nowrap">
-                    {fechaHora(e.creado_en)}
-                  </td>
-                </tr>
+                <FilaConDia key={e.id} separador={separador ? dia : null}>
+                  <tr
+                    className={`border-b border-border last:border-0 hover:bg-surface-2/60 transition-colors ${detalle ? "cursor-pointer" : ""}`}
+                    onClick={detalle ? () => setAbiertoId(abierto ? null : e.id) : undefined}
+                    title={detalle && !abierto ? "Ver detalle completo" : undefined}
+                  >
+                    <td className="px-4 py-2.5 max-w-72">
+                      {LABEL_EVENTO[e.tipo] ?? e.tipo}
+                      {e.tipo === "transicion" && (
+                        <span className="text-muted text-[13px]">
+                          {" "}· {etiquetaEtapa(e.de_etapa)} → {etiquetaEtapa(e.a_etapa)}
+                        </span>
+                      )}
+                      {detalle && (
+                        <span
+                          className={`block text-[13px] text-muted ${abierto ? "" : "line-clamp-1"}`}
+                        >
+                          {detalle}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 max-w-64">
+                      {/* Dirección primero: misma jerarquía que las cards del tablero y el Inicio */}
+                      <Link
+                        href={`/gestiones/${e.gestion_id}`}
+                        className="text-brand font-medium hover:text-brand-hover"
+                        onClick={(ev) => ev.stopPropagation()}
+                      >
+                        <span className="line-clamp-1">{e.direccion}</span>
+                      </Link>
+                      <span className="text-[13px] text-muted line-clamp-1">{e.gestion_descripcion}</span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {e.actor_nombre}
+                      {e.actor_rol && (
+                        <span className="block text-[12px] text-muted">
+                          {NOMBRE_ROL[e.actor_rol]}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 font-mono text-[12px] text-muted whitespace-nowrap">
+                      {hora(e.creado_en)}
+                    </td>
+                  </tr>
+                </FilaConDia>
               );
             })}
           </tbody>
         </table>
       </Card>
 
-      <Paginador {...paginadorProps} />
+      <Paginador
+        pagina={pagina}
+        totalPaginas={totalPaginas}
+        total={datos.total}
+        desde={desdeFila}
+        hasta={hastaFila}
+        onAnterior={() => setPagina((p) => Math.max(1, p - 1))}
+        onSiguiente={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+      />
     </div>
+  );
+}
+
+// Separador por día: el log se lee cronológicamente (STORY-974).
+function FilaConDia({
+  separador,
+  children,
+}: {
+  separador: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      {separador && (
+        <tr className="border-b border-border bg-surface-2/40">
+          <td colSpan={4} className="px-4 py-1.5 text-[12px] font-medium text-muted">
+            {separador}
+          </td>
+        </tr>
+      )}
+      {children}
+    </>
   );
 }

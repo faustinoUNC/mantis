@@ -1,0 +1,81 @@
+// STORY-974: labels y lectura humana de eventos_gestion en UN solo lugar.
+// Actividad (detalle.client.tsx) y Auditoría (auditoria.client.tsx) tenían
+// cada una su copia y ya habían divergido (tecnico_no_continua, imputado y
+// cargo se veían en una pantalla y no en la otra). Archivo client-safe: sin
+// "use server".
+
+import {
+  MEDIO_COBRO_LABEL,
+  MEDIO_LIQUIDACION_LABEL,
+} from "@/features/finanzas/medios";
+import { ETAPAS } from "@/features/gestiones/types";
+
+export const LABEL_EVENTO: Record<string, string> = {
+  creada: "Gestión creada",
+  transicion: "Cambio de etapa",
+  asignacion_solicitada: "Asignación enviada al técnico",
+  asignacion_aceptada: "El técnico aceptó el trabajo",
+  asignacion_rechazada: "El técnico rechazó la asignación",
+  asignacion_cancelada: "Solicitud de asignación cancelada por el gestor",
+  presupuesto_enviado: "Presupuesto enviado",
+  presupuesto_aprobado: "Presupuesto aprobado",
+  presupuesto_rechazado: "Presupuesto rechazado",
+  presupuesto_enviado_pagador: "Presupuesto enviado por email al pagador",
+  conformidad_aprobada: "Conformidad aprobada",
+  conformidad_rechazada: "Conformidad rechazada",
+  materiales_rendidos: "Comprobantes de materiales rendidos",
+  tecnico_no_continua: "El técnico avisó que no puede continuar",
+  gestor_reasignado: "Gestor reasignado",
+  nota_cobro_enviada: "Nota de cobro enviada",
+  cobro_registrado: "Cobro registrado",
+  liquidacion_registrada: "Liquidación registrada",
+  archivada: "Gestión archivada",
+  desarchivada: "Gestión desarchivada",
+};
+
+export function etiquetaEtapa(id: string | null) {
+  if (id === "cancelada") return "Cancelada"; // terminal fuera del stepper
+  return ETAPAS.find((e) => e.id === id)?.label ?? id ?? "";
+}
+
+// STORY-973: labels de cobro y liquidación en un solo mapa (las claves
+// compartidas, ej. "efectivo", tienen el mismo label en ambos).
+const MEDIO_LABEL: Record<string, string> = {
+  ...MEDIO_LIQUIDACION_LABEL,
+  ...MEDIO_COBRO_LABEL,
+};
+
+// Datos pertinentes del evento, legibles ("Técnico: X · Total: $ Y")
+export function detalleLegible(detalle: Record<string, unknown> | null): string | null {
+  if (!detalle) return null;
+  const plataD = (v: unknown) => `$ ${Number(v).toLocaleString("es-AR")}`;
+  const partes: string[] = [];
+  if (detalle.tecnico) partes.push(`Técnico: ${detalle.tecnico}`);
+  if (detalle.nuevo_gestor) partes.push(`Nuevo gestor: ${detalle.nuevo_gestor}`);
+  if (detalle.total != null) partes.push(`Total: ${plataD(detalle.total)}`);
+  if (detalle.costo_final != null) partes.push(`Costo final: ${plataD(detalle.costo_final)}`);
+  if (detalle.monto != null) partes.push(`Monto: ${plataD(detalle.monto)}`);
+  if (detalle.plazo_dias != null) partes.push(`Plazo: ${detalle.plazo_dias} día${Number(detalle.plazo_dias) === 1 ? "" : "s"}`);
+  if (detalle.pagador) partes.push(`Paga: ${detalle.pagador}`);
+  if (detalle.medio) partes.push(`Medio: ${MEDIO_LABEL[String(detalle.medio)] ?? detalle.medio}`);
+  // STORY-973: el cobro combinado (STORY-950) se cuenta completo.
+  if (detalle.medio2) {
+    const label = MEDIO_LABEL[String(detalle.medio2)] ?? detalle.medio2;
+    partes.push(
+      detalle.monto2 != null ? `2º medio: ${label} (${plataD(detalle.monto2)})` : `2º medio: ${label}`
+    );
+  }
+  if (detalle.factura_ref) partes.push(`Factura: ${detalle.factura_ref}`);
+  if (detalle.para) partes.push(`Para: ${detalle.para}`);
+  // STORY-967: el cargo de la cancelación, con nombre propio.
+  if (detalle.cargo != null) partes.push(`Cargo: ${plataD(detalle.cargo)}`);
+  // STORY-966: la desasignación imputada al técnico se dice con todas las
+  // letras, y el saliente queda nombrado (STORY-974 — estaba congelado en el
+  // evento y no se mostraba). El evento guarda el UUID; nombrarSalientes()
+  // lo traduce server-side — si quedó sin resolver, el id crudo no aporta.
+  if (detalle.imputado === "tecnico") partes.push("Abandonada por el técnico");
+  if (detalle.tecnico_saliente && !/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(String(detalle.tecnico_saliente)))
+    partes.push(`Saliente: ${detalle.tecnico_saliente}`);
+  if (detalle.motivo && detalle.motivo !== "reasignar") partes.push(String(detalle.motivo));
+  return partes.length ? partes.join(" · ") : null;
+}

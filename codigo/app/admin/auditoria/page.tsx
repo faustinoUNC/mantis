@@ -1,7 +1,10 @@
 import { Auditoria } from "@/components/auditoria/auditoria.client";
-import { historialGlobal } from "@/features/auditoria/service";
+import { historialGlobal, listarActores } from "@/features/auditoria/service";
 
 export default async function AuditoriaPage() {
-  const eventos = await historialGlobal();
-  return <Auditoria eventos={eventos} />;
+  const [inicial, actores] = await Promise.all([
+    historialGlobal(),
+    listarActores(),
+  ]);
+  return <Auditoria inicial={inicial} actores={actores} />;
 }

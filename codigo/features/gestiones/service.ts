@@ -17,6 +17,7 @@ import type {
 } from "./types";
 import { ETAPAS_TERMINALES } from "./types";
 import { ultimaEjecucionDias, type TransicionEjecucion } from "./ejecucion";
+import { nombrarSalientes } from "./salientes";
 
 const BUCKET = "gestiones";
 const MIME_FOTOS: Record<string, string> = {
@@ -316,7 +317,8 @@ export async function obtenerGestion(
     tecnico_id: fila.tecnico_id,
     propiedad_id: fila.propiedad_id,
     especialidad_id: fila.especialidad_id,
-    eventos: (eventos ?? []).map((e) => ({
+    // STORY-974: el tecnico_saliente congelado es un UUID — se nombra acá.
+    eventos: (await nombrarSalientes(eventos ?? [], supabase)).map((e) => ({
       ...e,
       actor: Array.isArray(e.actor) ? (e.actor[0] ?? null) : e.actor,
     })) as GestionDetalle["eventos"],
