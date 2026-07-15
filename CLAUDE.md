@@ -49,4 +49,4 @@ Evolución del MANTIS original (`/Users/fausti/Downloads/projects/tesis/sist_ges
 
 ### 6. Reset de datos de prueba
 - **`./scripts/reset-datos.sh`** — borra los datos operativos (gestiones + historial, inbox, notificaciones, emails, fotos del bucket) y conserva usuarios, técnicos, cartera, legajos y especialidades. Usarlo cuando Fausti pida "limpiar la base" para probar de cero. Lee la service key de `codigo/.env.local`; no requiere psql.
-- Usuarios de prueba (patrón `ausitesis+nombre@gmail.com` / `nombre123`): admin, gestormantenimientouno, gestoradministrativouno, tecnicouno. Todos los emails entregan en ausitesis@gmail.com.
+- Usuarios de prueba (patrón `ausitesis+nombre@gmail.com` / `nombre123`): admin, gestorcomercialuno (rol gestor de mantenimiento), tecnicouno. NO existe un usuario gestor administrativo de prueba (verificado en DB 2026-07-14) — el admin cubre ese rol. También hay usuarios `+demo*` sembrados por `demo-seed.sql`. Todos los emails entregan en ausitesis@gmail.com.
