@@ -1,7 +1,7 @@
 # Story 1.3: ABM de empleados con asignación de rol
 
 Status: done
-Versión: 1.0.0
+Versión: 1.1.0
 
 ## Story
 
@@ -42,6 +42,10 @@ para controlar quién hace qué en el sistema.
 
 - [Source: _bmad-output/planning-artifacts/epics.md#story-13] · [Source: specs/STORY-102.md] (RLS y rol_actual)
 - [Source: DESIGN.md#components] (tabla, badges, nav)
+
+## Spec Change Log
+
+- **v1.1.0 (2026-07-15)** — Refresco en vivo del listado: `/admin/empleados` monta `<RefrescoVivo tabla="usuarios" />` (mismo patrón que Técnicos, STORY-957). Motivo: `revalidatePath` solo refresca a la sesión que ejecutó la acción — otra sesión con la lista abierta no veía altas/ediciones/inhabilitaciones hasta recargar a mano. Sin cambios de DB: `usuarios` ya estaba en la publication `supabase_realtime` y la policy `admin_lee_todo` entrega los eventos al admin (la página es solo-admin). Trade-offs asumidos (Regla #0, mismos que Técnicos): la suscripción es a toda la tabla `usuarios`, así que actividad de técnicos también refresca (sin cambio visible, debounced); y si un evento ajeno reacomoda filtro/paginación mientras se edita inline, la fila en edición puede desmontarse y perder lo tipeado (ventana angosta, riesgo ya aceptado en STORY-957).
 
 ## Dev Agent Record
 

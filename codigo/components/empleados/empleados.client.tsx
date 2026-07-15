@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -318,6 +319,9 @@ export function Empleados({ empleados }: { empleados: Empleado[] }) {
       </Card>
 
       <Paginador {...paginadorProps} />
+      {/* Altas/ediciones hechas por otra sesión — revalidatePath solo refresca
+          a quien ejecutó la acción (STORY-103 v1.1). */}
+      <RefrescoVivo tabla="usuarios" />
     </div>
   );
 }
