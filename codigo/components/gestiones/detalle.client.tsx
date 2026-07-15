@@ -1348,7 +1348,7 @@ function detalleLegible(detalle: Record<string, unknown> | null): string | null 
 
 type ItemActividad =
   | { clase: "etapa"; etapa: string; fecha: string }
-  | { clase: "evento"; texto: string; detalle: string | null; actor: string | null; fecha: string }
+  | { clase: "evento"; texto: string; detalle: string | null; actor: string | null; fecha: string; fotos?: string[] }
   | { clase: "nota"; sello: string; nota: string; foto: string | null; fecha: string }
   | { clase: "conformidad"; estado: string; motivo: string | null; foto: string | null; fecha: string };
 
@@ -1361,6 +1361,14 @@ function FechaItem({ fecha }: { fecha: string }) {
 }
 
 function Actividad({ gestion }: { gestion: GestionDetalle }) {
+  // STORY-969: la evidencia de la rendición no desaparece al aprobar la
+  // conformidad — el evento de rendición lleva la galería. Solo el MÁS
+  // reciente: las fotos de la gestión son las de la última rendición (una
+  // vieja de un técnico desasignado ya no las tiene).
+  const ultimaRendicion = gestion.eventos
+    .filter((e) => e.tipo === "materiales_rendidos")
+    .sort((a, b) => b.creado_en.localeCompare(a.creado_en))[0];
+
   const items: ItemActividad[] = [
     ...gestion.eventos.map((e): ItemActividad =>
       e.tipo === "transicion" && e.a_etapa === "cancelada"
@@ -1400,6 +1408,10 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
             detalle: detalleLegible(e.detalle),
             actor: e.actor?.nombre ?? null,
             fecha: e.creado_en,
+            ...(e === ultimaRendicion &&
+              gestion.materiales_fotos_urls.length > 0 && {
+                fotos: gestion.materiales_fotos_urls,
+              }),
           }
     ),
     ...gestion.avances.map((a): ItemActividad => ({
@@ -1508,6 +1520,20 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
                 </div>
                 <FechaItem fecha={item.fecha} />
               </div>
+              {item.fotos && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {item.fotos.map((url, j) => (
+                    <a key={url} href={url} target="_blank" rel="noreferrer" className="shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`Comprobante ${j + 1}`}
+                        className="rounded-md h-24 border border-border object-cover"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
             </li>
           );
         })}

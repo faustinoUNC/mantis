@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-969](STORY-969.md) | Rendición: el picker de fotos ACUMULA entre aperturas (una por ticket, con quitar) en vez de pisar la selección, y los comprobantes quedan visibles para siempre en Actividad sobre el evento de rendición más reciente (card #92, errores de la prueba de STORY-965) | ✅ done |
 | [STORY-968](STORY-968.md) | El técnico se entera: notificación al saliente al desasignarlo (sin link, a prueba de 404), refresco en vivo de sus vistas vía INSERT de notificaciones (el UPDATE de gestiones no llega cuando la fila sale de su RLS) y redirect a `/tecnico` en vez de 404 (card #93, errores 3–6 de la prueba) | ✅ done |
 | [STORY-967](STORY-967.md) | Cancelación con cargo: post-aceptación del técnico, cargo opcional y libre que pasa por el circuito de Cobro existente y cierra en `cancelada` (cards #22/#93, party mode) | ✅ done |
 | [STORY-966](STORY-966.md) | Desasignar técnico a mitad del flujo: retroceso total a Asignación (reasignación y abandono imputado), baja de técnico bloqueada con gestiones operativas, marca de urgencia y fixes de métricas (cards #12/#13/#93, party mode) | ✅ done |
