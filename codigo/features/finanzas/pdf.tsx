@@ -44,6 +44,8 @@ export interface DatosDocumento {
   plazoDias?: number | null;
   // STORY-934: la línea de materiales trae la rendición real del técnico
   materialesRendidos?: boolean;
+  // STORY-972: nota de una cancelación con cargo — el total ES el cargo
+  cancelacion?: boolean;
 }
 
 function monto(n: number) {
@@ -97,7 +99,11 @@ function Documento({ datos }: { datos: DatosDocumento }) {
         )}
 
         <View style={s.caja}>
-          <Text style={s.label}>Trabajo realizado ({datos.especialidad})</Text>
+          <Text style={s.label}>
+            {datos.cancelacion
+              ? `Trabajo cancelado (${datos.especialidad})`
+              : `Trabajo realizado (${datos.especialidad})`}
+          </Text>
           <Text style={{ marginTop: 2, lineHeight: 1.5 }}>{datos.descripcion}</Text>
           {datos.detalleTrabajo && (
             <Text style={{ marginTop: 6, lineHeight: 1.5, color: "#52525b" }}>

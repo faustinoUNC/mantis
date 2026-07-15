@@ -64,7 +64,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, costo_final, cargo_admin, materiales_total, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, descripcion, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -140,10 +140,14 @@ async function datosDocumento(
   }
 
   const cargoAdmin = Number(overrides?.cargoAdmin ?? g.cargo_admin ?? 0);
+  // STORY-972: la nota de una cancelación con cargo cobra SOLO el cargo —
+  // sin desglose de obra (no hubo obra terminada que facturar).
+  const esCancelacion = tipo === "nota" && g.cargo_cancelacion != null;
   // El fee de la inmobiliaria viaja al PAGADOR: entra al presupuesto (lo
   // aprueba sabiendo el total real) y a la nota. Nunca al comprobante.
-  const total =
-    tipo === "presupuesto"
+  const total = esCancelacion
+    ? Number(g.cargo_cancelacion)
+    : tipo === "presupuesto"
       ? Number(vigente?.monto_materiales ?? 0) +
         Number(vigente?.monto_mano_obra ?? 0) +
         cargoAdmin
@@ -167,12 +171,13 @@ async function datosDocumento(
       direccion: j.propiedades?.direccion ?? "—",
       especialidad: j.especialidades?.nombre ?? "—",
       descripcion: g.descripcion,
-      detalleTrabajo:
-        tipo === "presupuesto"
+      detalleTrabajo: esCancelacion
+        ? "Cargo por cancelación acordado con la administración."
+        : tipo === "presupuesto"
           ? [vigente?.descripcion_trabajo, vigente?.notas].filter(Boolean).join(" — ") || null
           : aprobado?.descripcion_trabajo ?? aprobado?.notas ?? null,
-      tecnicoNombre: j.tecnico?.nombre ?? null,
-      presupuesto: (tipo === "presupuesto" ? vigente : aprobado)
+      tecnicoNombre: esCancelacion ? null : j.tecnico?.nombre ?? null,
+      presupuesto: !esCancelacion && (tipo === "presupuesto" ? vigente : aprobado)
         ? {
             materiales:
               tipo === "presupuesto"
@@ -182,7 +187,8 @@ async function datosDocumento(
           }
         : null,
       total,
-      facturaRef: tipo === "presupuesto" ? null : g.liq_factura_ref,
+      facturaRef: tipo === "presupuesto" || esCancelacion ? null : g.liq_factura_ref,
+      cancelacion: esCancelacion,
       medioPago:
         tipo === "comprobante" && g.liq_medio
           ? MEDIO_LIQUIDACION_LABEL[g.liq_medio as MedioLiquidacion]
@@ -259,9 +265,15 @@ export async function emitirNotaCobro(gestionId: string): Promise<ActionResult> 
   await enviarEmailDocumento({
     para: doc.emailDestinatario,
     destinatario: doc.datos.destinatarioNombre,
-    asunto: `Nota de cobro — ${doc.datos.direccion}`,
-    titulo: "Nota de cobro por trabajo de mantenimiento",
-    cuerpo: `Te enviamos el detalle del trabajo realizado en ${doc.datos.direccion}. El documento adjunto tiene el desglose completo.`,
+    asunto: doc.datos.cancelacion
+      ? `Cargo por cancelación — ${doc.datos.direccion}`
+      : `Nota de cobro — ${doc.datos.direccion}`,
+    titulo: doc.datos.cancelacion
+      ? "Nota de cobro por cancelación del trabajo"
+      : "Nota de cobro por trabajo de mantenimiento",
+    cuerpo: doc.datos.cancelacion
+      ? `Te enviamos el detalle del cargo por la cancelación del trabajo en ${doc.datos.direccion}. El documento adjunto tiene el importe acordado.`
+      : `Te enviamos el detalle del trabajo realizado en ${doc.datos.direccion}. El documento adjunto tiene el desglose completo.`,
     tipo: "nota_cobro",
     gestion_id: gestionId,
     adjunto: {

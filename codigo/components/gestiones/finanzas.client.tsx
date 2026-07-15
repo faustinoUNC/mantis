@@ -186,6 +186,17 @@ export function FinanzasAcciones({
             </p>
           </div>
         </div>
+
+        {/* STORY-972: el cargo también se respalda con la nota de cobro de
+            siempre (vista previa + envío por mail al pagador). */}
+        <EnvioDocumento
+          etiqueta="nota de cobro"
+          destinatarioEtiqueta={gestion.pagador ?? "pagador"}
+          yaEnviado={Boolean(gestion.nota_emitida_en)}
+          generar={() => descargarDocumento(gestion.id, "nota")}
+          enviar={() => emitirNotaCobro(gestion.id)}
+        />
+
         <FormCobro
           total={cargo}
           cargando={cargando}

@@ -583,7 +583,7 @@ async function estadisticasTecnicos(
   if (ids.length === 0) return salida;
 
   const admin = createAdminClient();
-  const [{ data: califs }, { data: gestiones }, { data: desasignaciones }] = await Promise.all([
+  const [{ data: califs }, { data: gestiones }, { data: desasignaciones }, { data: respuestas }] = await Promise.all([
     admin.from("calificaciones").select("tecnico_id, estrellas").in("tecnico_id", ids),
     admin
       .from("gestiones")
@@ -600,11 +600,27 @@ async function estadisticasTecnicos(
       .eq("a_etapa", "asignacion")
       .eq("detalle->>imputado", "tecnico")
       .in("detalle->>tecnico_saliente", ids),
+    // STORY-970: las respuestas a asignaciones también van por eventos — el
+    // rechazo pone tecnico_id = null en el acto, así que el estado vivo de
+    // gestiones no puede contarlas. El actor del evento ES el técnico
+    // (responder_asignacion valida tecnico_id = auth.uid()).
+    admin
+      .from("eventos_gestion")
+      .select("tipo, actor_id")
+      .in("tipo", ["asignacion_aceptada", "asignacion_rechazada"])
+      .in("actor_id", ids),
   ]);
   const abandonosPorTecnico = new Map<string, number>();
   for (const e of (desasignaciones ?? []) as { detalle: { tecnico_saliente?: string } | null }[]) {
     const t = e.detalle?.tecnico_saliente;
     if (t) abandonosPorTecnico.set(t, (abandonosPorTecnico.get(t) ?? 0) + 1);
+  }
+  const respuestasPorTecnico = new Map<string, { total: number; rechazos: number }>();
+  for (const e of (respuestas ?? []) as { tipo: string; actor_id: string }[]) {
+    const r = respuestasPorTecnico.get(e.actor_id) ?? { total: 0, rechazos: 0 };
+    r.total += 1;
+    if (e.tipo === "asignacion_rechazada") r.rechazos += 1;
+    respuestasPorTecnico.set(e.actor_id, r);
   }
 
   type GFila = {
@@ -649,8 +665,7 @@ async function estadisticasTecnicos(
       .filter((c) => c.tecnico_id === id)
       .map((c) => Number(c.estrellas));
 
-    const respondidas = gs.filter((g) => g.asignacion_aceptada !== null);
-    const rechazadas = gs.filter((g) => g.asignacion_aceptada === false);
+    const respuestas = respuestasPorTecnico.get(id) ?? { total: 0, rechazos: 0 };
 
     // STORY-937: desvío SOLO de materiales (la mano de obra es fija por
     // diseño), ponderado por plata: Σ reales / Σ presupuestados − 1.
@@ -700,10 +715,10 @@ async function estadisticasTecnicos(
       obrasActivas: gs.filter((g) => !ETAPAS_TERMINALES.has(g.etapa)).length,
       // Realizadas = solo finalizadas (una cancelada no es un trabajo hecho).
       obrasRealizadas: gs.filter((g) => g.etapa === "finalizado").length,
-      pctRechazoAsig: respondidas.length
-        ? Math.round((rechazadas.length / respondidas.length) * 100)
+      pctRechazoAsig: respuestas.total
+        ? Math.round((respuestas.rechazos / respuestas.total) * 100)
         : null,
-      nAsig: respondidas.length,
+      nAsig: respuestas.total,
       abandonos: abandonosPorTecnico.get(id) ?? 0,
     });
   }
@@ -1004,6 +1019,36 @@ async function exigirTecnicoAsignado(gestionId: string) {
     .eq("tecnico_id", actual.id)
     .single();
   return data ? { actual, gestion: data } : null;
+}
+
+// STORY-971: el técnico no cancela ni se desasigna solo (el funnel y las
+// imputaciones son del gestor) — pero puede AVISAR que no puede continuar.
+// Un evento + la notificación del outbox; el gestor decide con las
+// herramientas de siempre (desasignar/cancelar).
+export async function avisarNoPuedoContinuar(
+  gestionId: string,
+  motivo: string
+): Promise<ActionResult> {
+  if (!motivo?.trim()) {
+    return { ok: false, error: "Contá por qué no podés continuar." };
+  }
+  const ctx = await exigirTecnicoAsignado(gestionId);
+  if (!ctx) return { ok: false, error: "No tenés permiso." };
+  if (!["presupuesto", "en_ejecucion", "conformidad"].includes(ctx.gestion.etapa)) {
+    return { ok: false, error: "En esta etapa no hace falta avisar — contactá a la administración." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: "tecnico_no_continua",
+    actor_id: ctx.actual.id,
+    detalle: { motivo: motivo.trim() },
+  });
+  if (error) return { ok: false, error: "No se pudo enviar el aviso." };
+
+  refrescarTablero(gestionId);
+  return { ok: true };
 }
 
 export async function registrarAvance(

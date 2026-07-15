@@ -37,6 +37,9 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-972](STORY-972.md) | Nota de cobro para la cancelación con cargo: mismo circuito de nota (vista previa + email), total = cargo, PDF "Trabajo cancelado" — supersede la decisión #3 de STORY-967 (card #93, error 9 de la prueba) | ✅ done |
+| [STORY-971](STORY-971.md) | El técnico avisa que no puede continuar: evento `tecnico_no_continua` + notificación al gestor vía outbox; el gestor decide con desasignar/cancelar — sin estados nuevos (card #93, error 2 de la prueba) | ✅ done |
+| [STORY-970](STORY-970.md) | El chip "Rechaza" cuenta desde eventos (el rechazo pisa `tecnico_id` y el estado vivo no puede contarlo) + la desasignación anula `presupuesto_enviado_en`: el presupuesto del técnico nuevo exige su propio envío y el botón vuelve a "Enviar" (card #93, errores 1/7/8) | ✅ done |
 | [STORY-969](STORY-969.md) | Rendición: el picker de fotos ACUMULA entre aperturas (una por ticket, con quitar) en vez de pisar la selección, y los comprobantes quedan visibles para siempre en Actividad sobre el evento de rendición más reciente (card #92, errores de la prueba de STORY-965) | ✅ done |
 | [STORY-968](STORY-968.md) | El técnico se entera: notificación al saliente al desasignarlo (sin link, a prueba de 404), refresco en vivo de sus vistas vía INSERT de notificaciones (el UPDATE de gestiones no llega cuando la fila sale de su RLS) y redirect a `/tecnico` en vez de 404 (card #93, errores 3–6 de la prueba) | ✅ done |
 | [STORY-967](STORY-967.md) | Cancelación con cargo: post-aceptación del técnico, cargo opcional y libre que pasa por el circuito de Cobro existente y cierra en `cancelada` (cards #22/#93, party mode) | ✅ done |

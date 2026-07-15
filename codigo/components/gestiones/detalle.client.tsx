@@ -28,6 +28,7 @@ import {
   calificarTecnico,
   cancelarGestion,
   cancelarSolicitudAsignacion,
+  avisarNoPuedoContinuar,
   desasignarTecnico,
   enviarPresupuesto,
   reasignarGestor,
@@ -59,6 +60,7 @@ const LABEL_EVENTO: Record<string, string> = {
   conformidad_aprobada: "Conformidad aprobada",
   conformidad_rechazada: "Conformidad rechazada",
   materiales_rendidos: "Comprobantes de materiales rendidos",
+  tecnico_no_continua: "El técnico avisó que no puede continuar",
   gestor_reasignado: "Gestor reasignado",
   nota_cobro_enviada: "Nota de cobro enviada",
   cobro_registrado: "Cobro registrado",
@@ -1248,6 +1250,76 @@ function DesasignarTecnico({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
+// ── Aviso del técnico (STORY-971) — no cancela ni se desasigna solo: avisa ──
+
+function AvisarNoContinua({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  const [abierto, setAbierto] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+
+  if (enviado) {
+    return (
+      <Card className="p-4 mt-4 border-dashed">
+        <p className="text-[13px] text-muted">
+          Le avisamos al gestor — va a definir cómo sigue el trabajo. Ante
+          cualquier urgencia, contactá a la administración.
+        </p>
+      </Card>
+    );
+  }
+
+  if (!abierto) {
+    return (
+      <Card className="p-4 mt-4 border-dashed">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[13px] text-muted">
+            ¿No podés continuar con este trabajo?
+          </p>
+          <Button variante="fantasma" onClick={() => setAbierto(true)}>
+            Avisar al gestor
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-4 mt-4 border-dashed">
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const form = new FormData(e.currentTarget);
+          const ok = await correr(() =>
+            avisarNoPuedoContinuar(gestion.id, String(form.get("motivo")))
+          );
+          if (ok) setEnviado(true);
+        }}
+      >
+        <p className="text-[13px] font-medium text-muted">
+          El gestor recibe tu aviso con el motivo y decide cómo sigue la obra.
+          El trabajo sigue asignado a vos hasta que lo resuelva.
+        </p>
+        <Input
+          label="¿Por qué no podés continuar?"
+          name="motivo"
+          required
+          placeholder="Contá brevemente el motivo"
+        />
+        <div className="flex gap-2">
+          <Button type="submit" variante="secundario" disabled={cargando}>
+            Enviar aviso
+          </Button>
+          <Button type="button" variante="fantasma" onClick={() => setAbierto(false)}>
+            Cancelar
+          </Button>
+        </div>
+        {error && <p className="text-sm font-medium text-error">{error}</p>}
+      </form>
+    </Card>
+  );
+}
+
 // ── Archivar (STORY-935) — saca la finalizada del tablero; se ve en Archivo ──
 
 function ArchivarGestion({ gestion }: { gestion: GestionDetalle }) {
@@ -1733,6 +1805,13 @@ export function DetalleGestion({
         ["ingresado", "asignacion", "presupuesto", "en_ejecucion", "conformidad"].includes(
           gestion.etapa
         ) && <CancelarGestion gestion={gestion} />}
+
+      {/* STORY-971: post-aceptación el técnico ya no puede Rechazar — este es
+          su canal para avisar que no puede seguir (el gestor decide). */}
+      {esTecnicoAsignado &&
+        ["presupuesto", "en_ejecucion", "conformidad"].includes(gestion.etapa) && (
+          <AvisarNoContinua gestion={gestion} />
+        )}
 
       {(esGestorOwner || esAdministrativo) && gestion.etapa === "finalizado" && (
         <ArchivarGestion gestion={gestion} />
