@@ -37,9 +37,9 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
-| [STORY-964](STORY-964.md) | Rendición: el técnico rinde un solo total real de la obra (imprevistos incluidos); los gastos imprevistos son evidencia con ticket, no se re-suman; desvío real. Supersede la decisión #1 de STORY-961 — card #88 de Trello | 📝 aprobada |
-| [STORY-963](STORY-963.md) | Un CUIL no puede ser de dos personas distintas entre propietarios e inquilinos (bloqueo cruzado inteligente: bloquea si es otro nombre, permite la misma persona en ambos roles) — card #85 de Trello | 📝 aprobada |
-| [STORY-962](STORY-962.md) | La gestión no ofrece ni muestra al inquilino cuando su legajo ya está cerrado (`fecha_fin` ≠ null → solo propietario); no se puede mailear al inquilino que se fue — card #86 de Trello | 📝 aprobada |
+| [STORY-964](STORY-964.md) | Rendición: el técnico rinde un solo total real de la obra (imprevistos incluidos); los gastos imprevistos son evidencia con ticket, no se re-suman; desvío real. Supersede la decisión #1 de STORY-961 — card #88 de Trello | ✅ done |
+| [STORY-963](STORY-963.md) | Un CUIL no puede ser de dos personas distintas entre propietarios e inquilinos (bloqueo cruzado inteligente: bloquea si es otro nombre, permite la misma persona en ambos roles) — card #85 de Trello | ✅ done |
+| [STORY-962](STORY-962.md) | La gestión no ofrece ni muestra al inquilino cuando su legajo ya está cerrado (`fecha_fin` ≠ null → solo propietario); no se puede mailear al inquilino que se fue — card #86 de Trello | ✅ done |
 | [STORY-961](STORY-961.md) | Conformidad: el costo final se calcula (no editable) = materiales + gastos imprevistos + mano de obra; los gastos se suman al total con desglose claro; aprobar conformidad separado del cobro sin etapa nueva (card #82 de Trello) | ✅ done |
 | [STORY-960](STORY-960.md) | CUIL obligatorio al cargar/editar propietario e inquilino (client + server, sin migración; reutiliza `errorCuil`) — card #81 de Trello | ✅ done |
 | [STORY-959](STORY-959.md) | El técnico gestiona su contacto (email/teléfono) y su contraseña desde el perfil; la inmobiliaria ya no edita datos de contacto (recorte de STORY-948 a nombre + CUIL) | ✅ done |

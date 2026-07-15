@@ -1,6 +1,6 @@
 # STORY-963 — Un CUIL no puede pertenecer a dos personas distintas entre propietarios e inquilinos
 
-**Estado:** 📝 aprobada · **Origen:** Fausti (2026-07-14, card Trello #85): "Puedo dar de alta un inquilino nuevo usando el mismo CUIL que el de un propietario con otro nombre (ser otra persona y no la misma)."
+**Estado:** ✅ done · **Origen:** Fausti (2026-07-14, card Trello #85): "Puedo dar de alta un inquilino nuevo usando el mismo CUIL que el de un propietario con otro nombre (ser otra persona y no la misma)."
 
 ## Causa raíz
 
@@ -39,5 +39,5 @@ Sin migración: el índice UNIQUE cruzado a nivel DB requeriría unificar tablas
 ## Dev Agent Record
 
 - **Archivos:** `codigo/shared/utils/duplicados.ts` (`cuilCruzadoOtraPersona`), `codigo/features/cartera/service.ts` (import + `guardarPersona`, `resolverPersona`).
-- **Verificación:** `tsc --noEmit` + `eslint` verdes. E2E pendiente de Fausti (dar de alta un inquilino con el CUIL de un propietario existente: bloqueado si el nombre difiere, permitido si es el mismo nombre).
-- **Commit:** _(pendiente — sin commitear; aplicar fetch + pull --rebase antes de pushear)_
+- **Verificación:** `tsc --noEmit` + `eslint` verdes. E2E local (2026-07-14): alta de inquilino con el CUIL de Rodolfo Aguirre (propietario) y otro nombre → bloqueado con el mensaje esperado; mismo alta con el nombre "Rodolfo Aguirre" → permitido.
+- **Commit:** `226e167` (junto con STORY-962/964). Card Trello #85 movida a "En prueba".

@@ -1,6 +1,6 @@
 # STORY-964 — Rendición del técnico: un solo total real de la obra; los gastos imprevistos son evidencia, no un renglón que se re-suma
 
-**Estado:** 📝 aprobada · **Origen:** Fausti (2026-07-14, card Trello #88): "Si cargo un costo adicional en una gestión ya iniciada, no veo que impacte en el monto total a cobrar." Al analizarlo, el gasto **sí** impacta (STORY-961 lo suma); el problema real que Fausti detecta es que **pedirle al técnico el 'total gastado en materiales, sin los imprevistos' es poco intuitivo y produce un desvío irreal**.
+**Estado:** ✅ done · **Origen:** Fausti (2026-07-14, card Trello #88): "Si cargo un costo adicional en una gestión ya iniciada, no veo que impacte en el monto total a cobrar." Al analizarlo, el gasto **sí** impacta (STORY-961 lo suma); el problema real que Fausti detecta es que **pedirle al técnico el 'total gastado en materiales, sin los imprevistos' es poco intuitivo y produce un desvío irreal**.
 
 ## El problema (ejemplo de Fausti)
 
@@ -48,5 +48,5 @@ Sin migración. Nota de datos: gestiones aprobadas **antes** de esta story conse
 ## Dev Agent Record
 
 - **Archivos:** `codigo/components/gestiones/detalle.client.tsx` (`AccionConformidadTecnico`, `AccionConformidadGestor`), `codigo/features/gestiones/service.ts` (`resolverConformidad`, rendición de `subirConformidad`), `codigo/features/finanzas/service.ts` (`registrarLiquidacion`), `codigo/components/gestiones/finanzas.client.tsx`, `codigo/features/finanzas/pdf.tsx`.
-- **Verificación:** `tsc --noEmit` + `eslint` verdes. E2E pendiente de Fausti sobre una gestión **nueva** (presupuesto 10 → imprevisto 5 → rendir total 15 → conformidad: desvío +50% y costo final 15 + mano de obra → cobro y liquidación con 15, sin doble conteo). Conviene resetear datos de prueba (las gestiones aprobadas antes conservan la semántica vieja).
-- **Commit:** _(pendiente — sin commitear; aplicar fetch + pull --rebase antes de pushear)_
+- **Verificación:** `tsc --noEmit` + `eslint` verdes. E2E local (2026-07-14) sobre `[PRUEBA FAUSTI] Rendición de materiales`: materiales presupuestados $50.000, imprevisto $25.000, total rendido $75.000 (validación `total < Σ imprevistos` bloqueó correctamente antes de eso). Conformidad: desvío +$25.000 (+50%), costo final $155.000 = $75.000 + $80.000 mano de obra (sin doble conteo). Al aprobar, el server recalculó el mismo valor y Cobro mostró $155.000.
+- **Commit:** `226e167` (junto con STORY-962/963). Card Trello #88 movida a "En prueba".

@@ -1,6 +1,6 @@
 # STORY-962 — La gestión no ofrece ni muestra al inquilino cuando su legajo ya está cerrado
 
-**Estado:** 📝 aprobada · **Origen:** Fausti (2026-07-14, card Trello #86): "Puedo mandar un mail de confirmación de presupuesto a un inquilino que ya no habita la vivienda. Desde Administraciones la vivienda figura solo con propietario (sin inquilino), pero al esperar la aprobación del presupuesto aparece la opción de mandar el mail al inquilino que ya no está; además la info de la gestión muestra que el inquilino todavía habita cuando el legajo dice que no — inconsistencia."
+**Estado:** ✅ done · **Origen:** Fausti (2026-07-14, card Trello #86): "Puedo mandar un mail de confirmación de presupuesto a un inquilino que ya no habita la vivienda. Desde Administraciones la vivienda figura solo con propietario (sin inquilino), pero al esperar la aprobación del presupuesto aparece la opción de mandar el mail al inquilino que ya no está; además la info de la gestión muestra que el inquilino todavía habita cuando el legajo dice que no — inconsistencia."
 
 ## Causa raíz
 
@@ -38,5 +38,5 @@ Sin migración (campo ya existe). El selector de pagador en `detalle.client.tsx:
 ## Dev Agent Record
 
 - **Archivos:** `codigo/features/gestiones/service.ts` (`SELECT_RESUMEN`, `SELECT_DETALLE`, `normalizarFila`, `resolverContacto`, `resolverPresupuesto`), `codigo/features/finanzas/service.ts` (`datosDocumento`, `errorPagador`).
-- **Verificación:** `tsc --noEmit` + `eslint` verdes. E2E pendiente de Fausti (cerrar el legajo de un inquilino con una gestión suya no-terminal / volver de etapa: confirmar que la gestión pasa a mostrar el propietario y que "Inquilino" desaparece como pagador/destinatario del presupuesto).
-- **Commit:** _(pendiente — sin commitear; aplicar fetch + pull --rebase antes de pushear)_
+- **Verificación:** `tsc --noEmit` + `eslint` verdes. E2E local (2026-07-14): cerrado el legajo de Federico Torres, la gestión pasó de mostrar "Inquilino — Federico Torres" a "Propietario — Sucesión de Elena Marchetti" automáticamente.
+- **Commit:** `226e167` (junto con STORY-963/964). Card Trello #86 movida a "En prueba".
