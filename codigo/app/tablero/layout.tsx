@@ -11,5 +11,9 @@ export default async function Layout({
     "gestor_mantenimiento",
     "gestor_administrativo",
   ]);
-  return <PanelShell usuario={usuario}>{children}</PanelShell>;
+  return (
+    <PanelShell usuario={usuario} anchoCompleto>
+      {children}
+    </PanelShell>
+  );
 }

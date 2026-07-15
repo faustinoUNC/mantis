@@ -30,9 +30,11 @@ function Marca() {
 export async function PanelShell({
   usuario,
   children,
+  anchoCompleto,
 }: {
   usuario: UsuarioActual;
   children: React.ReactNode;
+  anchoCompleto?: boolean;
 }) {
   const notificaciones = await misNotificaciones();
   const items = NAV_POR_ROL[usuario.rol];
@@ -108,7 +110,7 @@ export async function PanelShell({
         }
       />
       <main className="flex-1 min-w-0 px-4 md:px-8 py-6">
-        <div className="max-w-6xl mx-auto">{children}</div>
+        {anchoCompleto ? children : <div className="max-w-6xl mx-auto">{children}</div>}
       </main>
     </div>
   );
