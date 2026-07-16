@@ -611,22 +611,25 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   }, [filasEsp, desde, gran, ahora]);
 
   // ── Dinero: caja pendiente (estado actual, sin período). "Por cobrar" se
-  // descompone honestamente en trabajo (lo que se liquidará al técnico) + fee
-  // de la casa; NO en materiales/mano de obra porque costo_final es un único
-  // número (ese detalle solo vive en el presupuesto, que puede diferir). ──
+  // descompone honestamente en trabajo del técnico + fee de la casa; NO en
+  // materiales/mano de obra porque costo_final es un único número (ese
+  // detalle solo vive en el presupuesto, que puede diferir). STORY-982 v1.3:
+  // misma fórmula que Finanzas — una cancelación con cargo vale su cargo
+  // (STORY-967) y nunca pasa por liquidación (el cobro la cierra), así que
+  // su cargo va entero a la casa. ──
   const pendiente = useMemo(() => {
-    let cobrarTrabajo = 0, cobrarFee = 0, liquidar = 0, nCobrar = 0, nLiquidar = 0;
+    let cobrarTrabajo = 0, cobrarFee = 0, nCobrar = 0;
     for (const f of filasEsp) {
-      if (f.etapa === "facturacion_cobro") {
+      if (f.etapa !== "facturacion_cobro") continue;
+      nCobrar += 1;
+      if (f.cargoCancelacion != null) {
+        cobrarFee += Number(f.cargoCancelacion);
+      } else {
         cobrarTrabajo += Number(f.costoFinal ?? 0);
         cobrarFee += Number(f.cargoAdmin ?? 0);
-        nCobrar += 1;
-      } else if (f.etapa === "liquidacion_tecnico") {
-        liquidar += Number(f.costoFinal ?? 0);
-        nLiquidar += 1;
       }
     }
-    return { cobrarTrabajo, cobrarFee, cobrarTotal: cobrarTrabajo + cobrarFee, liquidar, nCobrar, nLiquidar };
+    return { cobrarTrabajo, cobrarFee, cobrarTotal: cobrarTrabajo + cobrarFee, nCobrar };
   }, [filasEsp]);
 
   // ── Hoy: Presión por especialidad — demanda activa vs. capacidad (STORY-954) ──
@@ -673,7 +676,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           <div className="space-y-4">
             <div>
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm text-muted">Por cobrar · {pendiente.nCobrar} gestión{pendiente.nCobrar === 1 ? "" : "es"}</span>
+                <span className="text-sm text-muted">Por cobrar · {pendiente.nCobrar} {pendiente.nCobrar === 1 ? "gestión" : "gestiones"}</span>
                 <span className="text-xl font-semibold tabular-nums">{plata(pendiente.cobrarTotal)}</span>
               </div>
               {pendiente.cobrarTotal > 0 && (
@@ -683,7 +686,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
                     <div style={{ width: `${(pendiente.cobrarFee / pendiente.cobrarTotal) * 100}%`, background: AMBAR }} />
                   </div>
                   <div className="flex flex-wrap items-center gap-4 mt-2 text-[12px] text-muted">
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} />A técnicos {plata(pendiente.cobrarTrabajo)}</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} />Trabajo del técnico {plata(pendiente.cobrarTrabajo)}</span>
                     <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: AMBAR }} />Fee de la casa {plata(pendiente.cobrarFee)}</span>
                   </div>
                 </>

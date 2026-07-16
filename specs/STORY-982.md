@@ -1,6 +1,6 @@
 # STORY-982 — Finanzas gráfico y de un vistazo (rediseño UX del módulo)
 
-**Versión:** 1.2.0 · **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
+**Versión:** 1.3.0 · **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
 
 ## Diagnóstico
 
@@ -56,6 +56,15 @@ Feedback: los gráficos de v1.0/v1.1 **se superponen con Informes en el Inicio**
 - **`TarjetaGestion` reemplaza a `FilaGestion`**: grilla de tarjetas (1 col mobile / 2 sm / 3 xl), cada gestión es un objeto visual con jerarquía: **monto grande arriba a la izquierda** (es Finanzas: la plata manda), antigüedad como **`Badge` del contract** arriba a la derecha (ámbar si ≥ 8 días, neutro si no) o medio de pago en cerradas, descripción en `line-clamp-2`, y abajo dirección (ícono `pin`) + pagador/técnico (ícono `perfil`) en muted.
 - Pendientes y cerradas usan la misma tarjeta (consistencia); los meses colapsables se mantienen — son los que hacen escalable el histórico — pero su contenido pasa de lista dentro de una Card a grilla de tarjetas.
 - Estados vacíos y links a la gestión sin cambios.
+
+## v1.3 — Conciliación con el Inicio (reporte de Fausti, 2026-07-16)
+
+Reporte: "no me coinciden el total a cobrar ni el total a liquidar de Finanzas con lo que está en el Inicio". Diagnóstico (verificado con SQL contra la DB):
+
+1. **Bug real en Informes** (`panel-metricas.client.tsx`, card "Gestiones pendientes de cobro" que se ve en el Inicio): el total "Por cobrar" sumaba `costo_final + cargo_admin` ignorando `cargo_cancelacion` — STORY-967 ("una cancelación con cargo vale su cargo") se aplicó a la LISTA de esa card pero no a la barra del total. Con una cancelación con cargo en cobro: Informes $6.234.000 vs Finanzas $6.249.000. **Fix:** misma fórmula que Finanzas (`cargo_cancelacion ?? costo_final + cargo_admin`); como la cancelada con cargo nunca pasa por liquidación (el cobro la cierra en `cancelada`), su cargo va entero al bucket del fee de la casa. Ahora ambas pantallas muestran el mismo número.
+2. **"A técnicos" no era "por liquidar"**: esa leyenda es la composición de lo POR COBRAR (gestiones en etapa de cobro, $5.318.000); el "Por liquidar" de Finanzas ($4.318.010) son OTRAS gestiones (ya cobradas, en etapa de liquidación) con los adelantos de materiales restados (STORY-977). Son platas distintas y no deben coincidir. **Fix de claridad:** la leyenda pasa de "A técnicos" a **"Trabajo del técnico"** (mismo rótulo que el gráfico de ingresos), para que no se lea como la liquidación pendiente. El Inicio no muestra ningún "$ por liquidar"; esa foto vive en Finanzas.
+3. Typo preexistente corregido en la misma card: "14 gestiónes" → "14 gestiones".
+4. La variable interna `liquidar` de `pendiente` (calculada y nunca renderizada desde STORY-920) se elimina.
 
 ## Criterios de aceptación
 
