@@ -38,6 +38,13 @@ const TRAZOS: Record<string, React.ReactNode> = {
       <path d="M7 15v-4m5 4V7m5 8v-6" />
     </>
   ),
+  finanzas: (
+    <>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M6 12h.01M18 12h.01" />
+    </>
+  ),
   auditoria: (
     <>
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />

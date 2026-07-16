@@ -31,6 +31,7 @@ export const NAV_POR_ROL: Record<Rol, ItemNav[]> = {
     { href: "/tablero", label: "Tablero", icono: "tablero" },
     { href: "/inbox", label: "Inbox", icono: "inbox" },
     { href: "/cartera/propiedades", label: "Administración", icono: "cartera" },
+    { href: "/finanzas", label: "Finanzas", icono: "finanzas" },
     { href: "/tecnicos", label: "Técnicos", icono: "tecnicos" },
     { href: "/gestiones/archivadas", label: "Archivo", icono: "archivo" },
     { href: "/admin/auditoria", label: "Auditoría", icono: "auditoria" },
@@ -49,6 +50,7 @@ export const NAV_POR_ROL: Record<Rol, ItemNav[]> = {
     { href: "/administracion", label: "Inicio", icono: "inicio" },
     { href: "/tablero", label: "Tablero", icono: "tablero" },
     { href: "/cartera/propiedades", label: "Administración", icono: "cartera" },
+    { href: "/finanzas", label: "Finanzas", icono: "finanzas" },
     { href: "/gestiones/archivadas", label: "Archivo", icono: "archivo" },
   ],
   tecnico: [
