@@ -559,29 +559,31 @@ export async function registrarCobro(
 
 // STORY-977: adelanto de materiales al técnico ANTES de rendir la obra — un
 // solo campo (no una tabla de entregas: revive STORY-933, descartada por
-// complejidad, con el diseño más simple posible). Tope: no puede superar los
-// materiales del presupuesto APROBADO (ese es su techo propio, la mano de
-// obra no entra). Editable hasta que se registre la liquidación.
+// complejidad, con el diseño más simple posible). Editable hasta que se
+// registre la liquidación.
+// v1.1: cada carga SUMA al total ya adelantado (permite más de un adelanto)
+// y ya no hay tope contra el presupuesto — puede terminar superando lo
+// debido al técnico; ese excedente se muestra como "sobrante" al liquidar.
 export async function registrarAdelantoMateriales(
   gestionId: string,
   monto: number
 ): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
-  if (!Number.isFinite(monto) || monto < 0) {
+  if (!Number.isFinite(monto) || monto <= 0) {
     return { ok: false, error: "Ingresá un monto válido." };
   }
 
   const supabase = await createClient();
   const { data: g } = await supabase
     .from("gestiones")
-    .select("etapa, liq_pagada_en, presupuestos(monto_materiales, estado)")
+    .select("etapa, liq_pagada_en, adelanto_materiales")
     .eq("id", gestionId)
     .single();
   type Fila = {
     etapa: string;
     liq_pagada_en: string | null;
-    presupuestos: { monto_materiales: number; estado: string }[];
+    adelanto_materiales: number | null;
   };
   const fila = g as unknown as Fila | null;
   if (!fila || ETAPAS_TERMINALES.has(fila.etapa)) {
@@ -590,22 +592,15 @@ export async function registrarAdelantoMateriales(
   if (fila.liq_pagada_en) {
     return { ok: false, error: "La gestión ya fue liquidada." };
   }
-  const aprobado = fila.presupuestos.find((p) => p.estado === "aprobado");
-  const tope = aprobado ? Number(aprobado.monto_materiales) : 0;
-  if (monto > tope) {
-    return {
-      ok: false,
-      error: `El adelanto no puede superar los materiales presupuestados ($ ${tope.toLocaleString("es-AR")}).`,
-    };
-  }
+  const total = Number(fila.adelanto_materiales ?? 0) + monto;
 
   const { error } = await supabase
     .from("gestiones")
-    .update({ adelanto_materiales: monto || null })
+    .update({ adelanto_materiales: total })
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo guardar el adelanto." };
 
-  await registrarEvento(gestionId, "adelanto_materiales_registrado", actual.id, { monto });
+  await registrarEvento(gestionId, "adelanto_materiales_registrado", actual.id, { monto, total });
   revalidatePath(`/gestiones/${gestionId}`);
   return { ok: true };
 }
@@ -650,8 +645,11 @@ export async function registrarLiquidacion(
   }
   // STORY-977: la plata ya entregada como adelanto se resta acá — puede dar
   // $0 (adelanto cubrió todo) sin bloquear el cierre de la gestión.
+  // v1.1: si el adelanto superó lo debido, el excedente queda registrado
+  // como "sobrante" (no hay forma de cobrárselo al técnico automáticamente).
   const adelanto = Number(fila?.adelanto_materiales ?? 0);
   const monto = Math.max(base - adelanto, 0);
+  const sobrante = Math.max(adelanto - base, 0);
 
   const { error } = await supabase
     .from("gestiones")
@@ -684,6 +682,7 @@ export async function registrarLiquidacion(
   await registrarEvento(gestionId, "liquidacion_registrada", actual.id, {
     monto,
     medio: datos.medio,
+    ...(sobrante > 0 ? { sobrante } : {}),
   });
   return avanzarEtapa(gestionId, "finalizado");
 }

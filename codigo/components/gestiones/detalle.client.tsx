@@ -1785,12 +1785,18 @@ export function DetalleGestion({
         {gestion.etapa === "conformidad" && esTecnicoAsignado && !tecnicoEnPausa && (
           <AccionConformidadTecnico gestion={gestion} />
         )}
-        {/* STORY-977: única acción del administrativo antes de Cobro — cargar
-            el adelanto de materiales (presupuesto ya aprobado en esta altura). */}
-        {["en_ejecucion", "conformidad"].includes(gestion.etapa) && esAdministrativo && (
+        {/* STORY-977 v1.1: única acción del administrativo en ejecución —
+            cargar el adelanto de materiales (presupuesto ya aprobado en esta
+            altura). Ya no aplica en conformidad. */}
+        {gestion.etapa === "en_ejecucion" && esAdministrativo && (
           <div className="border-t border-border pt-5">
             <FinanzasAcciones gestion={gestion} />
           </div>
+        )}
+        {gestion.etapa === "conformidad" && esAdministrativo && (
+          <p className="text-sm text-muted">
+            Sin acciones para tu rol en esta etapa — interviene en Cobro, cuando se apruebe la conformidad.
+          </p>
         )}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
           esAdministrativo && <FinanzasAcciones gestion={gestion} />}
@@ -1813,7 +1819,8 @@ export function DetalleGestion({
           </p>
         )}
         {/* Gestor administrativo antes de Cobro: sin acciones todavía (en
-            ejecución/conformidad ya tiene el adelanto de materiales arriba) */}
+            ejecución ya tiene el adelanto de materiales arriba; conformidad
+            tiene su propio mensaje) */}
         {esAdministrativo && !esGestorOwner && !esTecnicoAsignado &&
           !["en_ejecucion", "conformidad", "facturacion_cobro", "liquidacion_tecnico", "finalizado"].includes(gestion.etapa) && (
             <p className="text-sm text-muted">
