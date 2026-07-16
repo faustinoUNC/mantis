@@ -1,5 +1,7 @@
 # STORY-978 — El admin recibe el conglomerado de notificaciones de los dos tipos de gestores
 
+> **v1.1 (2026-07-16):** copy sin "facturar" — la regla de la matriz pasa de "Obra lista para facturar" a **"Obra lista para cobrar"** (la columna del funnel se llama Cobro; decisión de Fausti: fuera las referencias a facturación del sistema). Migración `story_978_v11_obra_lista_para_cobrar` + update de las 86 notificaciones ya emitidas con el texto viejo. Nota de la ronda de prueba: el reporte "al admin no le llega" fue la guarda anti-auto-notificación funcionando — Fausti movió las gestiones logueado como admin (actor) y por diseño el actor no recibe copia de su propia acción; los otros 3 admins la recibieron correctamente (verificado en DB).
+
 **Estado:** ✅ done · **Origen:** reporte de Fausti 2026-07-15 ("cuando entra una gestión en cobro solo se notifica al gestor administrativo, no al admin") + party mode 2026-07-15 (diseño de la copia de supervisión).
 
 ## El problema
