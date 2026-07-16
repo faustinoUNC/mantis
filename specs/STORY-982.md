@@ -1,6 +1,6 @@
 # STORY-982 — Finanzas gráfico y de un vistazo (rediseño UX del módulo)
 
-**Versión:** 1.1.0 · **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
+**Versión:** 1.2.0 · **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
 
 ## Diagnóstico
 
@@ -48,6 +48,15 @@ Sin selector de período, sin export, sin paginación adicional, sin tocar queri
 - Los gráficos por tab ("Cobrado por mes" / "Liquidado por mes") pasan a mostrarse **solo con búsqueda activa**: su valor diferencial es graficar lo buscado (p. ej. cuánto se le liquidó a un técnico por mes); sin búsqueda duplicaban media serie del combinado, tres gráficos era ruido (Regla #0).
 - Misma regla de honestidad: el combinado no se dibuja con menos de 2 meses con datos; meses sin movimiento en $0 (cero real); tope 12 meses.
 
+## v1.2 — Sin gráficos; tarjetas en vez de filas (pedido de Fausti, 2026-07-16)
+
+Feedback: los gráficos de v1.0/v1.1 **se superponen con Informes en el Inicio** — afuera todos (combinado y por tab). Lo que tenía que ser "más gráfico" es **la visualización de cada cobro/liquidación**: las filas planas "horribles y básicas" no escalan visualmente ("si se usa por 5 años el sistema será un desastre").
+
+- **Se eliminan** `GraficoCombinado` y `GraficoMensual` (y recharts del módulo). Las 4 stat cards quedan (no son gráficos y no están en el Inicio).
+- **`TarjetaGestion` reemplaza a `FilaGestion`**: grilla de tarjetas (1 col mobile / 2 sm / 3 xl), cada gestión es un objeto visual con jerarquía: **monto grande arriba a la izquierda** (es Finanzas: la plata manda), antigüedad como **`Badge` del contract** arriba a la derecha (ámbar si ≥ 8 días, neutro si no) o medio de pago en cerradas, descripción en `line-clamp-2`, y abajo dirección (ícono `pin`) + pagador/técnico (ícono `perfil`) en muted.
+- Pendientes y cerradas usan la misma tarjeta (consistencia); los meses colapsables se mantienen — son los que hacen escalable el histórico — pero su contenido pasa de lista dentro de una Card a grilla de tarjetas.
+- Estados vacíos y links a la gestión sin cambios.
+
 ## Criterios de aceptación
 
 1. Al entrar a `/finanzas` se ve de un vistazo: por cobrar, por liquidar, cobrado y liquidado del mes en curso, sin scrollear.
@@ -60,5 +69,6 @@ Sin selector de período, sin export, sin paginación adicional, sin tocar queri
 ## Dev Agent Record
 
 - **Archivos:** `components/finanzas/finanzas.client.tsx` (único archivo tocado — server layer intacto, como pedía el diseño): `StatCard` (4 cards de resumen, click lleva al tab), `GraficoMensual` genérico (recharts, meses continuos vía `rangoMeses`, tope 12, tooltip $ + cantidad, no se dibuja con <2 meses con datos), `GrupoMes` + `GruposCerrados` (colapsables con chevron rotado del set propio; el más reciente abierto por defecto; búsqueda activa = todos forzados abiertos sin chevron), `porAntiguedad` para ordenar pendientes. Colores idénticos a `panel-metricas` (BRAND/GRID/INK_MUTED). Ajuste durante E2E: se quitó el borde esmeralda de "card activa" (dos cards resaltadas a la vez confundían; el estado del tab ya lo muestra el segmentado).
-- **v1.1:** `GraficoCombinado` ("Cobrado vs. liquidado por mes") debajo de las stat cards — barras agrupadas esmeralda/ámbar sobre las series completas sin filtrar (`gruposCobros`/`gruposLiq` en `Finanzas`), leyenda "Cobrado (entra)" / "Liquidado a técnicos (sale)", tooltip con $ y cantidad por serie (sin resta derivada). Los `GraficoMensual` por tab quedan detrás de `hayBusqueda`. Helper `plataCorta` compartido. E2E: tooltip "dic 25 — Cobrado: $2.256.000 · 6 gestiones / Liquidado: $2.157.000 · 6 gestiones"; sin búsqueda no hay gráfico de tab; "demo" (varios meses) lo hace aparecer; "urquiza" (1 mes) lo mantiene oculto por la regla de ≥2 meses; el combinado no reacciona a la búsqueda. `tsc` + `eslint` verdes, consola limpia.
+- **v1.2:** fuera todos los gráficos (recharts eliminado del módulo — se superponían con Informes en el Inicio); `TarjetaGestion` + `Grilla` (1/2/3 col) reemplazan a `FilaGestion`: monto `text-lg` arriba-izquierda, `Badge` de antigüedad (urgente/neutro) en pendientes o medio de pago en cerradas, descripción `line-clamp-2`, dirección con ícono `pin` y persona con `perfil`. `Vacio` ahora trae su propia Card; `GrupoMes` renderiza `Grilla` en vez de Card-lista. E2E (2026-07-16): grilla de 3 col con badges ámbar en demoradas, colapso Julio 57→38 tarjetas y reapertura, búsqueda "ferreyra" filtra (20) y expande grupos. `tsc` + `eslint` verdes, consola limpia.
+- **v1.1 (superada por v1.2):** `GraficoCombinado` ("Cobrado vs. liquidado por mes") debajo de las stat cards — barras agrupadas esmeralda/ámbar sobre las series completas sin filtrar (`gruposCobros`/`gruposLiq` en `Finanzas`), leyenda "Cobrado (entra)" / "Liquidado a técnicos (sale)", tooltip con $ y cantidad por serie (sin resta derivada). Los `GraficoMensual` por tab quedan detrás de `hayBusqueda`. Helper `plataCorta` compartido. E2E: tooltip "dic 25 — Cobrado: $2.256.000 · 6 gestiones / Liquidado: $2.157.000 · 6 gestiones"; sin búsqueda no hay gráfico de tab; "demo" (varios meses) lo hace aparecer; "urquiza" (1 mes) lo mantiene oculto por la regla de ≥2 meses; el combinado no reacciona a la búsqueda. `tsc` + `eslint` verdes, consola limpia.
 - **Verificación v1.0:** `tsc` + `eslint` verdes. E2E en navegador (2026-07-16, admin): cards con datos reales ($6.249.000 por cobrar · 14 gestiones · 5 demoradas en ámbar); pendientes ordenados 37→11→10→9→8 días→hoy; gráfico "Cobrado por mes" dic 25→jul 26 con meses vacíos en 0; solo Julio 2026 expandido (Junio→Diciembre colapsados), expandir/colapsar Junio suma/quita sus 20 filas; tab Liquidaciones + búsqueda "tecnico uno" filtra pendientes (3) y meses, expande todos los grupos con coincidencias y el gráfico se recalcula solo con lo del técnico. Links a gestión intactos. Consola limpia.
