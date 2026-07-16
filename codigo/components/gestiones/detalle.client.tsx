@@ -11,6 +11,7 @@ import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ComboFiltrable } from "@/components/ui/combo-filtrable.client";
 import { Input } from "@/components/ui/input";
 import { InputArchivo } from "@/components/ui/input-archivo.client";
 import { urlGoogleMaps } from "@/components/ui/mapa";
@@ -1393,14 +1394,14 @@ function ReasignarGestor({
       </p>
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-52">
-          <Select label="Nuevo gestor" value={nuevo} onChange={(e) => setNuevo(e.target.value)}>
-            <option value="">Elegir…</option>
-            {otros.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.nombre}
-              </option>
-            ))}
-          </Select>
+          <ComboFiltrable
+            label="Nuevo gestor"
+            opciones={otros.map((g) => ({ value: g.id, label: g.nombre }))}
+            value={nuevo}
+            onChange={setNuevo}
+            textoTodos={null}
+            placeholder="Elegir…"
+          />
         </div>
         <Button
           variante="secundario"

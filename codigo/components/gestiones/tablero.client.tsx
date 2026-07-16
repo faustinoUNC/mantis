@@ -131,10 +131,11 @@ function FormNueva({
         </div>
         <ComboFiltrable
           label="Propiedad"
-          grupos={[{ label: "Propiedades", opciones: propiedades.map((p) => ({ value: p.id, label: p.direccion })) }]}
+          opciones={propiedades.map((p) => ({ value: p.id, label: p.direccion }))}
           value={propiedadId}
           onChange={setPropiedadId}
-          textoTodos="Buscar por dirección…"
+          textoTodos={null}
+          placeholder="Buscar por dirección…"
         />
         <Select label="Especialidad" name="especialidad_id" required>
           {especialidades.map((e) => (
@@ -266,18 +267,13 @@ export function Tablero({
             </div>
             {esAdmin && (
               <div className="w-52">
-                <Select
+                <ComboFiltrable
                   label="Gestor"
+                  opciones={gestores.map((g) => ({ value: g.id, label: g.etiqueta }))}
                   value={gestor}
-                  onChange={(e) => setGestor(e.target.value)}
-                >
-                  <option value="">Todos los gestores</option>
-                  {gestores.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.etiqueta}
-                    </option>
-                  ))}
-                </Select>
+                  onChange={setGestor}
+                  textoTodos="Todos los gestores"
+                />
               </div>
             )}
           </>

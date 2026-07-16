@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ComboFiltrable } from "@/components/ui/combo-filtrable.client";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { guardarPersona } from "@/features/cartera/service";
 import type { Persona, RefPersona, TipoPersona } from "@/features/cartera/types";
 import { errorCuil } from "@/shared/utils/cuil";
@@ -125,13 +125,15 @@ export function SelectorPersona({
       )}
       {modo === "existente" && personas.length > 0 ? (
         <div className="max-w-sm animate-aparecer">
-          <Select label={quien[0].toUpperCase() + quien.slice(1)} value={id} onChange={(e) => onId(e.target.value)}>
-            {personas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </Select>
+          {/* STORY-981: la cartera crece — se elige tipeando el nombre. */}
+          <ComboFiltrable
+            label={quien[0].toUpperCase() + quien.slice(1)}
+            opciones={personas.map((p) => ({ value: p.id, label: p.nombre }))}
+            value={id}
+            onChange={onId}
+            textoTodos={null}
+            placeholder="Buscar por nombre…"
+          />
         </div>
       ) : (
         <CamposPersona valores={nueva} onCambio={onNueva} docLabel={docLabel} />

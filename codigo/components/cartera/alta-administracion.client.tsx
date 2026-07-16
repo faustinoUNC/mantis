@@ -123,7 +123,9 @@ export function AltaAdministracion({
 
   // Paso 1 — propietario
   const [propModo, setPropModo] = useState<Modo>(propietarios.length ? "existente" : "nuevo");
-  const [propId, setPropId] = useState(propietarios[0]?.id ?? "");
+  // STORY-981: arranca vacío — con el combo buscable elegir es explícito
+  // (validarPersona avisa si falta).
+  const [propId, setPropId] = useState("");
   const [propNuevo, setPropNuevo] = useState(PERSONA_VACIA);
 
   // Paso 2 — propiedad. El mapa se ubica recién al elegir una sugerencia

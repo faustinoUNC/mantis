@@ -6,6 +6,7 @@ import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ComboFiltrable } from "@/components/ui/combo-filtrable.client";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { Especialidad } from "@/features/especialidades/types";
@@ -42,15 +43,17 @@ function ReporteCard({
   const [modo, setModo] = useState<"ninguno" | "manual" | "descartar">("ninguno");
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
+  const [propiedadId, setPropiedadId] = useState("");
 
   async function manual(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    if (!propiedadId) return setError("Seleccioná una propiedad de la lista.");
     setCargando("manual");
     const f = new FormData(e.currentTarget);
     const r = await crearDesdeReporte(reporte.id, {
       descripcion: String(f.get("descripcion")),
-      propiedad_id: String(f.get("propiedad_id")),
+      propiedad_id: propiedadId,
       especialidad_id: String(f.get("especialidad_id")),
       urgencia: String(f.get("urgencia")) as Urgencia,
     });
@@ -111,13 +114,14 @@ function ReporteCard({
               defaultValue={`${reporte.asunto ?? ""}${reporte.cuerpo ? ` — ${reporte.cuerpo.slice(0, 140)}` : ""}`.trim()}
             />
           </div>
-          <Select label="Propiedad" name="propiedad_id" required>
-            {propiedades.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.direccion}
-              </option>
-            ))}
-          </Select>
+          <ComboFiltrable
+            label="Propiedad"
+            opciones={propiedades.map((p) => ({ value: p.id, label: p.direccion }))}
+            value={propiedadId}
+            onChange={setPropiedadId}
+            textoTodos={null}
+            placeholder="Buscar por dirección…"
+          />
           <Select label="Especialidad" name="especialidad_id" required>
             {especialidades.map((e) => (
               <option key={e.id} value={e.id}>

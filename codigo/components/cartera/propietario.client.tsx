@@ -34,7 +34,8 @@ export function PropietarioSeccion({
   // Candidatos al cambio: los activos menos el actual
   const candidatos = propietariosActivos.filter((p) => p.id !== propietario?.id);
   const [modo, setModo] = useState<Modo>(candidatos.length ? "existente" : "nuevo");
-  const [id, setId] = useState(candidatos[0]?.id ?? "");
+  // STORY-981: arranca vacío — con el combo buscable elegir es explícito.
+  const [id, setId] = useState("");
   const [nuevo, setNuevo] = useState(PERSONA_VACIA);
 
   async function onCambiar(e: React.FormEvent<HTMLFormElement>) {

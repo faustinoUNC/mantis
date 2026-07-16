@@ -96,7 +96,8 @@ export function Legajos({
   // El inquilino puede ser uno de la cartera o uno nuevo cargado acá mismo
   // (STORY-941 — no hay ABM suelto de inquilinos).
   const [modo, setModo] = useState<Modo>(inquilinosActivos.length ? "existente" : "nuevo");
-  const [inquilinoId, setInquilinoId] = useState(inquilinosActivos[0]?.id ?? "");
+  // STORY-981: arranca vacío — con el combo buscable elegir es explícito.
+  const [inquilinoId, setInquilinoId] = useState("");
   const [nuevo, setNuevo] = useState(PERSONA_VACIA);
 
   async function onAbrir(e: React.FormEvent<HTMLFormElement>) {

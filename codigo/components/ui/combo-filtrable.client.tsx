@@ -9,10 +9,18 @@ import { cn } from "@/shared/utils/cn";
 // del optgroup, pero filtrable). Patrón de listbox tomado de
 // BuscadorDireccion: absoluto bajo el input, onMouseDown preventDefault para
 // que el blur no le gane al click.
+// STORY-981: modo formulario — `textoTodos: null` saca la opción vacía (en
+// un campo requerido "Todos" no significa nada), `placeholder` va aparte y
+// `opciones` acepta una lista plana sin encabezados de grupo.
+
+export interface Opcion {
+  value: string;
+  label: string;
+}
 
 export interface GrupoOpciones {
-  label: string;
-  opciones: { value: string; label: string }[];
+  label: string; // "" = sin encabezado
+  opciones: Opcion[];
 }
 
 // Sin tildes ni mayúsculas: "tecnico" encuentra "Técnico".
@@ -23,15 +31,19 @@ function normalizar(t: string) {
 export function ComboFiltrable({
   label,
   grupos,
+  opciones,
   value,
   onChange,
   textoTodos = "Todos",
+  placeholder,
 }: {
   label: string;
-  grupos: GrupoOpciones[];
+  grupos?: GrupoOpciones[];
+  opciones?: Opcion[];
   value: string;
   onChange: (v: string) => void;
-  textoTodos?: string;
+  textoTodos?: string | null;
+  placeholder?: string;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [filtro, setFiltro] = useState("");
@@ -39,23 +51,32 @@ export function ComboFiltrable({
   const inputRef = useRef<HTMLInputElement>(null);
   const autoId = useId();
 
+  const listas = useMemo(
+    () => grupos ?? [{ label: "", opciones: opciones ?? [] }],
+    [grupos, opciones]
+  );
+  const textoInput = placeholder ?? textoTodos ?? "Buscar…";
+
   const etiquetaDe = (v: string) =>
-    grupos.flatMap((g) => g.opciones).find((o) => o.value === v)?.label ?? "";
+    listas.flatMap((g) => g.opciones).find((o) => o.value === v)?.label ?? "";
 
   const visibles = useMemo(() => {
     const f = normalizar(filtro.trim());
-    return grupos
+    return listas
       .map((g) => ({
         ...g,
         opciones: f ? g.opciones.filter((o) => normalizar(o.label).includes(f)) : g.opciones,
       }))
       .filter((g) => g.opciones.length > 0);
-  }, [grupos, filtro]);
+  }, [listas, filtro]);
 
   // Lista plana en el orden en que se ve, para navegar con el teclado.
-  // "Todos" es siempre la primera fila.
+  // Si existe la opción vacía ("Todos"), es siempre la primera fila.
   const planas = useMemo(
-    () => [{ value: "", label: textoTodos }, ...visibles.flatMap((g) => g.opciones)],
+    () => [
+      ...(textoTodos != null ? [{ value: "", label: textoTodos }] : []),
+      ...visibles.flatMap((g) => g.opciones),
+    ],
     [visibles, textoTodos]
   );
 
@@ -124,7 +145,7 @@ export function ComboFiltrable({
         aria-expanded={abierto}
         aria-controls={`${autoId}-listbox`}
         autoComplete="off"
-        placeholder={abierto ? etiquetaDe(value) || textoTodos : textoTodos}
+        placeholder={abierto ? etiquetaDe(value) || textoInput : textoInput}
         value={abierto ? filtro : etiquetaDe(value)}
         onChange={(e) => {
           setFiltro(e.target.value);
@@ -157,20 +178,24 @@ export function ComboFiltrable({
           aria-label={label}
           className="absolute z-10 left-0 right-0 top-full mt-1 rounded-md border border-border-strong bg-surface overflow-y-auto max-h-72 animate-aparecer"
         >
-          <li className="border-b border-border">
-            {filaOpcion({ value: "", label: textoTodos }, indice++)}
-          </li>
+          {textoTodos != null && (
+            <li className="border-b border-border">
+              {filaOpcion({ value: "", label: textoTodos }, indice++)}
+            </li>
+          )}
           {visibles.map((g) => (
             <li key={g.label} className="border-b border-border last:border-0">
-              <p className="px-3.5 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
-                {g.label}
-              </p>
+              {g.label && (
+                <p className="px-3.5 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  {g.label}
+                </p>
+              )}
               {g.opciones.map((o) => (
                 <div key={o.value}>{filaOpcion(o, indice++)}</div>
               ))}
             </li>
           ))}
-          {planas.length === 1 && (
+          {planas.length === (textoTodos != null ? 1 : 0) && (
             <li className="px-3.5 py-2.5 text-sm text-muted">Sin coincidencias.</li>
           )}
         </ul>
