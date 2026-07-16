@@ -60,6 +60,9 @@ export function CrearContrasenaForm({ tokenHash }: { tokenHash: string | null })
     if (password.length < 8) {
       return setError("La contraseña debe tener al menos 8 caracteres.");
     }
+    if (password !== String(form.get("password2"))) {
+      return setError("Las contraseñas no coinciden.");
+    }
     setEnviando(true);
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password });
@@ -84,6 +87,15 @@ export function CrearContrasenaForm({ tokenHash }: { tokenHash: string | null })
         variante="editorial"
         name="password"
         placeholder="Mínimo 8 caracteres"
+        autoComplete="new-password"
+        minLength={8}
+        required
+      />
+      <InputPassword
+        label="Repetir contraseña"
+        variante="editorial"
+        name="password2"
+        placeholder="La misma contraseña otra vez"
         autoComplete="new-password"
         minLength={8}
         required

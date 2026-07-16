@@ -50,6 +50,10 @@
 
 La limpieza de solicitudes huérfanas armaba un `.or()` de PostgREST interpolando el email crudo del form público — un email con metacaracteres (`,`, paréntesis) podía inyectar filtros y borrar solicitudes pendientes ajenas (hallazgo del review de seguridad del commit). Ahora son queries `.eq()` separadas por campo (email/cuil/teléfono) unidas por id en JS. Commit f1c7318; reintento re-verificado E2E.
 
+## Cambios v1.2 (2026-07-15)
+
+Pedido de Fausti: `/crear-contrasena` pide la contraseña **dos veces** (campo "Repetir contraseña") y valida que coincidan antes de guardar, con error claro si no ("Las contraseñas no coinciden."). Vale tanto para el link de aprobación del técnico como para el flujo de "¿Olvidaste tu contraseña?" (misma página). Solo `codigo/components/auth/crear-contrasena.client.tsx`.
+
 ## Dev Agent Record
 
 - **Migración:** `story_955_verificacion_email` aplicada (columnas `email_verificado` + `token_verificacion` en `tecnicos`, backfill de existentes a `true`, trigger `trg_notificar_solicitud_tecnico` pasa de AFTER INSERT a AFTER UPDATE OF `email_verificado`).
