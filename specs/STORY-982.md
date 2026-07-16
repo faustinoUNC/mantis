@@ -1,6 +1,6 @@
 # STORY-982 — Finanzas gráfico y de un vistazo (rediseño UX del módulo)
 
-**Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
+**Versión:** 1.1.0 · **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
 
 ## Diagnóstico
 
@@ -40,7 +40,13 @@ Descendente (la más vieja primero) — mismo criterio que "qué cobrar primero"
 
 ### Fuera de alcance (simplicidad)
 
-Sin selector de período, sin export, sin gráfico combinado cobros-vs-liquidaciones, sin paginación adicional, sin tocar queries ni permisos.
+Sin selector de período, sin export, sin paginación adicional, sin tocar queries ni permisos. ~~Sin gráfico combinado cobros-vs-liquidaciones~~ → entra en v1.1 (abajo).
+
+## v1.1 — Gráfico combinado cobros vs. liquidaciones (pedido de Fausti, 2026-07-16)
+
+- **"Cobrado vs. liquidado por mes"** arriba, debajo de las stat cards y fuera de los tabs (es la foto global entra-vs-sale; no depende del tab ni de la búsqueda). Barras **agrupadas** (no apiladas: no son partes de un todo) — cobrado en esmeralda, liquidado en ámbar (mismo par de series de dinero que "Ingresos cobrados" de Informes). Leyenda debajo; tooltip con $ y cantidad de cada serie, **sin "diferencia" derivada** (un cobro de julio puede liquidarse en agosto — mostrar la resta como ganancia mentiría; doctrina de honestidad de Informes).
+- Los gráficos por tab ("Cobrado por mes" / "Liquidado por mes") pasan a mostrarse **solo con búsqueda activa**: su valor diferencial es graficar lo buscado (p. ej. cuánto se le liquidó a un técnico por mes); sin búsqueda duplicaban media serie del combinado, tres gráficos era ruido (Regla #0).
+- Misma regla de honestidad: el combinado no se dibuja con menos de 2 meses con datos; meses sin movimiento en $0 (cero real); tope 12 meses.
 
 ## Criterios de aceptación
 
@@ -54,4 +60,5 @@ Sin selector de período, sin export, sin gráfico combinado cobros-vs-liquidaci
 ## Dev Agent Record
 
 - **Archivos:** `components/finanzas/finanzas.client.tsx` (único archivo tocado — server layer intacto, como pedía el diseño): `StatCard` (4 cards de resumen, click lleva al tab), `GraficoMensual` genérico (recharts, meses continuos vía `rangoMeses`, tope 12, tooltip $ + cantidad, no se dibuja con <2 meses con datos), `GrupoMes` + `GruposCerrados` (colapsables con chevron rotado del set propio; el más reciente abierto por defecto; búsqueda activa = todos forzados abiertos sin chevron), `porAntiguedad` para ordenar pendientes. Colores idénticos a `panel-metricas` (BRAND/GRID/INK_MUTED). Ajuste durante E2E: se quitó el borde esmeralda de "card activa" (dos cards resaltadas a la vez confundían; el estado del tab ya lo muestra el segmentado).
-- **Verificación:** `tsc` + `eslint` verdes. E2E en navegador (2026-07-16, admin): cards con datos reales ($6.249.000 por cobrar · 14 gestiones · 5 demoradas en ámbar); pendientes ordenados 37→11→10→9→8 días→hoy; gráfico "Cobrado por mes" dic 25→jul 26 con meses vacíos en 0; solo Julio 2026 expandido (Junio→Diciembre colapsados), expandir/colapsar Junio suma/quita sus 20 filas; tab Liquidaciones + búsqueda "tecnico uno" filtra pendientes (3) y meses, expande todos los grupos con coincidencias y el gráfico se recalcula solo con lo del técnico. Links a gestión intactos. Consola limpia.
+- **v1.1:** `GraficoCombinado` ("Cobrado vs. liquidado por mes") debajo de las stat cards — barras agrupadas esmeralda/ámbar sobre las series completas sin filtrar (`gruposCobros`/`gruposLiq` en `Finanzas`), leyenda "Cobrado (entra)" / "Liquidado a técnicos (sale)", tooltip con $ y cantidad por serie (sin resta derivada). Los `GraficoMensual` por tab quedan detrás de `hayBusqueda`. Helper `plataCorta` compartido. E2E: tooltip "dic 25 — Cobrado: $2.256.000 · 6 gestiones / Liquidado: $2.157.000 · 6 gestiones"; sin búsqueda no hay gráfico de tab; "demo" (varios meses) lo hace aparecer; "urquiza" (1 mes) lo mantiene oculto por la regla de ≥2 meses; el combinado no reacciona a la búsqueda. `tsc` + `eslint` verdes, consola limpia.
+- **Verificación v1.0:** `tsc` + `eslint` verdes. E2E en navegador (2026-07-16, admin): cards con datos reales ($6.249.000 por cobrar · 14 gestiones · 5 demoradas en ámbar); pendientes ordenados 37→11→10→9→8 días→hoy; gráfico "Cobrado por mes" dic 25→jul 26 con meses vacíos en 0; solo Julio 2026 expandido (Junio→Diciembre colapsados), expandir/colapsar Junio suma/quita sus 20 filas; tab Liquidaciones + búsqueda "tecnico uno" filtra pendientes (3) y meses, expande todos los grupos con coincidencias y el gráfico se recalcula solo con lo del técnico. Links a gestión intactos. Consola limpia.
