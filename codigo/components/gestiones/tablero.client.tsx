@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ComboFiltrable } from "@/components/ui/combo-filtrable.client";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -103,15 +104,17 @@ function FormNueva({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [propiedadId, setPropiedadId] = useState("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    if (!propiedadId) return setError("Seleccioná una propiedad de la lista.");
     setEnviando(true);
     const form = new FormData(e.currentTarget);
     const r = await crearGestion({
       descripcion: String(form.get("descripcion")),
-      propiedad_id: String(form.get("propiedad_id")),
+      propiedad_id: propiedadId,
       especialidad_id: String(form.get("especialidad_id")),
       urgencia: String(form.get("urgencia")) as Urgencia,
     });
@@ -126,13 +129,13 @@ function FormNueva({
         <div className="sm:col-span-2 lg:col-span-3">
           <Input label="Descripción" name="descripcion" required placeholder="Qué hay que arreglar y dónde (ambiente)" />
         </div>
-        <Select label="Propiedad" name="propiedad_id" required>
-          {propiedades.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.direccion}
-            </option>
-          ))}
-        </Select>
+        <ComboFiltrable
+          label="Propiedad"
+          grupos={[{ label: "Propiedades", opciones: propiedades.map((p) => ({ value: p.id, label: p.direccion })) }]}
+          value={propiedadId}
+          onChange={setPropiedadId}
+          textoTodos="Buscar por dirección…"
+        />
         <Select label="Especialidad" name="especialidad_id" required>
           {especialidades.map((e) => (
             <option key={e.id} value={e.id}>
