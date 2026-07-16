@@ -534,7 +534,7 @@ export async function registrarCobro(
     .eq("id", gestionId);
   if (error) {
     console.error("registrarCobro: update falló", error);
-    return { ok: false, error: `No se pudo registrar el cobro: ${error.message}` };
+    return { ok: false, error: "No se pudo registrar el cobro." };
   }
 
   // STORY-973: el total viaja en el evento — la Actividad cuenta el cobro
