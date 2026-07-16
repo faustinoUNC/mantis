@@ -532,7 +532,10 @@ export async function registrarCobro(
       recargo_tarjeta_monto: recargoMonto,
     })
     .eq("id", gestionId);
-  if (error) return { ok: false, error: "No se pudo registrar el cobro." };
+  if (error) {
+    console.error("registrarCobro: update falló", error);
+    return { ok: false, error: `No se pudo registrar el cobro: ${error.message}` };
+  }
 
   // STORY-973: el total viaja en el evento — la Actividad cuenta el cobro
   // completo (cuánto y con qué medios) sin leer campos de la gestión.
