@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { obtenerUsuarioActual } from "@/features/auth/service";
+import type { Rol } from "@/features/auth/types";
 import { emailEstadoGestion } from "@/features/email/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
@@ -46,7 +47,9 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     | null;
   const inquilinoVigente = legajo?.fecha_fin == null ? legajo?.inquilinos : null;
   const especialidad = g.especialidades as { nombre: string } | null;
-  const gestor = g.gestor as { nombre: string } | null;
+  // STORY-979: el rol viene null cuando la RLS de usuarios no deja ver la
+  // fila del gestor (roles no-admin) — el filtro por rol es solo del admin.
+  const gestor = g.gestor as { nombre: string; rol: Rol } | null;
   const tecnico = g.tecnico as { nombre: string } | null;
   const presupuestos = (g.presupuestos as { estado: string }[] | null) ?? [];
   const conformidades =
@@ -63,6 +66,8 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     direccion: propiedad?.direccion ?? "—",
     propietario_nombre: propiedad?.propietarios?.nombre ?? null,
     inquilino_nombre: inquilinoVigente?.nombre ?? null,
+    gestor_id: g.gestor_id as string,
+    gestor_rol: gestor?.rol ?? null,
     gestor_nombre: gestor?.nombre ?? "—",
     tecnico_nombre: tecnico?.nombre ?? null,
     asignacion_aceptada: (g.asignacion_aceptada as boolean | null) ?? null,
@@ -75,12 +80,13 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
 }
 
 const SELECT_RESUMEN =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestor_id, propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // STORY-938: igual que SELECT_RESUMEN pero con el contacto de propietario/
 // inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
+// (gestor_id no va acá: obtenerGestion ya lo suma junto a tecnico_id y demás.)
 const SELECT_DETALLE =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // Inquilino si la gestión tiene legajo vigente; si no, el propietario.
 function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_cliente"] {

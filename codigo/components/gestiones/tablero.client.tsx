@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import type { Rol } from "@/features/auth/types";
+import { NOMBRE_ROL, type Rol } from "@/features/auth/types";
 import type { Especialidad } from "@/features/especialidades/types";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { crearGestion } from "@/features/gestiones/service";
@@ -186,10 +186,20 @@ export function Tablero({
   const esAdmin = rol === "administrador";
 
   // Gestores presentes en las gestiones (para el filtro del admin).
-  const gestores = useMemo(
-    () => [...new Set(gestiones.map((g) => g.gestor_nombre))].sort(),
-    [gestiones]
-  );
+  // STORY-979: por id, nunca por nombre — dos usuarios pueden llamarse igual
+  // (p. ej. la misma persona como admin y como gestor). El rol desambigua.
+  const gestores = useMemo(() => {
+    const porId = new Map<string, { nombre: string; rol: Rol | null }>();
+    for (const g of gestiones) {
+      porId.set(g.gestor_id, { nombre: g.gestor_nombre, rol: g.gestor_rol });
+    }
+    return [...porId.entries()]
+      .map(([id, u]) => ({
+        id,
+        etiqueta: u.rol ? `${u.nombre} (${NOMBRE_ROL[u.rol]})` : u.nombre,
+      }))
+      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta));
+  }, [gestiones]);
 
   // Búsqueda + (admin) gestor asignado + orden por fecha de ingreso.
   const filtradas = useMemo(
@@ -198,7 +208,7 @@ export function Tablero({
         .filter(
           (g) =>
             coincideCampo(consulta, campo, CAMPOS_BUSQUEDA, g) &&
-            (gestor === "" || g.gestor_nombre === gestor)
+            (gestor === "" || g.gestor_id === gestor)
         )
         .sort((a, b) =>
           orden === "desc"
@@ -260,8 +270,8 @@ export function Tablero({
                 >
                   <option value="">Todos los gestores</option>
                   {gestores.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
+                    <option key={g.id} value={g.id}>
+                      {g.etiqueta}
                     </option>
                   ))}
                 </Select>

@@ -1,3 +1,5 @@
+import type { Rol } from "@/features/auth/types";
+
 export type Etapa =
   | "ingresado"
   | "asignacion"
@@ -42,6 +44,11 @@ export interface GestionResumen {
   direccion: string;
   propietario_nombre: string | null;
   inquilino_nombre: string | null; // del legajo snapshot; null si nació con la propiedad libre
+  // STORY-979: identidad del responsable por id (el filtro nunca compara por
+  // nombre — dos usuarios pueden llamarse igual). El rol viene del embed de
+  // usuarios y puede ser null bajo la RLS de roles no-admin.
+  gestor_id: string;
+  gestor_rol: Rol | null;
   gestor_nombre: string;
   tecnico_nombre: string | null;
   asignacion_aceptada: boolean | null;
