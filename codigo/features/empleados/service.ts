@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { registrarEventoSistema } from "@/features/auditoria/registrar";
 import { linkCrearContrasena } from "@/features/auth/recovery";
 import { obtenerUsuarioActual } from "@/features/auth/service";
 import type { Rol } from "@/features/auth/types";
@@ -65,6 +66,13 @@ export async function crearEmpleado(
     return { ok: false, error: "No se pudo guardar el empleado." };
   }
 
+  // STORY-980: el alta queda en la auditoría de sistema.
+  await registrarEventoSistema("empleado_creado", {
+    afectado: nuevo.nombre,
+    email: nuevo.email,
+    rol: nuevo.rol,
+  });
+
   revalidatePath("/admin/empleados");
   return { ok: true };
 }
@@ -82,11 +90,15 @@ export async function cambiarEstadoEmpleado(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: empleado, error } = await supabase
     .from("usuarios")
     .update({ esta_activo: activo })
-    .eq("id", id);
-  if (error) return { ok: false, error: "No se pudo actualizar el estado." };
+    .eq("id", id)
+    .select("nombre, email")
+    .single();
+  if (error || !empleado) {
+    return { ok: false, error: "No se pudo actualizar el estado." };
+  }
 
   if (!activo) {
     // Capa dura del bloqueo: revocar refresh tokens (GoTrue Admin API;
@@ -104,6 +116,12 @@ export async function cambiarEstadoEmpleado(
       // El update ya cortó el acceso vía RLS/guards; la revocación es refuerzo.
     });
   }
+
+  // STORY-980: el cambio de estado queda en la auditoría de sistema.
+  await registrarEventoSistema(
+    activo ? "empleado_reactivado" : "empleado_desactivado",
+    { afectado: empleado.nombre, email: empleado.email }
+  );
 
   revalidatePath("/admin/empleados");
   return { ok: true };
@@ -131,7 +149,7 @@ export async function editarEmpleado(
   const admin = createAdminClient();
   const { data: actual } = await admin
     .from("usuarios")
-    .select("email")
+    .select("email, rol")
     .eq("id", id)
     .single();
   if (!actual) return { ok: false, error: "Empleado no encontrado." };
@@ -167,6 +185,17 @@ export async function editarEmpleado(
     };
   }
 
+  // STORY-980: solo el cambio de ROL es evento de auditoría — editar el
+  // nombre o el correo es mantenimiento de datos, no un hecho de acceso.
+  if (actual.rol !== cambios.rol) {
+    await registrarEventoSistema("rol_cambiado", {
+      afectado: cambios.nombre,
+      email,
+      de: actual.rol,
+      a: cambios.rol,
+    });
+  }
+
   revalidatePath("/admin/empleados");
   return { ok: true };
 }
@@ -198,5 +227,12 @@ export async function restablecerContrasenaEmpleado(
     link,
     "restablecer_contrasena"
   );
+
+  // STORY-980: el blanqueo queda en la auditoría de sistema.
+  await registrarEventoSistema("contrasena_blanqueada", {
+    afectado: empleado.nombre,
+    email: empleado.email,
+  });
+
   return { ok: true };
 }

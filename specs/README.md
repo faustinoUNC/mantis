@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-980](STORY-980.md) | Auditoría de eventos de sistema: tabla nueva `eventos_sistema` (actor nullable, afectado congelado en `detalle`) + 11 tipos de identidad y acceso (crear/rol/estado/blanqueo de empleados; postulación/alta/aprobación/rechazo/estado de técnicos) + tabs "Gestiones | Sistema" en `/admin/auditoria` con filtros server-side patrón 974 — party mode 2026-07-15 | ✅ done |
 | [STORY-976](STORY-976.md) | El aviso "no puedo continuar" se hace ver y pausa la obra: campo explícito `aviso_no_continua_en/motivo` (patrón `desasignada_en`), banner ámbar del gestor + badges en tablero/detalle/lista del técnico, acciones del técnico bloqueadas (UI + server) hasta que el gestor decida, "El técnico continúa" (`aviso_resuelto`) y toda transición del funnel limpia el aviso — card #93, tercera ronda de prueba | ✅ done |
 | [STORY-975](STORY-975.md) | Recargo por tarjeta de crédito al cobrar (% que tipea la administración, se suma al total) + UX del formulario de cobro (resumen en vivo, medio 2 formateado a currency) — migración pendiente: `recargo_tarjeta_pct`/`recargo_tarjeta_monto` | 🚧 en desarrollo |
 | [STORY-979](STORY-979.md) | Identidad consistente de empleados: filtros por `usuario.id` (nunca por nombre) y presentación "Nombre (Rol)" solo donde se mezclan roles — filtro del kanban por id con rol, copia de supervisión "Responsable: {nombre} ({rol}) — {desc}" — party mode 2026-07-16 | ✅ done |

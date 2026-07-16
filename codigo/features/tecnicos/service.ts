@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { registrarEventoSistema } from "@/features/auditoria/registrar";
 import { linkCrearContrasena } from "@/features/auth/recovery";
 import { obtenerUsuarioActual } from "@/features/auth/service";
 import {
@@ -291,6 +292,13 @@ async function altaTecnico(
       { nombre: datos.nombre, email: datos.email },
       `${baseUrl()}/registro-tecnico/verificar?token=${tokenReintento}`
     );
+    // STORY-980: el reintento tras rechazo también queda en la auditoría
+    // de sistema (sin sesión → actor "Registro público").
+    await registrarEventoSistema("tecnico_postulado", {
+      afectado: datos.nombre,
+      email: datos.email,
+      reintento: true,
+    });
     revalidatePath("/tecnicos");
     return { ok: true };
   }
@@ -372,6 +380,13 @@ async function altaTecnico(
       { linkCrearContrasena: link ?? undefined }
     );
   }
+
+  // STORY-980: postulación pública (sin sesión → actor "Registro público")
+  // o alta manual del staff, según quién llegó hasta acá.
+  await registrarEventoSistema(
+    esEnrolamiento ? "tecnico_postulado" : "tecnico_alta_manual",
+    { afectado: datos.nombre, email: datos.email }
+  );
 
   revalidatePath("/tecnicos");
   return { ok: true };
@@ -576,6 +591,12 @@ export async function aprobarTecnico(id: string): Promise<ActionResult> {
     linkCrearContrasena: link ?? undefined,
   });
 
+  // STORY-980: la aprobación queda en la auditoría de sistema.
+  await registrarEventoSistema("tecnico_aprobado", {
+    afectado: t.nombre,
+    email: t.email,
+  });
+
   revalidatePath("/tecnicos");
   return { ok: true };
 }
@@ -598,6 +619,13 @@ export async function rechazarTecnico(
   if (error || !t) return { ok: false, error: "No se pudo rechazar." };
 
   await emailResultadoTecnico(t, "rechazado", { motivo: motivo.trim() });
+
+  // STORY-980: el rechazo queda en la auditoría de sistema, motivo incluido.
+  await registrarEventoSistema("tecnico_rechazado", {
+    afectado: t.nombre,
+    email: t.email,
+    motivo: motivo.trim(),
+  });
 
   revalidatePath("/tecnicos");
   return { ok: true };
@@ -822,12 +850,14 @@ export async function cambiarEstadoTecnico(
     }
   }
 
-  const { error } = await admin
+  const { data: u, error } = await admin
     .from("usuarios")
     .update({ esta_activo: activo })
     .eq("id", id)
-    .eq("rol", "tecnico");
-  if (error) return { ok: false, error: "No se pudo actualizar el estado." };
+    .eq("rol", "tecnico")
+    .select("nombre, email")
+    .single();
+  if (error || !u) return { ok: false, error: "No se pudo actualizar el estado." };
 
   if (!activo) {
     await fetch(
@@ -841,6 +871,12 @@ export async function cambiarEstadoTecnico(
       }
     ).catch(() => {});
   }
+
+  // STORY-980: el cambio de estado queda en la auditoría de sistema.
+  await registrarEventoSistema(
+    activo ? "tecnico_rehabilitado" : "tecnico_inhabilitado",
+    { afectado: u.nombre, email: u.email }
+  );
 
   revalidatePath("/tecnicos");
   return { ok: true };

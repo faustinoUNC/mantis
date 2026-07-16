@@ -4,7 +4,9 @@ import {
   AUDITORIA_POR_PAGINA,
   type ActorAuditoria,
   type FiltrosAuditoria,
+  type FiltrosSistema,
   type PaginaAuditoria,
+  type PaginaSistema,
 } from "@/features/auditoria/types";
 import type { Rol } from "@/features/auth/types";
 import { obtenerUsuarioActual } from "@/features/auth/service";
@@ -108,6 +110,63 @@ export async function historialGlobal(
       actor_nombre: actorPorId.get(e.actor_id)?.nombre ?? "Sistema",
       actor_rol: actorPorId.get(e.actor_id)?.rol ?? null,
     })),
+  };
+}
+
+// STORY-980: tab Sistema — eventos administrativos (eventos_sistema).
+// Mismo patrón que historialGlobal: admin-only, filtros y paginación en la
+// query, count real. La búsqueda es por el afectado congelado en detalle.
+export async function historialSistema(
+  filtros: FiltrosSistema = {}
+): Promise<PaginaSistema> {
+  const actual = await obtenerUsuarioActual();
+  if (actual?.rol !== "administrador") return { eventos: [], total: 0 };
+
+  const admin = createAdminClient();
+  const pagina = Math.max(1, filtros.pagina ?? 1);
+  const desdeFila = (pagina - 1) * AUDITORIA_POR_PAGINA;
+
+  let query = admin
+    .from("eventos_sistema")
+    .select("id, tipo, actor_id, detalle, creado_en", { count: "exact" });
+  const busqueda = filtros.busqueda?.trim();
+  if (busqueda) query = query.ilike("detalle->>afectado", `%${busqueda}%`);
+  if (filtros.tipo) query = query.eq("tipo", filtros.tipo);
+  if (filtros.actorId) query = query.eq("actor_id", filtros.actorId);
+  // Offset fijo -03:00: Argentina no tiene horario de verano.
+  if (filtros.desde) query = query.gte("creado_en", `${filtros.desde}T00:00:00-03:00`);
+  if (filtros.hasta) query = query.lte("creado_en", `${filtros.hasta}T23:59:59.999-03:00`);
+
+  const { data, count } = await query
+    .order("creado_en", { ascending: false })
+    .range(desdeFila, desdeFila + AUDITORIA_POR_PAGINA - 1);
+
+  const filas = data ?? [];
+  const { data: actores } = await admin
+    .from("usuarios")
+    .select("id, nombre, rol")
+    .in("id", [...new Set(filas.map((e) => e.actor_id).filter(Boolean))]);
+  const actorPorId = new Map(
+    (actores ?? []).map((a) => [a.id, { nombre: a.nombre, rol: a.rol as Rol }])
+  );
+
+  return {
+    total: count ?? 0,
+    eventos: filas.map((e) => {
+      const detalle = (e.detalle ?? null) as Record<string, unknown> | null;
+      return {
+        id: e.id as string,
+        tipo: e.tipo as string,
+        detalle,
+        creado_en: e.creado_en as string,
+        actor_nombre: e.actor_id
+          ? (actorPorId.get(e.actor_id)?.nombre ?? "—")
+          : "Registro público",
+        actor_rol: e.actor_id ? (actorPorId.get(e.actor_id)?.rol ?? null) : null,
+        afectado: String(detalle?.afectado ?? "—"),
+        afectado_email: detalle?.email ? String(detalle.email) : null,
+      };
+    }),
   };
 }
 
