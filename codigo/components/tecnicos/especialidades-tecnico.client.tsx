@@ -5,10 +5,8 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  CampoArchivo,
-  MAX_ARCHIVO_BYTES,
-} from "@/components/tecnicos/form-tecnico.client";
+import { MAX_ARCHIVO_BYTES } from "@/components/tecnicos/form-tecnico.client";
+import { InputArchivo } from "@/components/ui/input-archivo.client";
 import type { Especialidad } from "@/features/especialidades/types";
 import { actualizarEspecialidadesTecnico } from "@/features/tecnicos/service";
 
@@ -122,10 +120,11 @@ export function EspecialidadesTecnico({
           ))}
         </div>
         {faltaMatricula && (
-          <CampoArchivo
+          <InputArchivo
             label="Matrícula (obligatoria para la especialidad elegida)"
             name="doc_matricula"
-            requerido
+            required
+            accept="image/*,.pdf"
             multiple
           />
         )}

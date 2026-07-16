@@ -3,45 +3,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputArchivo } from "@/components/ui/input-archivo.client";
 import type { Especialidad } from "@/features/especialidades/types";
 import {
   crearTecnicoManual,
   enrolarTecnico,
 } from "@/features/tecnicos/service";
-import { comprimirArchivosDeInput } from "@/shared/utils/imagen.client";
 
 // Los PDFs no se comprimen y el body del request tiene techo (~4.5 MB en Vercel).
 export const MAX_ARCHIVO_BYTES = 4 * 1024 * 1024;
-
-export function CampoArchivo({
-  label,
-  name,
-  requerido,
-  multiple,
-}: {
-  label: string;
-  name: string;
-  requerido?: boolean;
-  multiple?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[13px] font-medium text-muted">
-        {label}
-        {requerido && <span className="text-error"> *</span>}
-      </label>
-      <input
-        type="file"
-        name={name}
-        required={requerido}
-        multiple={multiple}
-        accept="image/*,.pdf"
-        onChange={(e) => void comprimirArchivosDeInput(e.target)}
-        className="text-sm text-muted file:mr-3 file:min-h-9 file:px-3 file:rounded-md file:border file:border-border-strong file:bg-surface file:text-sm file:font-medium file:text-foreground hover:file:bg-surface-2 file:transition-colors file:cursor-pointer"
-      />
-    </div>
-  );
-}
 
 export function TecnicoForm({
   especialidades,
@@ -132,11 +102,12 @@ export function TecnicoForm({
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <CampoArchivo label="DNI (foto/PDF)" name="doc_dni" requerido />
-        <CampoArchivo
+        <InputArchivo label="DNI (foto/PDF)" name="doc_dni" required accept="image/*,.pdf" />
+        <InputArchivo
           label="Matrícula (podés subir más de una)"
           name="doc_matricula"
-          requerido={exigeMatricula}
+          required={exigeMatricula}
+          accept="image/*,.pdf"
           multiple
         />
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Icono } from "@/components/ui/iconos";
 import {
   comprimirArchivosDeInput,
@@ -30,14 +30,44 @@ export function InputArchivo({
   multiple?: boolean;
 }) {
   const id = useId();
-  const [nombre, setNombre] = useState<string | null>(null);
+  const [archivoUnico, setArchivoUnico] = useState<File | null>(null);
   const [archivos, setArchivos] = useState<File[]>([]);
+  // Miniatura de imagen: URL de objeto por archivo (los PDF no tienen
+  // preview de imagen, se muestran con el ícono genérico). El ref refleja
+  // siempre el último estado para poder liberar las URLs al desmontar.
+  const [urls, setUrls] = useState<Map<File, string>>(new Map());
+  const urlsRef = useRef(urls);
+
+  useEffect(() => {
+    return () => {
+      for (const url of urlsRef.current.values()) URL.revokeObjectURL(url);
+    };
+  }, []);
+
+  // Recalcula las miniaturas para la selección vigente: libera las de
+  // archivos que ya no están y crea las que falten.
+  function actualizarMiniaturas(vigentes: File[]) {
+    const vivos = new Set(vigentes);
+    const proximo = new Map<File, string>();
+    for (const [archivo, url] of urlsRef.current) {
+      if (vivos.has(archivo)) proximo.set(archivo, url);
+      else URL.revokeObjectURL(url);
+    }
+    for (const archivo of vigentes) {
+      if (archivo.type.startsWith("image/") && !proximo.has(archivo)) {
+        proximo.set(archivo, URL.createObjectURL(archivo));
+      }
+    }
+    urlsRef.current = proximo;
+    setUrls(proximo);
+  }
 
   function sincronizar(input: HTMLInputElement, todos: File[]) {
     const dt = new DataTransfer();
     for (const archivo of todos) dt.items.add(archivo);
     input.files = dt.files;
     setArchivos(todos);
+    actualizarMiniaturas(todos);
   }
 
   return (
@@ -53,11 +83,22 @@ export function InputArchivo({
           <Icono id="camara" size={16} />
           {multiple
             ? archivos.length > 0 ? "Agregar más fotos" : "Sacar o elegir fotos"
-            : nombre ? "Cambiar foto" : "Sacar o elegir foto"}
+            : archivoUnico ? "Cambiar foto" : "Sacar o elegir foto"}
         </label>
         {!multiple && (
-          <span className="text-[13px] text-muted truncate min-w-0">
-            {nombre ?? "Ninguna elegida"}
+          <span className="flex items-center gap-2 min-w-0">
+            {archivoUnico ? (
+              <>
+                <Miniatura url={urls.get(archivoUnico) ?? null} />
+                <span className="text-[13px] text-muted truncate min-w-0">
+                  {archivoUnico.name}
+                </span>
+              </>
+            ) : (
+              <span className="text-[13px] text-muted truncate min-w-0">
+                Ninguna elegida
+              </span>
+            )}
           </span>
         )}
         {multiple && archivos.length === 0 && (
@@ -67,17 +108,18 @@ export function InputArchivo({
         )}
       </div>
       {multiple && archivos.length > 0 && (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-1.5">
           {archivos.map((archivo, i) => (
             <li
               key={`${archivo.name}-${i}`}
               className="flex items-center gap-2 text-[13px] text-muted min-w-0"
             >
+              <Miniatura url={urls.get(archivo) ?? null} />
               <span className="truncate min-w-0">{archivo.name}</span>
               <button
                 type="button"
                 aria-label={`Quitar ${archivo.name}`}
-                className="shrink-0 flex items-center justify-center size-6 rounded-md hover:bg-surface-2 hover:text-foreground transition-colors"
+                className="ml-auto shrink-0 flex items-center justify-center size-6 rounded-md hover:bg-surface-2 hover:text-foreground transition-colors"
                 onClick={(e) => {
                   const input = document.getElementById(id) as HTMLInputElement | null;
                   if (!input) return;
@@ -103,7 +145,9 @@ export function InputArchivo({
         onChange={async (e) => {
           const input = e.target;
           if (!multiple) {
-            setNombre(input.files?.[0]?.name ?? null);
+            const nuevo = input.files?.[0] ?? null;
+            setArchivoUnico(nuevo);
+            actualizarMiniaturas(nuevo ? [nuevo] : []);
             // Fotos de cámara: comprimir acá para no exceder el body del server action
             void comprimirArchivosDeInput(input);
             return;
@@ -115,6 +159,24 @@ export function InputArchivo({
           sincronizar(input, [...archivos, ...nuevos]);
         }}
       />
+    </div>
+  );
+}
+
+function Miniatura({ url }: { url: string | null }) {
+  if (url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- preview de un archivo local, no una URL remota
+      <img
+        src={url}
+        alt=""
+        className="size-10 shrink-0 rounded-md border border-border object-cover"
+      />
+    );
+  }
+  return (
+    <div className="size-10 shrink-0 rounded-md border border-border grid place-items-center text-muted">
+      <Icono id="archivo" size={16} />
     </div>
   );
 }
