@@ -105,16 +105,5 @@ export function pesos(n: number): string {
   return `$ ${r < 0 ? "-" : ""}${abs}`;
 }
 
-// ── Búsqueda (client-side, sobre los datos ya cargados) ──────────────────
-// Sin query vacía, coincide todo. Con query, alcanza con que UNO de los
-// campos matchee (sustring, sin distinguir mayúsculas — mismo criterio que
-// el filtro server-side de Auditoría, extendido acá con quién paga / quién
-// ejecuta, que es lo que realmente se busca en Finanzas).
-export function coincide(
-  query: string,
-  campos: (string | null | undefined)[]
-): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return campos.some((c) => (c ?? "").toLowerCase().includes(q));
-}
+// La búsqueda client-side usa los helpers compartidos de shared/utils/filtros
+// (coincideCampo + CampoBusqueda, patrón STORY-927 — además busca sin tildes).

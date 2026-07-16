@@ -1,6 +1,6 @@
 # STORY-982 — Finanzas gráfico y de un vistazo (rediseño UX del módulo)
 
-**Versión:** 1.4.0 · **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
+**Versión:** 1.5.0 · **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
 
 ## Diagnóstico
 
@@ -73,6 +73,14 @@ Feedback sobre los meses colapsables de v1.2: "sigue sin convencerme… hay que 
 - **`HistorialMensual` reemplaza a los colapsables**: en pantalla hay siempre **UN solo mes** — flechas ‹ › para el mes vecino y un `<select>` de meses (solo los que tienen movimientos) para saltar lejos. La vista mide lo mismo con 6 meses que con 6 años de uso.
 - Encabezado del mes: título de sección ("Cobrados"/"Liquidadas") + navegación + `n gestiones · $ total` a la derecha. Default: el mes más reciente con datos.
 - **Con búsqueda activa** la navegación desaparece y se listan todos los meses con coincidencias (encabezado por mes + grilla): el largo lo acota la búsqueda, no el tiempo. Al limpiar la búsqueda se vuelve al mes que estaba elegido.
+
+## v1.5 — Consistencia con el resto del sistema + claridad de conceptos (pedido de Fausti, 2026-07-16)
+
+1. **Tarjeta consistente con tablero/archivo**: dirección como línea principal (`text-sm font-medium truncate`, hover brand) y descripción secundaria (`text-[12px] muted line-clamp-2`); se quitan los íconos pin/perfil (las otras cards no los usan). El monto grande arriba queda (es Finanzas).
+2. **Buscador consistente (patrón STORY-927)**: selector "Buscar por" (Cobros: Dirección/Descripción/Pagador/Medio de pago; Liquidaciones: Dirección/Descripción/Técnico/Medio de pago) usando `coincideCampo` de `shared/utils/filtros` — que además busca sin tildes. El helper `coincide` propio de `consultas-types` se elimina (muerto). Al cambiar de pestaña el campo vuelve a "Todo" (Pagador/Técnico no existen en la otra).
+3. **Ordenador consistente (patrón tablero)**: `Select` "Orden de pendientes" — "Más antiguas primero" (default) / "Mayor monto primero". Solo ordena los pendientes; el histórico ya tiene su navegación por mes.
+4. **Tooltips ⓘ en las 4 stat cards** (mismo patrón visual que los tiles del Inicio): Por cobrar = "trabajos terminados esperando el pago del cliente — se puede cobrar hoy"; Por liquidar = "cobros que ya entraron y falta pagarle al técnico, descuenta adelantos"; Cobrado/Liquidado del mes.
+5. **Claridad Inicio ↔ Finanzas**: la ayuda de "Gestiones pendientes de cobro" (Informes) aclara "Es el mismo 'Por cobrar' del módulo Finanzas"; las leyendas Trabajo del técnico / Fee de la casa llevan `title` con la explicación (el trabajo pasa a 'Por liquidar' recién cuando el cliente paga).
 
 ## Criterios de aceptación
 

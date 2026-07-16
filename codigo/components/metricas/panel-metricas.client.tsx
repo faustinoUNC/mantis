@@ -672,7 +672,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
 
         {/* Cobro unificado: resumen de plata (barra "Por cobrar") + lista de las
             gestiones en cobro, ordenadas por antigüedad. */}
-        <MetricCard titulo="Gestiones pendientes de cobro" ayuda="Cuánta plata falta cobrar y hace cuánto espera cada gestión — qué cobrar primero." n={cobranza.length} humildad={false}>
+        <MetricCard titulo="Gestiones pendientes de cobro" ayuda="Cuánta plata falta cobrar y hace cuánto espera cada gestión — qué cobrar primero. Es el mismo 'Por cobrar' del módulo Finanzas." n={cobranza.length} humildad={false}>
           <div className="space-y-4">
             <div>
               <div className="flex items-baseline justify-between gap-2">
@@ -686,8 +686,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
                     <div style={{ width: `${(pendiente.cobrarFee / pendiente.cobrarTotal) * 100}%`, background: AMBAR }} />
                   </div>
                   <div className="flex flex-wrap items-center gap-4 mt-2 text-[12px] text-muted">
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} />Trabajo del técnico {plata(pendiente.cobrarTrabajo)}</span>
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: AMBAR }} />Fee de la casa {plata(pendiente.cobrarFee)}</span>
+                    <span className="flex items-center gap-1.5 cursor-help" title="La parte de estos cobros que después irá a los técnicos. Recién cuando el cliente pague pasa a 'Por liquidar' en Finanzas."><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} />Trabajo del técnico {plata(pendiente.cobrarTrabajo)}</span>
+                    <span className="flex items-center gap-1.5 cursor-help" title="La ganancia de la inmobiliaria dentro de lo que falta cobrar (incluye cargos por cancelación)."><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: AMBAR }} />Fee de la casa {plata(pendiente.cobrarFee)}</span>
                   </div>
                 </>
               )}

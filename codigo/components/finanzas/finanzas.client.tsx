@@ -5,25 +5,49 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Icono } from "@/components/ui/iconos";
+import { Select } from "@/components/ui/select";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
+import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 import {
   DIAS_ALERTA,
   antiguedadLegible,
   claveMes,
-  coincide,
   mesLabel,
   pesos,
   type CobrosData,
+  type FilaCobroCerrado,
+  type FilaCobroPendiente,
+  type FilaLiquidacionCerrada,
+  type FilaLiquidacionPendiente,
   type LiquidacionesData,
 } from "@/features/finanzas/consultas-types";
 
-// STORY-982 v1.2 — Finanzas de un vistazo: stat cards de resumen, tarjetas
-// en grilla en vez de filas (cada gestión es un objeto visual: monto grande,
-// antigüedad como badge, dirección y persona) y meses cerrados colapsables
-// (solo el más reciente abierto). Sin gráficos: eso vive en Informes.
-// El server layer no cambia.
+// STORY-982 — Finanzas de un vistazo: stat cards de resumen con tooltips,
+// tarjetas en grilla en vez de filas (v1.2/v1.5: monto grande, dirección
+// principal y descripción secundaria como en tablero/archivo), histórico de
+// UN mes por vez (v1.4, no crece con los años) y buscador con "Buscar por"
+// + orden de pendientes (v1.5, patrón STORY-927). Sin gráficos: eso vive en
+// Informes. El server layer no cambia.
 
 type Tab = "cobros" | "liquidaciones";
+type OrdenPendientes = "antiguedad" | "monto";
+
+// "Buscar por" (patrón STORY-927, mismo criterio que el tablero). El medio de
+// pago solo existe en cerradas: con ese campo elegido, ningún pendiente pasa.
+type FilaCobro = FilaCobroPendiente | FilaCobroCerrado;
+type FilaLiquidacion = FilaLiquidacionPendiente | FilaLiquidacionCerrada;
+const CAMPOS_COBROS: CampoBusqueda<FilaCobro>[] = [
+  { id: "direccion", label: "Dirección", de: (f) => [f.direccion] },
+  { id: "descripcion", label: "Descripción", de: (f) => [f.descripcion] },
+  { id: "pagador", label: "Pagador", de: (f) => [f.pagadorNombre, f.pagadorRotulo] },
+  { id: "medio", label: "Medio de pago", de: (f) => ["medioLabel" in f ? f.medioLabel : null] },
+];
+const CAMPOS_LIQUIDACIONES: CampoBusqueda<FilaLiquidacion>[] = [
+  { id: "direccion", label: "Dirección", de: (f) => [f.direccion] },
+  { id: "descripcion", label: "Descripción", de: (f) => [f.descripcion] },
+  { id: "tecnico", label: "Técnico", de: (f) => [f.tecnicoNombre] },
+  { id: "medio", label: "Medio de pago", de: (f) => ["medioLabel" in f ? f.medioLabel : null] },
+];
 
 // Suma de un campo numérico de una lista de filas.
 function sumar<T>(filas: T[], campo: (f: T) => number): number {
@@ -67,6 +91,13 @@ export function Finanzas({
 }) {
   const [tab, setTab] = useState<Tab>("cobros");
   const [busqueda, setBusqueda] = useState("");
+  const [campo, setCampo] = useState("todo");
+  const [orden, setOrden] = useState<OrdenPendientes>("antiguedad");
+  // Al cambiar de pestaña el campo elegido puede no existir (Pagador/Técnico).
+  const irATab = (t: Tab) => {
+    setTab(t);
+    setCampo("todo");
+  };
   // Congelado al montar: define el "mes en curso" de las cards de resumen.
   const [ahoraIso] = useState(() => new Date().toISOString());
   const mesActual = claveMes(ahoraIso);
@@ -114,29 +145,33 @@ export function Finanzas({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <StatCard
           label="Por cobrar"
+          hint="Trabajos terminados (o cancelaciones con cargo) esperando el pago del cliente. Se puede cobrar hoy."
           monto={resumen.porCobrar}
           cantidad={resumen.nCobrar}
           demoradas={resumen.cobrarDemoradas}
-          onClick={() => setTab("cobros")}
+          onClick={() => irATab("cobros")}
         />
         <StatCard
           label="Por liquidar"
+          hint="Cobros que ya entraron y falta pagarle al técnico. Descuenta los adelantos de materiales ya entregados."
           monto={resumen.porLiquidar}
           cantidad={resumen.nLiquidar}
           demoradas={resumen.liquidarDemoradas}
-          onClick={() => setTab("liquidaciones")}
+          onClick={() => irATab("liquidaciones")}
         />
         <StatCard
           label={`Cobrado en ${nombreMes}`}
+          hint="La plata que entró este mes."
           monto={resumen.cobradoMes}
           cantidad={resumen.nCobradoMes}
-          onClick={() => setTab("cobros")}
+          onClick={() => irATab("cobros")}
         />
         <StatCard
           label={`Liquidado en ${nombreMes}`}
+          hint="La plata pagada a los técnicos este mes."
           monto={resumen.liquidadoMes}
           cantidad={resumen.nLiquidadoMes}
-          onClick={() => setTab("liquidaciones")}
+          onClick={() => irATab("liquidaciones")}
         />
       </div>
 
@@ -146,7 +181,7 @@ export function Finanzas({
           <button
             key={t.id}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => irATab(t.id)}
             className={`text-sm px-3.5 py-1.5 transition-colors ${
               tab === t.id
                 ? "bg-brand text-white"
@@ -166,13 +201,33 @@ export function Finanzas({
             ? "Gestión, dirección o pagador…"
             : "Gestión, dirección o técnico…"
         }
+        campos={tab === "cobros" ? CAMPOS_COBROS : CAMPOS_LIQUIDACIONES}
+        campo={campo}
+        onCampo={setCampo}
+        extra={
+          <div className="w-52">
+            <Select
+              label="Orden de pendientes"
+              value={orden}
+              onChange={(e) => setOrden(e.target.value as OrdenPendientes)}
+            >
+              <option value="antiguedad">Más antiguas primero</option>
+              <option value="monto">Mayor monto primero</option>
+            </Select>
+          </div>
+        }
       />
 
       <div className={tab === "cobros" ? "" : "hidden"}>
-        <TabCobros cobros={cobros} busqueda={busqueda} />
+        <TabCobros cobros={cobros} busqueda={busqueda} campo={campo} orden={orden} />
       </div>
       <div className={tab === "liquidaciones" ? "" : "hidden"}>
-        <TabLiquidaciones liquidaciones={liquidaciones} busqueda={busqueda} />
+        <TabLiquidaciones
+          liquidaciones={liquidaciones}
+          busqueda={busqueda}
+          campo={campo}
+          orden={orden}
+        />
       </div>
     </div>
   );
@@ -181,12 +236,14 @@ export function Finanzas({
 // ── Card de resumen ────────────────────────────────────────────────────────
 function StatCard({
   label,
+  hint,
   monto,
   cantidad,
   demoradas = 0,
   onClick,
 }: {
   label: string;
+  hint: string; // tooltip ⓘ — mismo patrón que los tiles del Inicio
   monto: number;
   cantidad: number;
   demoradas?: number;
@@ -195,7 +252,15 @@ function StatCard({
   return (
     <button type="button" onClick={onClick} className="text-left">
       <Card className="p-4 h-full transition-colors hover:border-brand">
-        <p className="text-[12px] font-medium text-muted">{label}</p>
+        <p className="text-[12px] font-medium text-muted flex items-center">
+          {label}
+          <span className="relative group/tip ml-1 inline-flex">
+            <span className="text-muted/50 cursor-help">ⓘ</span>
+            <span className="pointer-events-none absolute left-1/2 bottom-full z-20 mb-1.5 hidden group-hover/tip:block w-max max-w-[220px] -translate-x-1/2 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12px] font-normal leading-snug text-foreground shadow-overlay">
+              {hint}
+            </span>
+          </span>
+        </p>
         <p className="text-xl font-semibold tabular-nums tracking-tight mt-1">
           {pesos(monto)}
         </p>
@@ -246,8 +311,9 @@ function Grilla({ children }: { children: React.ReactNode }) {
 }
 
 // Tarjeta de una gestión: el monto manda (es Finanzas), la antigüedad es un
-// badge (ámbar si está demorada) o el medio de pago si ya cerró, y abajo la
-// dirección y quién paga / quién ejecuta.
+// badge (ámbar si está demorada) o el medio de pago si ya cerró; después la
+// dirección como principal y la descripción más chica — mismo orden que las
+// cards del tablero y del archivo (consistencia, v1.5).
 function TarjetaGestion({
   id,
   monto,
@@ -268,7 +334,7 @@ function TarjetaGestion({
   medio?: string; // cerradas
 }) {
   return (
-    <Link href={`/gestiones/${id}`} className="block">
+    <Link href={`/gestiones/${id}`} className="group block">
       <Card className="p-4 h-full transition-colors hover:border-brand">
         <div className="flex items-start justify-between gap-3">
           <p className="text-lg font-semibold tabular-nums tracking-tight">
@@ -283,17 +349,11 @@ function TarjetaGestion({
             <span className="text-[12px] text-muted shrink-0 mt-1">{medio}</span>
           )}
         </div>
-        <p className="text-sm font-medium mt-2 line-clamp-2">{descripcion}</p>
-        <div className="mt-3 space-y-1">
-          <p className="text-[13px] text-muted flex items-center gap-1.5 min-w-0">
-            <Icono id="pin" size={13} />
-            <span className="truncate">{direccion}</span>
-          </p>
-          <p className="text-[13px] text-muted flex items-center gap-1.5 min-w-0">
-            <Icono id="perfil" size={13} />
-            <span className="truncate">{persona}</span>
-          </p>
-        </div>
+        <p className="text-sm font-medium leading-snug truncate mt-2 group-hover:text-brand-active transition-colors">
+          {direccion}
+        </p>
+        <p className="text-[12px] text-muted mt-1 line-clamp-2">{descripcion}</p>
+        <p className="text-[12px] text-muted mt-2">{persona}</p>
       </Card>
     </Link>
   );
@@ -408,35 +468,45 @@ function porAntiguedad<T extends { diasPendiente: number | null }>(filas: T[]): 
   );
 }
 
+// Pendientes: por antigüedad (la más vieja primero) o por monto, según el
+// selector de orden.
+function ordenarPendientes<T extends { diasPendiente: number | null }>(
+  filas: T[],
+  orden: OrdenPendientes,
+  monto: (f: T) => number
+): T[] {
+  return orden === "monto"
+    ? [...filas].sort((a, b) => monto(b) - monto(a))
+    : porAntiguedad(filas);
+}
+
 // ── Pestaña COBROS ────────────────────────────────────────────────────────
 function TabCobros({
   cobros,
   busqueda,
+  campo,
+  orden,
 }: {
   cobros: CobrosData;
   busqueda: string;
+  campo: string;
+  orden: OrdenPendientes;
 }) {
   const pendientes = useMemo(
     () =>
-      porAntiguedad(
+      ordenarPendientes(
         cobros.pendientes.filter((f) =>
-          coincide(busqueda, [f.descripcion, f.direccion, f.pagadorNombre, f.pagadorRotulo])
-        )
+          coincideCampo(busqueda, campo, CAMPOS_COBROS, f)
+        ),
+        orden,
+        (f) => f.total
       ),
-    [cobros.pendientes, busqueda]
+    [cobros.pendientes, busqueda, campo, orden]
   );
   const cerrados = useMemo(
     () =>
-      cobros.cerrados.filter((f) =>
-        coincide(busqueda, [
-          f.descripcion,
-          f.direccion,
-          f.pagadorNombre,
-          f.pagadorRotulo,
-          f.medioLabel,
-        ])
-      ),
-    [cobros.cerrados, busqueda]
+      cobros.cerrados.filter((f) => coincideCampo(busqueda, campo, CAMPOS_COBROS, f)),
+    [cobros.cerrados, busqueda, campo]
   );
   const grupos = useMemo(() => agruparPorMes(cerrados), [cerrados]);
   const totalPend = sumar(pendientes, (f) => f.total);
@@ -511,25 +581,31 @@ function TabCobros({
 function TabLiquidaciones({
   liquidaciones,
   busqueda,
+  campo,
+  orden,
 }: {
   liquidaciones: LiquidacionesData;
   busqueda: string;
+  campo: string;
+  orden: OrdenPendientes;
 }) {
   const pendientes = useMemo(
     () =>
-      porAntiguedad(
+      ordenarPendientes(
         liquidaciones.pendientes.filter((f) =>
-          coincide(busqueda, [f.descripcion, f.direccion, f.tecnicoNombre])
-        )
+          coincideCampo(busqueda, campo, CAMPOS_LIQUIDACIONES, f)
+        ),
+        orden,
+        (f) => f.monto
       ),
-    [liquidaciones.pendientes, busqueda]
+    [liquidaciones.pendientes, busqueda, campo, orden]
   );
   const cerrados = useMemo(
     () =>
       liquidaciones.cerrados.filter((f) =>
-        coincide(busqueda, [f.descripcion, f.direccion, f.tecnicoNombre, f.medioLabel])
+        coincideCampo(busqueda, campo, CAMPOS_LIQUIDACIONES, f)
       ),
-    [liquidaciones.cerrados, busqueda]
+    [liquidaciones.cerrados, busqueda, campo]
   );
   const grupos = useMemo(() => agruparPorMes(cerrados), [cerrados]);
   const totalPend = sumar(pendientes, (f) => f.monto);
