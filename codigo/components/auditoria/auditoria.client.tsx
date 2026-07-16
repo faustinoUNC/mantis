@@ -19,7 +19,7 @@ import {
   type PaginaAuditoria,
   type PaginaSistema,
 } from "@/features/auditoria/types";
-import { NOMBRE_ROL } from "@/features/auth/types";
+import { NOMBRE_ROL, type Rol } from "@/features/auth/types";
 import {
   LABEL_EVENTO,
   detalleLegible,
@@ -44,6 +44,45 @@ function hora(f: string) {
 }
 
 type Tab = "gestiones" | "sistema";
+
+// STORY-980 v1.1: la lista plana de ~35 usuarios era inusable. Agrupada por
+// rol (optgroup nativo, staff primero) y sin el sufijo "— rol" en cada
+// opción: el grupo ya lo dice.
+const ORDEN_ROLES: Rol[] = [
+  "administrador",
+  "gestor_mantenimiento",
+  "gestor_administrativo",
+  "tecnico",
+];
+
+function SelectPersona({
+  actores,
+  value,
+  onChange,
+}: {
+  actores: ActorAuditoria[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const grupos = ORDEN_ROLES.map((rol) => ({
+    rol,
+    actores: actores.filter((a) => a.rol === rol),
+  })).filter((g) => g.actores.length > 0);
+  return (
+    <Select label="Persona" value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">Todas</option>
+      {grupos.map((g) => (
+        <optgroup key={g.rol} label={NOMBRE_ROL[g.rol]}>
+          {g.actores.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.nombre}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </Select>
+  );
+}
 
 // STORY-980: dos logs con columnas distintas no se mezclan en una tabla —
 // tab Gestiones (eventos_gestion, intacto) y tab Sistema (eventos_sistema:
@@ -166,18 +205,11 @@ function TabGestiones({
         extra={
           <>
             <div className="w-56">
-              <Select
-                label="Persona"
+              <SelectPersona
+                actores={actores}
                 value={actorId}
-                onChange={(e) => filtrar(setActorId)(e.target.value)}
-              >
-                <option value="">Todas</option>
-                {actores.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.nombre} — {NOMBRE_ROL[a.rol]}
-                  </option>
-                ))}
-              </Select>
+                onChange={filtrar(setActorId)}
+              />
             </div>
             <div className="w-56">
               <Select
@@ -326,6 +358,10 @@ function TabSistema({
   const [abiertoId, setAbiertoId] = useState<string | null>(null);
   const [pendiente, startTransition] = useTransition();
 
+  // v1.1: los técnicos nunca son actores acá — sus acciones logueadas las
+  // hace el staff, o el registro público (actor null). Afuera del filtro.
+  const actoresStaff = actores.filter((a) => a.rol !== "tecnico");
+
   const primera = useRef(true);
   const pedido = useRef(0);
   const cargar = useCallback(() => {
@@ -370,18 +406,11 @@ function TabSistema({
         extra={
           <>
             <div className="w-56">
-              <Select
-                label="Persona"
+              <SelectPersona
+                actores={actoresStaff}
                 value={actorId}
-                onChange={(e) => filtrar(setActorId)(e.target.value)}
-              >
-                <option value="">Todas</option>
-                {actores.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.nombre} — {NOMBRE_ROL[a.rol]}
-                  </option>
-                ))}
-              </Select>
+                onChange={filtrar(setActorId)}
+              />
             </div>
             <div className="w-56">
               <Select
