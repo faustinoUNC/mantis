@@ -55,7 +55,7 @@ const ORDEN_ROLES: Rol[] = [
   "tecnico",
 ];
 
-function SelectPersona({
+function SelectUsuario({
   actores,
   value,
   onChange,
@@ -69,8 +69,8 @@ function SelectPersona({
     actores: actores.filter((a) => a.rol === rol),
   })).filter((g) => g.actores.length > 0);
   return (
-    <Select label="Persona" value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">Todas</option>
+    <Select label="Usuario" value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">Todos</option>
       {grupos.map((g) => (
         <optgroup key={g.rol} label={NOMBRE_ROL[g.rol]}>
           {g.actores.map((a) => (
@@ -205,7 +205,7 @@ function TabGestiones({
         extra={
           <>
             <div className="w-56">
-              <SelectPersona
+              <SelectUsuario
                 actores={actores}
                 value={actorId}
                 onChange={filtrar(setActorId)}
@@ -406,7 +406,7 @@ function TabSistema({
         extra={
           <>
             <div className="w-56">
-              <SelectPersona
+              <SelectUsuario
                 actores={actoresStaff}
                 value={actorId}
                 onChange={filtrar(setActorId)}
