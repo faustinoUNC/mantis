@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Card } from "@/components/ui/card";
+import {
+  ComboFiltrable,
+  type GrupoOpciones,
+} from "@/components/ui/combo-filtrable.client";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { Icono } from "@/components/ui/iconos";
 import { Input } from "@/components/ui/input";
 import { Paginador } from "@/components/ui/paginador.client";
-import { Select } from "@/components/ui/select";
 import {
   LABEL_EVENTO_SISTEMA,
   detalleSistemaLegible,
@@ -45,9 +48,9 @@ function hora(f: string) {
 
 type Tab = "gestiones" | "sistema";
 
-// STORY-980 v1.1: la lista plana de ~35 usuarios era inusable. Agrupada por
-// rol (optgroup nativo, staff primero) y sin el sufijo "— rol" en cada
-// opción: el grupo ya lo dice.
+// STORY-980 v1.1: la lista plana de ~35 usuarios era inusable — agrupada por
+// rol, staff primero. v1.3: el select pasa a combo filtrable (se tipea y el
+// desplegable se achica), misma clasificación visual.
 const ORDEN_ROLES: Rol[] = [
   "administrador",
   "gestor_mantenimiento",
@@ -55,34 +58,51 @@ const ORDEN_ROLES: Rol[] = [
   "tecnico",
 ];
 
-function SelectUsuario({
-  actores,
-  value,
-  onChange,
-}: {
-  actores: ActorAuditoria[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const grupos = ORDEN_ROLES.map((rol) => ({
-    rol,
-    actores: actores.filter((a) => a.rol === rol),
-  })).filter((g) => g.actores.length > 0);
-  return (
-    <Select label="Usuario" value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">Todos</option>
-      {grupos.map((g) => (
-        <optgroup key={g.rol} label={NOMBRE_ROL[g.rol]}>
-          {g.actores.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nombre}
-            </option>
-          ))}
-        </optgroup>
-      ))}
-    </Select>
-  );
+function gruposDeActores(actores: ActorAuditoria[]): GrupoOpciones[] {
+  return ORDEN_ROLES.map((rol) => ({
+    label: NOMBRE_ROL[rol],
+    opciones: actores
+      .filter((a) => a.rol === rol)
+      .map((a) => ({ value: a.id, label: a.nombre })),
+  })).filter((g) => g.opciones.length > 0);
 }
+
+// Clasificación visual de los tipos, solo para ordenar el filtro. Un tipo
+// que no esté clasificado cae en "Otros": nunca desaparece del combo.
+function gruposDeTipos(
+  labels: Record<string, string>,
+  clasificacion: { label: string; tipos: string[] }[]
+): GrupoOpciones[] {
+  const clasificados = new Set(clasificacion.flatMap((c) => c.tipos));
+  const grupos = clasificacion.map((c) => ({
+    label: c.label,
+    opciones: c.tipos
+      .filter((t) => labels[t])
+      .map((t) => ({ value: t, label: labels[t] })),
+  }));
+  const otros = Object.keys(labels).filter((t) => !clasificados.has(t));
+  if (otros.length > 0) {
+    grupos.push({
+      label: "Otros",
+      opciones: otros.map((t) => ({ value: t, label: labels[t] })),
+    });
+  }
+  return grupos.filter((g) => g.opciones.length > 0);
+}
+
+const GRUPOS_TIPO_GESTION = gruposDeTipos(LABEL_EVENTO, [
+  { label: "Gestión", tipos: ["creada", "transicion", "gestor_reasignado", "archivada", "desarchivada"] },
+  { label: "Asignación", tipos: ["asignacion_solicitada", "asignacion_aceptada", "asignacion_rechazada", "asignacion_cancelada"] },
+  { label: "Presupuesto", tipos: ["presupuesto_enviado", "presupuesto_aprobado", "presupuesto_rechazado", "presupuesto_enviado_pagador"] },
+  { label: "Ejecución", tipos: ["tecnico_no_continua", "aviso_resuelto", "materiales_rendidos", "adelanto_materiales_registrado"] },
+  { label: "Conformidad", tipos: ["conformidad_aprobada", "conformidad_rechazada"] },
+  { label: "Cobro y liquidación", tipos: ["nota_cobro_enviada", "cobro_registrado", "liquidacion_registrada"] },
+]);
+
+const GRUPOS_TIPO_SISTEMA = gruposDeTipos(LABEL_EVENTO_SISTEMA, [
+  { label: "Empleados", tipos: ["empleado_creado", "rol_cambiado", "empleado_desactivado", "empleado_reactivado", "contrasena_blanqueada"] },
+  { label: "Técnicos", tipos: ["tecnico_postulado", "tecnico_alta_manual", "tecnico_aprobado", "tecnico_rechazado", "tecnico_inhabilitado", "tecnico_rehabilitado"] },
+]);
 
 // STORY-980: dos logs con columnas distintas no se mezclan en una tabla —
 // tab Gestiones (eventos_gestion, intacto) y tab Sistema (eventos_sistema:
@@ -205,25 +225,20 @@ function TabGestiones({
         extra={
           <>
             <div className="w-56">
-              <SelectUsuario
-                actores={actores}
+              <ComboFiltrable
+                label="Usuario"
+                grupos={gruposDeActores(actores)}
                 value={actorId}
                 onChange={filtrar(setActorId)}
               />
             </div>
             <div className="w-56">
-              <Select
+              <ComboFiltrable
                 label="Tipo de evento"
+                grupos={GRUPOS_TIPO_GESTION}
                 value={tipo}
-                onChange={(e) => filtrar(setTipo)(e.target.value)}
-              >
-                <option value="">Todos</option>
-                {Object.entries(LABEL_EVENTO).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </Select>
+                onChange={filtrar(setTipo)}
+              />
             </div>
             <div className="w-38">
               <Input
@@ -406,25 +421,20 @@ function TabSistema({
         extra={
           <>
             <div className="w-56">
-              <SelectUsuario
-                actores={actoresStaff}
+              <ComboFiltrable
+                label="Usuario"
+                grupos={gruposDeActores(actoresStaff)}
                 value={actorId}
                 onChange={filtrar(setActorId)}
               />
             </div>
             <div className="w-56">
-              <Select
+              <ComboFiltrable
                 label="Tipo de evento"
+                grupos={GRUPOS_TIPO_SISTEMA}
                 value={tipo}
-                onChange={(e) => filtrar(setTipo)(e.target.value)}
-              >
-                <option value="">Todos</option>
-                {Object.entries(LABEL_EVENTO_SISTEMA).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </Select>
+                onChange={filtrar(setTipo)}
+              />
             </div>
             <div className="w-38">
               <Input
