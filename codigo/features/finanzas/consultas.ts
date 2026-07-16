@@ -31,6 +31,22 @@ function medioCobroLabel(m1: string | null, m2: string | null): string {
   return `${l1} + ${l2}`;
 }
 
+// Compartido entre pendientes y cerrados: el pagador se busca igual en los
+// dos (permite filtrar cobros cerrados por quién pagó, no solo pendientes).
+function resolverPagador(
+  pagador: "inquilino" | "propietario" | null,
+  propiedades: { propietarios: { nombre: string } | null } | null,
+  legajos: { inquilinos: { nombre: string } | null } | null
+): { nombre: string; rotulo: string } {
+  if (pagador === "propietario") {
+    return { nombre: propiedades?.propietarios?.nombre ?? "—", rotulo: "Propietario" };
+  }
+  if (pagador === "inquilino") {
+    return { nombre: legajos?.inquilinos?.nombre ?? "—", rotulo: "Inquilino" };
+  }
+  return { nombre: "—", rotulo: "—" };
+}
+
 // ── COBROS ────────────────────────────────────────────────────────────────
 export async function listarCobros(): Promise<CobrosData> {
   if (!(await permitido())) return { pendientes: [], cerrados: [] };
@@ -80,15 +96,11 @@ export async function listarCobros(): Promise<CobrosData> {
       g.cargo_cancelacion != null
         ? Number(g.cargo_cancelacion)
         : Number(g.costo_final ?? 0) + Number(g.cargo_admin ?? 0);
-    let pagadorNombre = "—";
-    let pagadorRotulo = "—";
-    if (g.pagador === "propietario") {
-      pagadorNombre = g.propiedades?.propietarios?.nombre ?? "—";
-      pagadorRotulo = "Propietario";
-    } else if (g.pagador === "inquilino") {
-      pagadorNombre = g.legajos?.inquilinos?.nombre ?? "—";
-      pagadorRotulo = "Inquilino";
-    }
+    const { nombre: pagadorNombre, rotulo: pagadorRotulo } = resolverPagador(
+      g.pagador,
+      g.propiedades,
+      g.legajos
+    );
     const entro = entroPorId.get(g.id);
     return {
       id: g.id,
@@ -101,11 +113,12 @@ export async function listarCobros(): Promise<CobrosData> {
     };
   });
 
-  // Cerrados: ya cobrados (monto congelado en cobrado_monto).
+  // Cerrados: ya cobrados (monto congelado en cobrado_monto). Trae también
+  // el pagador — permite buscar un cobro cerrado por quién pagó.
   const { data: cerrRaw } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, cobrado_en, cobrado_monto, medio_cobro, medio_cobro_2, propiedades(direccion)"
+      "id, descripcion, pagador, cobrado_en, cobrado_monto, medio_cobro, medio_cobro_2, propiedades(direccion, propietarios(nombre)), legajos(inquilinos(nombre))"
     )
     .not("cobrado_en", "is", null)
     .order("cobrado_en", { ascending: false });
@@ -113,20 +126,34 @@ export async function listarCobros(): Promise<CobrosData> {
   type CerrFila = {
     id: string;
     descripcion: string;
+    pagador: "inquilino" | "propietario" | null;
     cobrado_en: string;
     cobrado_monto: number | null;
     medio_cobro: string | null;
     medio_cobro_2: string | null;
-    propiedades: { direccion: string } | null;
+    propiedades: {
+      direccion: string;
+      propietarios: { nombre: string } | null;
+    } | null;
+    legajos: { inquilinos: { nombre: string } | null } | null;
   };
-  const cerrados = ((cerrRaw ?? []) as unknown as CerrFila[]).map((g) => ({
-    id: g.id,
-    descripcion: g.descripcion,
-    direccion: g.propiedades?.direccion ?? "—",
-    monto: Number(g.cobrado_monto ?? 0),
-    medioLabel: medioCobroLabel(g.medio_cobro, g.medio_cobro_2),
-    fecha: g.cobrado_en,
-  }));
+  const cerrados = ((cerrRaw ?? []) as unknown as CerrFila[]).map((g) => {
+    const { nombre: pagadorNombre, rotulo: pagadorRotulo } = resolverPagador(
+      g.pagador,
+      g.propiedades,
+      g.legajos
+    );
+    return {
+      id: g.id,
+      descripcion: g.descripcion,
+      direccion: g.propiedades?.direccion ?? "—",
+      pagadorNombre,
+      pagadorRotulo,
+      monto: Number(g.cobrado_monto ?? 0),
+      medioLabel: medioCobroLabel(g.medio_cobro, g.medio_cobro_2),
+      fecha: g.cobrado_en,
+    };
+  });
 
   return { pendientes, cerrados };
 }

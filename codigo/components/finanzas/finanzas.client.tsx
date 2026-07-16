@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import {
   DIAS_ALERTA,
   antiguedadLegible,
   claveMes,
+  coincide,
   mesLabel,
   pesos,
   type CobrosData,
@@ -54,6 +56,7 @@ export function Finanzas({
   liquidaciones: LiquidacionesData;
 }) {
   const [tab, setTab] = useState<Tab>("cobros");
+  const [busqueda, setBusqueda] = useState("");
   const TABS: { id: Tab; label: string }[] = [
     { id: "cobros", label: "Cobros" },
     { id: "liquidaciones", label: "Liquidaciones" },
@@ -88,11 +91,21 @@ export function Finanzas({
         ))}
       </div>
 
+      <FiltrosLista
+        consulta={busqueda}
+        onConsulta={setBusqueda}
+        placeholder={
+          tab === "cobros"
+            ? "Gestión, dirección o pagador…"
+            : "Gestión, dirección o técnico…"
+        }
+      />
+
       <div className={tab === "cobros" ? "" : "hidden"}>
-        <TabCobros cobros={cobros} />
+        <TabCobros cobros={cobros} busqueda={busqueda} />
       </div>
       <div className={tab === "liquidaciones" ? "" : "hidden"}>
-        <TabLiquidaciones liquidaciones={liquidaciones} />
+        <TabLiquidaciones liquidaciones={liquidaciones} busqueda={busqueda} />
       </div>
     </div>
   );
@@ -167,22 +180,55 @@ function Vacio({ texto }: { texto: string }) {
 }
 
 // ── Pestaña COBROS ────────────────────────────────────────────────────────
-function TabCobros({ cobros }: { cobros: CobrosData }) {
-  const grupos = agruparPorMes(cobros.cerrados);
-  const totalPend = sumar(cobros.pendientes, (f) => f.total);
+function TabCobros({
+  cobros,
+  busqueda,
+}: {
+  cobros: CobrosData;
+  busqueda: string;
+}) {
+  const pendientes = useMemo(
+    () =>
+      cobros.pendientes.filter((f) =>
+        coincide(busqueda, [f.descripcion, f.direccion, f.pagadorNombre, f.pagadorRotulo])
+      ),
+    [cobros.pendientes, busqueda]
+  );
+  const cerrados = useMemo(
+    () =>
+      cobros.cerrados.filter((f) =>
+        coincide(busqueda, [
+          f.descripcion,
+          f.direccion,
+          f.pagadorNombre,
+          f.pagadorRotulo,
+          f.medioLabel,
+        ])
+      ),
+    [cobros.cerrados, busqueda]
+  );
+  const grupos = agruparPorMes(cerrados);
+  const totalPend = sumar(pendientes, (f) => f.total);
+  const hayBusqueda = busqueda.trim() !== "";
 
   return (
     <>
       <EncabezadoGrupo
         titulo="Por cobrar"
-        cantidad={cobros.pendientes.length}
+        cantidad={pendientes.length}
         total={totalPend}
       />
       <Card>
-        {cobros.pendientes.length === 0 ? (
-          <Vacio texto="No hay cobros pendientes." />
+        {pendientes.length === 0 ? (
+          <Vacio
+            texto={
+              hayBusqueda
+                ? "Ningún cobro pendiente coincide con la búsqueda."
+                : "No hay cobros pendientes."
+            }
+          />
         ) : (
-          cobros.pendientes.map((f) => (
+          pendientes.map((f) => (
             <FilaGestion
               key={f.id}
               id={f.id}
@@ -200,7 +246,13 @@ function TabCobros({ cobros }: { cobros: CobrosData }) {
         <>
           <EncabezadoGrupo titulo="Cobrados" cantidad={0} total={0} />
           <Card>
-            <Vacio texto="Todavía no hay cobros registrados." />
+            <Vacio
+              texto={
+                hayBusqueda
+                  ? "Ningún cobro cerrado coincide con la búsqueda."
+                  : "Todavía no hay cobros registrados."
+              }
+            />
           </Card>
         </>
       ) : (
@@ -217,7 +269,7 @@ function TabCobros({ cobros }: { cobros: CobrosData }) {
                   key={f.id}
                   id={f.id}
                   titulo={f.descripcion}
-                  subtitulo={f.direccion}
+                  subtitulo={`${f.direccion} · ${f.pagadorRotulo}: ${f.pagadorNombre}`}
                   monto={f.monto}
                   meta={f.medioLabel}
                 />
@@ -233,24 +285,47 @@ function TabCobros({ cobros }: { cobros: CobrosData }) {
 // ── Pestaña LIQUIDACIONES ─────────────────────────────────────────────────
 function TabLiquidaciones({
   liquidaciones,
+  busqueda,
 }: {
   liquidaciones: LiquidacionesData;
+  busqueda: string;
 }) {
-  const grupos = agruparPorMes(liquidaciones.cerrados);
-  const totalPend = sumar(liquidaciones.pendientes, (f) => f.monto);
+  const pendientes = useMemo(
+    () =>
+      liquidaciones.pendientes.filter((f) =>
+        coincide(busqueda, [f.descripcion, f.direccion, f.tecnicoNombre])
+      ),
+    [liquidaciones.pendientes, busqueda]
+  );
+  const cerrados = useMemo(
+    () =>
+      liquidaciones.cerrados.filter((f) =>
+        coincide(busqueda, [f.descripcion, f.direccion, f.tecnicoNombre, f.medioLabel])
+      ),
+    [liquidaciones.cerrados, busqueda]
+  );
+  const grupos = agruparPorMes(cerrados);
+  const totalPend = sumar(pendientes, (f) => f.monto);
+  const hayBusqueda = busqueda.trim() !== "";
 
   return (
     <>
       <EncabezadoGrupo
         titulo="Por liquidar"
-        cantidad={liquidaciones.pendientes.length}
+        cantidad={pendientes.length}
         total={totalPend}
       />
       <Card>
-        {liquidaciones.pendientes.length === 0 ? (
-          <Vacio texto="No hay liquidaciones pendientes." />
+        {pendientes.length === 0 ? (
+          <Vacio
+            texto={
+              hayBusqueda
+                ? "Ninguna liquidación pendiente coincide con la búsqueda."
+                : "No hay liquidaciones pendientes."
+            }
+          />
         ) : (
-          liquidaciones.pendientes.map((f) => (
+          pendientes.map((f) => (
             <FilaGestion
               key={f.id}
               id={f.id}
@@ -268,7 +343,13 @@ function TabLiquidaciones({
         <>
           <EncabezadoGrupo titulo="Liquidadas" cantidad={0} total={0} />
           <Card>
-            <Vacio texto="Todavía no hay liquidaciones registradas." />
+            <Vacio
+              texto={
+                hayBusqueda
+                  ? "Ninguna liquidación cerrada coincide con la búsqueda."
+                  : "Todavía no hay liquidaciones registradas."
+              }
+            />
           </Card>
         </>
       ) : (
