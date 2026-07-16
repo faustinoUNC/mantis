@@ -236,53 +236,6 @@ function EncabezadoGrupo({
   );
 }
 
-// ── Grupo de mes colapsable ────────────────────────────────────────────────
-function GrupoMes({
-  titulo,
-  cantidad,
-  total,
-  abierto,
-  forzado,
-  onToggle,
-  children,
-}: {
-  titulo: string;
-  cantidad: number;
-  total: number;
-  abierto: boolean;
-  forzado: boolean; // búsqueda activa: queda abierto (los resultados no se esconden)
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={forzado ? undefined : onToggle}
-        className={`w-full flex items-baseline justify-between gap-4 mb-2 mt-6 group ${
-          forzado ? "cursor-default" : ""
-        }`}
-      >
-        <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-          {!forzado && (
-            <span
-              className={`text-muted transition-transform ${abierto ? "rotate-90" : ""}`}
-            >
-              <Icono id="chevron" size={14} />
-            </span>
-          )}
-          {titulo}{" "}
-          <span className="text-muted font-normal">
-            · {cantidad} {cantidad === 1 ? "gestión" : "gestiones"}
-          </span>
-        </h2>
-        <span className="text-sm font-semibold tabular-nums">{pesos(total)}</span>
-      </button>
-      {abierto && <Grilla>{children}</Grilla>}
-    </div>
-  );
-}
-
 // ── Tarjetas (v1.2: cada gestión es un objeto visual, no una fila) ────────
 function Grilla({ children }: { children: React.ReactNode }) {
   return (
@@ -354,36 +307,96 @@ function Vacio({ texto }: { texto: string }) {
   );
 }
 
-// Grupos de meses colapsables: solo el más reciente arranca abierto; con
-// búsqueda activa se muestran todos abiertos (forzados).
-function GruposCerrados<T extends { fecha: string; monto: number; id: string }>({
+// ── Histórico mensual: UN mes por vez (v1.4) ──────────────────────────────
+// El histórico crece para siempre; en pantalla hay siempre un solo mes, con
+// flechas para el mes vecino y un selector para saltar lejos — la vista no
+// se alarga aunque el sistema se use años. Solo se listan meses con
+// movimientos. Con búsqueda activa se muestran todos los meses con
+// coincidencias (el largo lo acota la búsqueda, no el tiempo).
+function HistorialMensual<T extends { fecha: string; monto: number; id: string }>({
+  titulo,
   grupos,
   hayBusqueda,
   tarjeta,
 }: {
+  titulo: string;
   grupos: Grupo<T>[];
   hayBusqueda: boolean;
   tarjeta: (f: T) => React.ReactNode;
 }) {
-  const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
+  const [idx, setIdx] = useState(0); // 0 = mes más reciente
+  if (hayBusqueda) {
+    return (
+      <>
+        {grupos.map((g) => (
+          <div key={g.clave}>
+            <EncabezadoGrupo
+              titulo={g.label}
+              cantidad={g.filas.length}
+              total={g.total}
+            />
+            <Grilla>{g.filas.map(tarjeta)}</Grilla>
+          </div>
+        ))}
+      </>
+    );
+  }
+
+  const i = Math.min(idx, grupos.length - 1);
+  const g = grupos[i];
+  const botonMes =
+    "p-1.5 rounded-md border border-border bg-surface text-muted hover:text-foreground hover:border-border-strong disabled:opacity-40 transition-colors";
   return (
-    <>
-      {grupos.map((g, i) => (
-        <GrupoMes
-          key={g.clave}
-          titulo={g.label}
-          cantidad={g.filas.length}
-          total={g.total}
-          abierto={hayBusqueda || (abiertos[g.clave] ?? i === 0)}
-          forzado={hayBusqueda}
-          onToggle={() =>
-            setAbiertos((s) => ({ ...s, [g.clave]: !(s[g.clave] ?? i === 0) }))
-          }
-        >
-          {g.filas.map(tarjeta)}
-        </GrupoMes>
-      ))}
-    </>
+    <div className="mt-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-sm font-semibold">{titulo}</h2>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              className={botonMes}
+              disabled={i >= grupos.length - 1}
+              onClick={() => setIdx(i + 1)}
+              aria-label="Mes anterior"
+            >
+              <span className="block rotate-180">
+                <Icono id="chevron" size={14} />
+              </span>
+            </button>
+            <select
+              value={g.clave}
+              onChange={(e) =>
+                setIdx(grupos.findIndex((x) => x.clave === e.target.value))
+              }
+              className="text-sm font-medium bg-surface border border-border rounded-md px-2 py-1.5"
+              aria-label="Elegir mes"
+            >
+              {grupos.map((x) => (
+                <option key={x.clave} value={x.clave}>
+                  {x.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={botonMes}
+              disabled={i <= 0}
+              onClick={() => setIdx(i - 1)}
+              aria-label="Mes siguiente"
+            >
+              <Icono id="chevron" size={14} />
+            </button>
+          </div>
+        </div>
+        <span className="text-sm">
+          <span className="text-muted">
+            {g.filas.length} {g.filas.length === 1 ? "gestión" : "gestiones"} ·{" "}
+          </span>
+          <span className="font-semibold tabular-nums">{pesos(g.total)}</span>
+        </span>
+      </div>
+      <Grilla>{g.filas.map(tarjeta)}</Grilla>
+    </div>
   );
 }
 
@@ -473,7 +486,8 @@ function TabCobros({
           />
         </>
       ) : (
-        <GruposCerrados
+        <HistorialMensual
+          titulo="Cobrados"
           grupos={grupos}
           hayBusqueda={hayBusqueda}
           tarjeta={(f) => (
@@ -565,7 +579,8 @@ function TabLiquidaciones({
           />
         </>
       ) : (
-        <GruposCerrados
+        <HistorialMensual
+          titulo="Liquidadas"
           grupos={grupos}
           hayBusqueda={hayBusqueda}
           tarjeta={(f) => (

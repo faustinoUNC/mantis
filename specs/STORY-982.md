@@ -1,6 +1,6 @@
 # STORY-982 — Finanzas gráfico y de un vistazo (rediseño UX del módulo)
 
-**Versión:** 1.3.0 · **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
+**Versión:** 1.4.0 · **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-16) sobre el módulo Finanzas que introdujo Giuliano (`6f2a863` + buscador `869417f`): "actualmente son listas eternas, no son intuitivas, son súper extensas — veamos si podemos hacerlo de una manera más gráfica, más funcional, más simple, de mejor calidad visual".
 
 ## Diagnóstico
 
@@ -65,6 +65,14 @@ Reporte: "no me coinciden el total a cobrar ni el total a liquidar de Finanzas c
 2. **"A técnicos" no era "por liquidar"**: esa leyenda es la composición de lo POR COBRAR (gestiones en etapa de cobro, $5.318.000); el "Por liquidar" de Finanzas ($4.318.010) son OTRAS gestiones (ya cobradas, en etapa de liquidación) con los adelantos de materiales restados (STORY-977). Son platas distintas y no deben coincidir. **Fix de claridad:** la leyenda pasa de "A técnicos" a **"Trabajo del técnico"** (mismo rótulo que el gráfico de ingresos), para que no se lea como la liquidación pendiente. El Inicio no muestra ningún "$ por liquidar"; esa foto vive en Finanzas.
 3. Typo preexistente corregido en la misma card: "14 gestiónes" → "14 gestiones".
 4. La variable interna `liquidar` de `pendiente` (calculada y nunca renderizada desde STORY-920) se elimina.
+
+## v1.4 — Histórico: un mes por vez (pedido de Fausti, 2026-07-16)
+
+Feedback sobre los meses colapsables de v1.2: "sigue sin convencerme… hay que buscar otra forma más visual y pensada para que crezca y no sea algo eterno" — aun colapsados, la pila de encabezados crece sin techo (5 años ≈ 60 renglones).
+
+- **`HistorialMensual` reemplaza a los colapsables**: en pantalla hay siempre **UN solo mes** — flechas ‹ › para el mes vecino y un `<select>` de meses (solo los que tienen movimientos) para saltar lejos. La vista mide lo mismo con 6 meses que con 6 años de uso.
+- Encabezado del mes: título de sección ("Cobrados"/"Liquidadas") + navegación + `n gestiones · $ total` a la derecha. Default: el mes más reciente con datos.
+- **Con búsqueda activa** la navegación desaparece y se listan todos los meses con coincidencias (encabezado por mes + grilla): el largo lo acota la búsqueda, no el tiempo. Al limpiar la búsqueda se vuelve al mes que estaba elegido.
 
 ## Criterios de aceptación
 
