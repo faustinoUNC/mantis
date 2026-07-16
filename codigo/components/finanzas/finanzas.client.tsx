@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Card } from "@/components/ui/card";
+import { Icono } from "@/components/ui/iconos";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import {
   DIAS_ALERTA,
@@ -15,18 +25,31 @@ import {
   type LiquidacionesData,
 } from "@/features/finanzas/consultas-types";
 
+// STORY-982 — Finanzas gráfico y de un vistazo: stat cards de resumen,
+// gráfico de barras mensual por tab (patrón Informes) y meses cerrados
+// colapsables (solo el más reciente abierto). El server layer no cambia.
+
 type Tab = "cobros" | "liquidaciones";
+
+// Colores del contract (mismos hex que panel-metricas).
+const BRAND = "#059669";
+const GRID = "#e4e4e7";
+const INK_MUTED = "#71717a";
+const MESES_CORTO = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const MAX_MESES_GRAFICO = 12;
 
 // Suma de un campo numérico de una lista de filas.
 function sumar<T>(filas: T[], campo: (f: T) => number): number {
   return filas.reduce((acc, f) => acc + campo(f), 0);
 }
 
+type Grupo<T> = { clave: string; label: string; total: number; filas: T[] };
+
 // Agrupa filas cerradas por mes (clave AAAA-MM), preservando el orden de
 // entrada (ya vienen del server ordenadas por fecha desc = mes reciente 1º).
 function agruparPorMes<T extends { fecha: string; monto: number }>(
   filas: T[]
-): { clave: string; label: string; total: number; filas: T[] }[] {
+): Grupo<T>[] {
   const orden: string[] = [];
   const mapa = new Map<string, T[]>();
   for (const f of filas) {
@@ -48,6 +71,29 @@ function agruparPorMes<T extends { fecha: string; monto: number }>(
   });
 }
 
+// Meses continuos entre dos claves AAAA-MM (inclusive) — los meses sin
+// movimiento aparecen en $0, que acá es un cero real (ya había sistema).
+function rangoMeses(desde: string, hasta: string): string[] {
+  let [y, m] = desde.split("-").map(Number);
+  const [y2, m2] = hasta.split("-").map(Number);
+  const out: string[] = [];
+  let guarda = 0;
+  while ((y < y2 || (y === y2 && m <= m2)) && guarda++ < 120) {
+    out.push(`${y}-${String(m).padStart(2, "0")}`);
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return out;
+}
+
+function mesCorto(clave: string): string {
+  const [y, m] = clave.split("-");
+  return `${MESES_CORTO[Number(m) - 1]} ${y.slice(2)}`;
+}
+
 export function Finanzas({
   cobros,
   liquidaciones,
@@ -57,10 +103,38 @@ export function Finanzas({
 }) {
   const [tab, setTab] = useState<Tab>("cobros");
   const [busqueda, setBusqueda] = useState("");
+  // Congelado al montar: define el "mes en curso" de las cards y el techo del
+  // gráfico (mismo criterio que panel-metricas con Date.now()).
+  const [ahoraIso] = useState(() => new Date().toISOString());
+  const mesActual = claveMes(ahoraIso);
+  const nombreMes = mesLabel(ahoraIso).split(" ")[0].toLowerCase();
+
   const TABS: { id: Tab; label: string }[] = [
     { id: "cobros", label: "Cobros" },
     { id: "liquidaciones", label: "Liquidaciones" },
   ];
+
+  // ── Resumen (la foto de hoy — no lo afecta la búsqueda) ──
+  const resumen = useMemo(() => {
+    const cobradoMes = cobros.cerrados.filter((f) => claveMes(f.fecha) === mesActual);
+    const liquidadoMes = liquidaciones.cerrados.filter((f) => claveMes(f.fecha) === mesActual);
+    return {
+      porCobrar: sumar(cobros.pendientes, (f) => f.total),
+      nCobrar: cobros.pendientes.length,
+      cobrarDemoradas: cobros.pendientes.filter(
+        (f) => f.diasPendiente != null && f.diasPendiente >= DIAS_ALERTA
+      ).length,
+      porLiquidar: sumar(liquidaciones.pendientes, (f) => f.monto),
+      nLiquidar: liquidaciones.pendientes.length,
+      liquidarDemoradas: liquidaciones.pendientes.filter(
+        (f) => f.diasPendiente != null && f.diasPendiente >= DIAS_ALERTA
+      ).length,
+      cobradoMes: sumar(cobradoMes, (f) => f.monto),
+      nCobradoMes: cobradoMes.length,
+      liquidadoMes: sumar(liquidadoMes, (f) => f.monto),
+      nLiquidadoMes: liquidadoMes.length,
+    };
+  }, [cobros, liquidaciones, mesActual]);
 
   return (
     <div className="animate-aparecer">
@@ -72,6 +146,36 @@ export function Finanzas({
         La plata pendiente y la cerrada, en un solo lugar. Tocá una fila para ir
         a la gestión.
       </p>
+
+      {/* Resumen de un vistazo — tocar una card lleva a su pestaña */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <StatCard
+          label="Por cobrar"
+          monto={resumen.porCobrar}
+          cantidad={resumen.nCobrar}
+          demoradas={resumen.cobrarDemoradas}
+          onClick={() => setTab("cobros")}
+        />
+        <StatCard
+          label="Por liquidar"
+          monto={resumen.porLiquidar}
+          cantidad={resumen.nLiquidar}
+          demoradas={resumen.liquidarDemoradas}
+          onClick={() => setTab("liquidaciones")}
+        />
+        <StatCard
+          label={`Cobrado en ${nombreMes}`}
+          monto={resumen.cobradoMes}
+          cantidad={resumen.nCobradoMes}
+          onClick={() => setTab("cobros")}
+        />
+        <StatCard
+          label={`Liquidado en ${nombreMes}`}
+          monto={resumen.liquidadoMes}
+          cantidad={resumen.nLiquidadoMes}
+          onClick={() => setTab("liquidaciones")}
+        />
+      </div>
 
       {/* Segmentado idéntico al de Auditoría */}
       <div className="flex rounded-md border border-border overflow-hidden w-fit mb-4">
@@ -102,12 +206,51 @@ export function Finanzas({
       />
 
       <div className={tab === "cobros" ? "" : "hidden"}>
-        <TabCobros cobros={cobros} busqueda={busqueda} />
+        <TabCobros cobros={cobros} busqueda={busqueda} mesActual={mesActual} />
       </div>
       <div className={tab === "liquidaciones" ? "" : "hidden"}>
-        <TabLiquidaciones liquidaciones={liquidaciones} busqueda={busqueda} />
+        <TabLiquidaciones
+          liquidaciones={liquidaciones}
+          busqueda={busqueda}
+          mesActual={mesActual}
+        />
       </div>
     </div>
+  );
+}
+
+// ── Card de resumen ────────────────────────────────────────────────────────
+function StatCard({
+  label,
+  monto,
+  cantidad,
+  demoradas = 0,
+  onClick,
+}: {
+  label: string;
+  monto: number;
+  cantidad: number;
+  demoradas?: number;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" onClick={onClick} className="text-left">
+      <Card className="p-4 h-full transition-colors hover:border-brand">
+        <p className="text-[12px] font-medium text-muted">{label}</p>
+        <p className="text-xl font-semibold tabular-nums tracking-tight mt-1">
+          {pesos(monto)}
+        </p>
+        <p className="text-[12px] text-muted mt-0.5">
+          {cantidad} {cantidad === 1 ? "gestión" : "gestiones"}
+          {demoradas > 0 && (
+            <span className="text-urgente font-medium">
+              {" "}
+              · {demoradas} {demoradas === 1 ? "demorada" : "demoradas"}
+            </span>
+          )}
+        </p>
+      </Card>
+    </button>
   );
 }
 
@@ -130,6 +273,126 @@ function EncabezadoGrupo({
         </span>
       </h2>
       <span className="text-sm font-semibold tabular-nums">{pesos(total)}</span>
+    </div>
+  );
+}
+
+// ── Gráfico de barras mensual (patrón Informes) ───────────────────────────
+// Se calcula sobre las filas YA filtradas por la búsqueda: buscar un técnico
+// en Liquidaciones muestra cuánto se le liquidó por mes. Con menos de dos
+// meses con datos no se dibuja (una barra sola no es una serie).
+function GraficoMensual<T extends { fecha: string; monto: number }>({
+  titulo,
+  grupos,
+  mesActual,
+}: {
+  titulo: string;
+  grupos: Grupo<T>[];
+  mesActual: string;
+}) {
+  const data = useMemo(() => {
+    if (grupos.length < 2) return [];
+    const porClave = new Map(grupos.map((g) => [g.clave, g]));
+    const desde = grupos[grupos.length - 1].clave;
+    return rangoMeses(desde, mesActual)
+      .slice(-MAX_MESES_GRAFICO)
+      .map((k) => ({
+        label: mesCorto(k),
+        total: porClave.get(k)?.total ?? 0,
+        n: porClave.get(k)?.filas.length ?? 0,
+      }));
+  }, [grupos, mesActual]);
+  if (data.length === 0) return null;
+
+  return (
+    <Card className="p-4 mt-6">
+      <h2 className="text-sm font-semibold mb-3">{titulo}</h2>
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={data} margin={{ left: 8, right: 8 }}>
+          <CartesianGrid stroke={GRID} vertical={false} />
+          <XAxis
+            dataKey="label"
+            tick={{ fontSize: 11, fill: INK_MUTED }}
+            tickLine={false}
+            axisLine={{ stroke: GRID }}
+          />
+          <YAxis
+            tick={{ fontSize: 11, fill: INK_MUTED }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: number) =>
+              Math.abs(v) >= 1_000_000
+                ? `${Math.round(v / 100000) / 10}M`
+                : Math.abs(v) >= 1000
+                  ? `${Math.round(v / 1000)}k`
+                  : String(v)
+            }
+          />
+          <Tooltip
+            cursor={{ fill: "rgba(24,24,27,0.04)" }}
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.length) return null;
+              const p = payload[0].payload as { total: number; n: number };
+              return (
+                <div className="bg-surface border border-border rounded-md shadow-overlay px-3 py-2 text-sm">
+                  <p className="font-medium mb-0.5">{label}</p>
+                  <p className="text-muted">
+                    {pesos(p.total)} · {p.n} {p.n === 1 ? "gestión" : "gestiones"}
+                  </p>
+                </div>
+              );
+            }}
+          />
+          <Bar dataKey="total" fill={BRAND} radius={[3, 3, 0, 0]} maxBarSize={40} />
+        </BarChart>
+      </ResponsiveContainer>
+    </Card>
+  );
+}
+
+// ── Grupo de mes colapsable ────────────────────────────────────────────────
+function GrupoMes({
+  titulo,
+  cantidad,
+  total,
+  abierto,
+  forzado,
+  onToggle,
+  children,
+}: {
+  titulo: string;
+  cantidad: number;
+  total: number;
+  abierto: boolean;
+  forzado: boolean; // búsqueda activa: queda abierto (los resultados no se esconden)
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={forzado ? undefined : onToggle}
+        className={`w-full flex items-baseline justify-between gap-4 mb-2 mt-6 group ${
+          forzado ? "cursor-default" : ""
+        }`}
+      >
+        <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          {!forzado && (
+            <span
+              className={`text-muted transition-transform ${abierto ? "rotate-90" : ""}`}
+            >
+              <Icono id="chevron" size={14} />
+            </span>
+          )}
+          {titulo}{" "}
+          <span className="text-muted font-normal">
+            · {cantidad} {cantidad === 1 ? "gestión" : "gestiones"}
+          </span>
+        </h2>
+        <span className="text-sm font-semibold tabular-nums">{pesos(total)}</span>
+      </button>
+      {abierto && <Card>{children}</Card>}
     </div>
   );
 }
@@ -179,18 +442,63 @@ function Vacio({ texto }: { texto: string }) {
   return <p className="text-sm text-muted px-4 py-6 text-center">{texto}</p>;
 }
 
+// Grupos de meses colapsables: solo el más reciente arranca abierto; con
+// búsqueda activa se muestran todos abiertos (forzados).
+function GruposCerrados<T extends { fecha: string; monto: number; id: string }>({
+  grupos,
+  hayBusqueda,
+  fila,
+}: {
+  grupos: Grupo<T>[];
+  hayBusqueda: boolean;
+  fila: (f: T) => React.ReactNode;
+}) {
+  const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
+  return (
+    <>
+      {grupos.map((g, i) => (
+        <GrupoMes
+          key={g.clave}
+          titulo={g.label}
+          cantidad={g.filas.length}
+          total={g.total}
+          abierto={hayBusqueda || (abiertos[g.clave] ?? i === 0)}
+          forzado={hayBusqueda}
+          onToggle={() =>
+            setAbiertos((s) => ({ ...s, [g.clave]: !(s[g.clave] ?? i === 0) }))
+          }
+        >
+          {g.filas.map(fila)}
+        </GrupoMes>
+      ))}
+    </>
+  );
+}
+
+// Pendientes: la más vieja primero (qué cobrar/liquidar primero — mismo
+// criterio que Informes).
+function porAntiguedad<T extends { diasPendiente: number | null }>(filas: T[]): T[] {
+  return [...filas].sort(
+    (a, b) => (b.diasPendiente ?? -1) - (a.diasPendiente ?? -1)
+  );
+}
+
 // ── Pestaña COBROS ────────────────────────────────────────────────────────
 function TabCobros({
   cobros,
   busqueda,
+  mesActual,
 }: {
   cobros: CobrosData;
   busqueda: string;
+  mesActual: string;
 }) {
   const pendientes = useMemo(
     () =>
-      cobros.pendientes.filter((f) =>
-        coincide(busqueda, [f.descripcion, f.direccion, f.pagadorNombre, f.pagadorRotulo])
+      porAntiguedad(
+        cobros.pendientes.filter((f) =>
+          coincide(busqueda, [f.descripcion, f.direccion, f.pagadorNombre, f.pagadorRotulo])
+        )
       ),
     [cobros.pendientes, busqueda]
   );
@@ -207,7 +515,7 @@ function TabCobros({
       ),
     [cobros.cerrados, busqueda]
   );
-  const grupos = agruparPorMes(cerrados);
+  const grupos = useMemo(() => agruparPorMes(cerrados), [cerrados]);
   const totalPend = sumar(pendientes, (f) => f.total);
   const hayBusqueda = busqueda.trim() !== "";
 
@@ -242,6 +550,8 @@ function TabCobros({
         )}
       </Card>
 
+      <GraficoMensual titulo="Cobrado por mes" grupos={grupos} mesActual={mesActual} />
+
       {grupos.length === 0 ? (
         <>
           <EncabezadoGrupo titulo="Cobrados" cantidad={0} total={0} />
@@ -256,27 +566,20 @@ function TabCobros({
           </Card>
         </>
       ) : (
-        grupos.map((g) => (
-          <div key={g.clave}>
-            <EncabezadoGrupo
-              titulo={`Cobrados · ${g.label}`}
-              cantidad={g.filas.length}
-              total={g.total}
+        <GruposCerrados
+          grupos={grupos}
+          hayBusqueda={hayBusqueda}
+          fila={(f) => (
+            <FilaGestion
+              key={f.id}
+              id={f.id}
+              titulo={f.descripcion}
+              subtitulo={`${f.direccion} · ${f.pagadorRotulo}: ${f.pagadorNombre}`}
+              monto={f.monto}
+              meta={f.medioLabel}
             />
-            <Card>
-              {g.filas.map((f) => (
-                <FilaGestion
-                  key={f.id}
-                  id={f.id}
-                  titulo={f.descripcion}
-                  subtitulo={`${f.direccion} · ${f.pagadorRotulo}: ${f.pagadorNombre}`}
-                  monto={f.monto}
-                  meta={f.medioLabel}
-                />
-              ))}
-            </Card>
-          </div>
-        ))
+          )}
+        />
       )}
     </>
   );
@@ -286,14 +589,18 @@ function TabCobros({
 function TabLiquidaciones({
   liquidaciones,
   busqueda,
+  mesActual,
 }: {
   liquidaciones: LiquidacionesData;
   busqueda: string;
+  mesActual: string;
 }) {
   const pendientes = useMemo(
     () =>
-      liquidaciones.pendientes.filter((f) =>
-        coincide(busqueda, [f.descripcion, f.direccion, f.tecnicoNombre])
+      porAntiguedad(
+        liquidaciones.pendientes.filter((f) =>
+          coincide(busqueda, [f.descripcion, f.direccion, f.tecnicoNombre])
+        )
       ),
     [liquidaciones.pendientes, busqueda]
   );
@@ -304,7 +611,7 @@ function TabLiquidaciones({
       ),
     [liquidaciones.cerrados, busqueda]
   );
-  const grupos = agruparPorMes(cerrados);
+  const grupos = useMemo(() => agruparPorMes(cerrados), [cerrados]);
   const totalPend = sumar(pendientes, (f) => f.monto);
   const hayBusqueda = busqueda.trim() !== "";
 
@@ -339,6 +646,12 @@ function TabLiquidaciones({
         )}
       </Card>
 
+      <GraficoMensual
+        titulo="Liquidado por mes"
+        grupos={grupos}
+        mesActual={mesActual}
+      />
+
       {grupos.length === 0 ? (
         <>
           <EncabezadoGrupo titulo="Liquidadas" cantidad={0} total={0} />
@@ -353,27 +666,20 @@ function TabLiquidaciones({
           </Card>
         </>
       ) : (
-        grupos.map((g) => (
-          <div key={g.clave}>
-            <EncabezadoGrupo
-              titulo={`Liquidadas · ${g.label}`}
-              cantidad={g.filas.length}
-              total={g.total}
+        <GruposCerrados
+          grupos={grupos}
+          hayBusqueda={hayBusqueda}
+          fila={(f) => (
+            <FilaGestion
+              key={f.id}
+              id={f.id}
+              titulo={f.descripcion}
+              subtitulo={`${f.direccion} · Técnico: ${f.tecnicoNombre}`}
+              monto={f.monto}
+              meta={f.medioLabel}
             />
-            <Card>
-              {g.filas.map((f) => (
-                <FilaGestion
-                  key={f.id}
-                  id={f.id}
-                  titulo={f.descripcion}
-                  subtitulo={`${f.direccion} · Técnico: ${f.tecnicoNombre}`}
-                  monto={f.monto}
-                  meta={f.medioLabel}
-                />
-              ))}
-            </Card>
-          </div>
-        ))
+          )}
+        />
       )}
     </>
   );
