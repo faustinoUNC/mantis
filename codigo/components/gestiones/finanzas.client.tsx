@@ -410,9 +410,6 @@ export function FinanzasAcciones({
     const sobrante = Math.max(adelanto - base, 0);
     return (
       <div className="flex flex-col gap-4">
-        <div className="border-b border-border pb-4">
-          <AdelantoMateriales gestion={gestion} />
-        </div>
         <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
           {rendido != null && (
             <>

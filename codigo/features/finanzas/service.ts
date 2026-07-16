@@ -5,7 +5,7 @@ import { obtenerUsuarioActual } from "@/features/auth/service";
 import { enviarEmailDocumento } from "@/features/email/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { avanzarEtapa } from "@/features/gestiones/service";
-import { ETAPAS_TERMINALES, type Pagador } from "@/features/gestiones/types";
+import type { Pagador } from "@/features/gestiones/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 import {
@@ -559,11 +559,13 @@ export async function registrarCobro(
 
 // STORY-977: adelanto de materiales al técnico ANTES de rendir la obra — un
 // solo campo (no una tabla de entregas: revive STORY-933, descartada por
-// complejidad, con el diseño más simple posible). Editable hasta que se
-// registre la liquidación.
+// complejidad, con el diseño más simple posible).
 // v1.1: cada carga SUMA al total ya adelantado (permite más de un adelanto)
 // y ya no hay tope contra el presupuesto — puede terminar superando lo
 // debido al técnico; ese excedente se muestra como "sobrante" al liquidar.
+// v1.2: solo se puede adelantar en ejecución (antes de rendir la obra) — ya
+// no en conformidad ni en liquidación técnico, guard server-side además de
+// sacarlo de esas pantallas.
 export async function registrarAdelantoMateriales(
   gestionId: string,
   monto: number
@@ -577,20 +579,16 @@ export async function registrarAdelantoMateriales(
   const supabase = await createClient();
   const { data: g } = await supabase
     .from("gestiones")
-    .select("etapa, liq_pagada_en, adelanto_materiales")
+    .select("etapa, adelanto_materiales")
     .eq("id", gestionId)
     .single();
   type Fila = {
     etapa: string;
-    liq_pagada_en: string | null;
     adelanto_materiales: number | null;
   };
   const fila = g as unknown as Fila | null;
-  if (!fila || ETAPAS_TERMINALES.has(fila.etapa)) {
-    return { ok: false, error: "La gestión ya no admite cambios de adelanto." };
-  }
-  if (fila.liq_pagada_en) {
-    return { ok: false, error: "La gestión ya fue liquidada." };
+  if (!fila || fila.etapa !== "en_ejecucion") {
+    return { ok: false, error: "El adelanto solo se puede cargar en ejecución." };
   }
   const total = Number(fila.adelanto_materiales ?? 0) + monto;
 
