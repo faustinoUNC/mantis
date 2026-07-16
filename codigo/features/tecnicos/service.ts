@@ -14,7 +14,7 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { baseUrl } from "@/shared/utils/base-url";
 import { errorCuil, normalizarCuil } from "@/shared/utils/cuil";
 import { duplicadoPersona, ERROR_DUPLICADO_DB } from "@/shared/utils/duplicados";
-import { normalizarTelefono } from "@/shared/utils/telefono";
+import { errorTelefono, normalizarTelefono } from "@/shared/utils/telefono";
 import type {
   EstadoTecnico,
   Franja,
@@ -101,6 +101,10 @@ async function altaTecnico(
   // dígitos), así "abc" o espacios no lo bypasean.
   if (!datos.nombre || !datos.email || !datos.telefono) {
     return { ok: false, error: "Completá nombre, email y teléfono." };
+  }
+  const errTelefono = errorTelefono(datos.telefono);
+  if (errTelefono) {
+    return { ok: false, error: errTelefono };
   }
   if (datos.especialidadIds.length === 0) {
     return { ok: false, error: "Elegí al menos una especialidad." };
@@ -767,6 +771,10 @@ export async function actualizarMiContacto(datos: {
   const telefono = normalizarTelefono(datos.telefono);
   if (!email || !telefono) {
     return { ok: false, error: "Completá email y teléfono." };
+  }
+  const errTelefono = errorTelefono(telefono);
+  if (errTelefono) {
+    return { ok: false, error: errTelefono };
   }
 
   const admin = createAdminClient();

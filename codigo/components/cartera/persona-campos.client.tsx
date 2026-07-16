@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { guardarPersona } from "@/features/cartera/service";
 import type { Persona, RefPersona, TipoPersona } from "@/features/cartera/types";
 import { errorCuil } from "@/shared/utils/cuil";
+import { errorTelefono } from "@/shared/utils/telefono";
 import { cn } from "@/shared/utils/cn";
 
 // Piezas compartidas para referenciar/editar personas de la cartera
@@ -29,6 +30,10 @@ export function validarPersona(
   }
   if (!nueva.nombre.trim() || !nueva.email.trim() || !nueva.telefono.trim()) {
     return `Completá nombre, email y teléfono del ${quien}.`;
+  }
+  const errTelefono = errorTelefono(nueva.telefono);
+  if (errTelefono) {
+    return errTelefono;
   }
   const errCuil = errorCuil(nueva.cuil, "CUIL/CUIT");
   if (errCuil) {

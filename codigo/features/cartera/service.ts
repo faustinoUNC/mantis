@@ -9,7 +9,7 @@ import {
   duplicadoPersona,
   ERROR_DUPLICADO_DB,
 } from "@/shared/utils/duplicados";
-import { normalizarTelefono } from "@/shared/utils/telefono";
+import { errorTelefono, normalizarTelefono } from "@/shared/utils/telefono";
 import type { Legajo, Persona, Propiedad, RefPersona, TipoPersona } from "./types";
 
 // RLS staff-only hace cumplir los permisos en las 4 tablas de cartera.
@@ -52,6 +52,10 @@ export async function guardarPersona(
   const telefono = normalizarTelefono(datos.telefono);
   if (!telefono) {
     return { ok: false, error: "El teléfono es obligatorio." };
+  }
+  const errTelefono = errorTelefono(telefono);
+  if (errTelefono) {
+    return { ok: false, error: errTelefono };
   }
   const errCuil = errorCuil(datos.documento, "CUIL/CUIT");
   if (errCuil) {
@@ -195,6 +199,10 @@ async function resolverPersona(
   const telefono = normalizarTelefono(ref.nueva.telefono);
   if (!telefono) {
     return { error: "El teléfono es obligatorio." };
+  }
+  const errTelefono = errorTelefono(telefono);
+  if (errTelefono) {
+    return { error: errTelefono };
   }
   const errCuil = errorCuil(ref.nueva.cuil, "CUIL/CUIT");
   if (errCuil) {

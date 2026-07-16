@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { InputPassword } from "@/components/ui/input-password.client";
 import { actualizarMiContacto } from "@/features/tecnicos/service";
 import { createClient } from "@/shared/lib/supabase/client";
+import { errorTelefono } from "@/shared/utils/telefono";
 
 // El contacto es del técnico (STORY-959): email y teléfono se editan acá,
 // no desde la inmobiliaria. Mobile-first: targets ≥44px, edición inline.
@@ -29,6 +30,8 @@ export function ContactoPerfil({
     if (!valores.email.trim() || !valores.telefono.trim()) {
       return setError("Completá email y teléfono.");
     }
+    const errTelefono = errorTelefono(valores.telefono);
+    if (errTelefono) return setError(errTelefono);
     setGuardando(true);
     const r = await actualizarMiContacto(valores);
     setGuardando(false);
