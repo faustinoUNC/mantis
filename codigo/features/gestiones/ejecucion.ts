@@ -27,3 +27,26 @@ export function ultimaEjecucionDias(
   }
   return duracion;
 }
+
+// STORY-984: días de ejecución PARA la métrica de cumplimiento de plazo.
+// Solo cuenta la obra realmente terminada (salida a conformidad — cancelar o
+// desasignar en plena ejecución no es cumplir el plazo; allowlist porque la
+// cancelación con cargo sale a facturacion_cobro, no a cancelada) y con piso
+// de 1 día: el plazo comprometido nunca puede ser menor a 1 (min del form),
+// así que una obra de horas cumple, no "se adelanta un 98%". El ciclo sigue
+// usando ultimaEjecucionDias — necesita la fracción real de obra.
+export function ejecucionParaPlazoDias(
+  transiciones: TransicionEjecucion[]
+): number | null {
+  const evs = [...transiciones].sort((a, b) => a.t - b.t);
+  let entrada: number | null = null;
+  let duracion: number | null = null;
+  for (const e of evs) {
+    if (e.aEtapa === "en_ejecucion") entrada = e.t;
+    if (e.deEtapa === "en_ejecucion" && entrada != null && e.t > entrada) {
+      if (e.aEtapa === "conformidad") duracion = (e.t - entrada) / 86400000;
+      entrada = null;
+    }
+  }
+  return duracion == null ? null : Math.max(1, duracion);
+}

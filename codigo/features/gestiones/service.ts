@@ -17,7 +17,7 @@ import type {
   Urgencia,
 } from "./types";
 import { ETAPAS_TERMINALES } from "./types";
-import { ultimaEjecucionDias, type TransicionEjecucion } from "./ejecucion";
+import { ejecucionParaPlazoDias, type TransicionEjecucion } from "./ejecucion";
 import { nombrarSalientes } from "./salientes";
 
 const BUCKET = "gestiones";
@@ -670,8 +670,10 @@ async function estadisticasTecnicos(
       lista.push({ aEtapa: e.a_etapa, deEtapa: e.de_etapa, t: new Date(e.creado_en).getTime() });
       porGestion.set(e.gestion_id, lista);
     }
+    // STORY-984: para el % de plazo solo cuentan obras terminadas (salida a
+    // conformidad) y con piso de 1 día — canceladas/desasignadas no computan.
     for (const [gid, evs] of porGestion) {
-      const dias = ultimaEjecucionDias(evs);
+      const dias = ejecucionParaPlazoDias(evs);
       if (dias != null) ejecucionDias.set(gid, dias);
     }
   }

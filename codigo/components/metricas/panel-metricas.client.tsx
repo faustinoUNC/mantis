@@ -19,7 +19,7 @@ import { Card } from "@/components/ui/card";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import type { Metricas } from "@/features/metricas/service";
 import { ETAPAS_TERMINALES } from "@/features/gestiones/types";
-import { ultimaEjecucionDias } from "@/features/gestiones/ejecucion";
+import { ejecucionParaPlazoDias, ultimaEjecucionDias } from "@/features/gestiones/ejecucion";
 
 // STORY-914/919 — Dashboard de métricas graficadas, organizado en bloques
 // temáticos (las relacionadas, juntas). Desktop-first (no lo ve el técnico).
@@ -435,7 +435,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   // ── Duración de la etapa en_ejecucion por gestión (entrada→salida), derivada
   // de los eventos. Base para excluir el tiempo de obra del ciclo y para el
   // cumplimiento de plazo. El tiempo físico depende del tamaño de la obra. ──
-  const ejecucionPorGestion = useMemo(() => {
+  const { ejecucionPorGestion, ejecucionPlazoPorGestion } = useMemo(() => {
     // STORY-966: última visita COMPLETA a en_ejecucion (con desasignación el
     // span primer-entrada→última-salida se tragaba etapas intermedias e
     // inflaba el desvío de plazo del técnico nuevo).
@@ -446,12 +446,18 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       lista.push({ aEtapa: e.aEtapa, deEtapa: e.deEtapa, t: new Date(e.creadoEn).getTime() });
       porGestion.set(e.gestionId, lista);
     }
+    // STORY-984: dos lecturas del mismo historial — el ciclo resta la fracción
+    // real de obra; el cumplimiento de plazo solo mira obras terminadas y con
+    // piso de 1 día.
     const dur = new Map<string, number>();
+    const durPlazo = new Map<string, number>();
     for (const [id, evs] of porGestion) {
       const dias = ultimaEjecucionDias(evs);
       if (dias != null) dur.set(id, dias);
+      const diasPlazo = ejecucionParaPlazoDias(evs);
+      if (diasPlazo != null) durPlazo.set(id, diasPlazo);
     }
-    return dur;
+    return { ejecucionPorGestion: dur, ejecucionPlazoPorGestion: durPlazo };
   }, [metricas.eventos]);
 
   // ── Flujo: Tiempo de ciclo (creación → finalización, sin obra) por cubo ──
@@ -557,7 +563,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   const desvioPlazo = useMemo(() => {
     const acum = new Map<string, { total: number; n: number }>();
     for (const f of filasEsp) {
-      const real = ejecucionPorGestion.get(f.id);
+      const real = ejecucionPlazoPorGestion.get(f.id);
       if (!f.plazoDias || f.plazoDias <= 0 || real == null || !f.tecnicoNombre) continue;
       const pct = ((real - f.plazoDias) / f.plazoDias) * 100;
       const cur = acum.get(f.tecnicoNombre) ?? { total: 0, n: 0 };
@@ -567,7 +573,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       .map(([tecnico, { total, n }]) => ({ tecnico, pct: Math.round((total / n) * 10) / 10, n }))
       .filter((d) => d.pct > 0) // solo los que se pasaron; cumplir/adelantarse no es accionable
       .sort((a, b) => b.pct - a.pct); // el que más se pasó, arriba
-  }, [filasEsp, ejecucionPorGestion]);
+  }, [filasEsp, ejecucionPlazoPorGestion]);
   const nDesvioPlazo = desvioPlazo.reduce((s, d) => s + d.n, 0);
   // Todos se pasaron (pct>0): rampa cálida según cuánto (ámbar→terracota).
   const maxPlazoPos = Math.max(1, ...desvioPlazo.map((d) => d.pct));
