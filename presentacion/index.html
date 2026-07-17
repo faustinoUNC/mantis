@@ -2823,8 +2823,8 @@
       <div class="traza traza-clickable" data-trace="06">
         <div class="cell cell-num">06</div>
         <div class="cell"><strong>Cero estadísticas</strong> para decidir</div>
-        <div class="cell">Métricas calculadas del propio event log, por rol</div>
-        <div class="cell">Event log · Informes por rol</div>
+        <div class="cell">Métricas que salen solas de la operación — nada se carga a mano</div>
+        <div class="cell">Módulo Informes</div>
         <div class="cell">Embudo, tiempo de ciclo, cuellos de botella, dinero, desempeño</div>
         <div class="cell cell-valor">Decisiones con datos</div>
       </div>
@@ -3796,8 +3796,8 @@
 
     <div style="padding-top: 90px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: end;">
       <div>
-        <div class="eyebrow">Informes · cada rol ve las métricas de su área</div>
-        <h2 class="display-lg">Indicadores calculados<br>del propio event log<span class="mark-blue dot-end"></span></h2>
+        <div class="eyebrow">Informes · cada gestor ve su cartera — admin y administrativo, todo el negocio</div>
+        <h2 class="display-lg">Un proceso que<br>se mide solo<span class="mark-blue dot-end"></span></h2>
       </div>
       <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--ink-faded); text-transform: uppercase; text-align: right;">
         Nada se carga a mano ·<br>los históricos no cambian
@@ -3807,41 +3807,41 @@
     <div class="stagger" style="flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: auto 1fr; gap: 16px;">
       <div class="ed-card with-shadow" style="padding: 22px;">
         <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin-bottom: 8px;">En curso</p>
-        <div class="big-stat" style="color: var(--mantis);">24</div>
+        <div class="big-stat" style="color: var(--mantis);">72</div>
         <p style="font-size: 13.5px; margin-top: 6px;">Gestiones activas en el funnel</p>
-      </div>
-      <div class="ed-card with-shadow" style="padding: 22px; border-left: 4px solid var(--warm);">
-        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--warm); text-transform: uppercase; margin-bottom: 8px;">Estancadas</p>
-        <div class="big-stat" style="color: var(--warm);">3</div>
-        <p style="font-size: 13.5px; margin-top: 6px;">Frenadas ≥ 1 día en su etapa — para resolver hoy</p>
       </div>
       <div class="ed-card with-shadow" style="padding: 22px; border-left: 4px solid var(--success);">
         <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--success); text-transform: uppercase; margin-bottom: 8px;">Por cobrar</p>
-        <div class="big-stat" style="color: var(--success); font-size: 56px;">$4,3<span style="font-size: 22px; color: var(--ink-faded); font-weight: 500;"> M</span></div>
-        <p style="font-size: 13.5px; margin-top: 6px;">Pendiente de cobro, con antigüedad de cada una</p>
+        <div class="big-stat" style="color: var(--success); font-size: 56px;">$6,3<span style="font-size: 22px; color: var(--ink-faded); font-weight: 500;"> M</span></div>
+        <p style="font-size: 13.5px; margin-top: 6px;">15 gestiones esperando cobro, con la antigüedad de cada una</p>
+      </div>
+      <div class="ed-card with-shadow" style="padding: 22px;">
+        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 8px;">Orden por valor</p>
+        <div class="big-stat" style="color: var(--mantis); font-size: 56px;">$3,9<span style="font-size: 22px; color: var(--ink-faded); font-weight: 500;"> M</span></div>
+        <p style="font-size: 13.5px; margin-top: 6px;">De fee en juego en 32 gestiones activas, de mayor a menor</p>
       </div>
       <div class="ed-card with-shadow" style="padding: 22px;">
         <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin-bottom: 8px;">Tiempo de ciclo</p>
-        <div class="big-stat" style="font-size: 56px;">12<span style="font-size: 22px; color: var(--ink-faded); font-weight: 500;"> días</span></div>
-        <p style="font-size: 13.5px; margin-top: 6px;">Ingreso → finalización, con cuellos de botella por etapa</p>
+        <div class="big-stat" style="font-size: 56px;">18<span style="font-size: 22px; color: var(--ink-faded); font-weight: 500;"> días</span></div>
+        <p style="font-size: 13.5px; margin-top: 6px;">De ingreso a finalización, sin contar la obra: mide el circuito, no el tamaño del trabajo</p>
       </div>
 
       <div class="ed-card with-shadow" style="padding: 22px; grid-column: span 2;">
-        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 12px;">Distribución por especialidad</p>
-        <div style="height: 245px;"><canvas id="chartCategorias"></canvas></div>
+        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 12px;">Embudo de gestiones · 173 ingresadas, 11 canceladas en el camino</p>
+        <div style="height: 245px;"><canvas id="chartEmbudo"></canvas></div>
       </div>
 
       <div class="ed-card with-shadow" style="padding: 22px; grid-column: span 2;">
-        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 12px;">Gestiones por mes</p>
-        <div style="height: 245px;"><canvas id="chartTendencia"></canvas></div>
+        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 12px;">Ingresos cobrados · fee de la casa vs. pago al técnico</p>
+        <div style="height: 245px;"><canvas id="chartIngresos"></canvas></div>
       </div>
     </div>
 
     <p style="margin-top: 12px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faded); letter-spacing: 0.12em; text-transform: uppercase; text-align: center;">
-      Y también: embudo del funnel · dinero cobrado · desempeño por técnico · cobertura de especialidades
+      Y también: gestiones estancadas · cuellos de botella · presión por especialidad · desempeño por técnico
     </p>
 
-    <div class="slide-footer"><span>11 · INDICADORES</span><span>MÉTRICAS OPERATIVAS EN VIVO</span></div>
+    <div class="slide-footer"><span>11 · INDICADORES</span><span>MÓDULO INFORMES · NÚMEROS REALES DE LA BASE DEMO</span></div>
   </div>
 </section>
 
@@ -4071,67 +4071,53 @@
   function initCharts() {
     if (chartsInitialized) return;
 
-    const cat = document.getElementById('chartCategorias');
-    const tend = document.getElementById('chartTendencia');
+    const embudo = document.getElementById('chartEmbudo');
+    const ingresos = document.getElementById('chartIngresos');
 
-    if (cat && !cat.dataset.init) {
-      cat.dataset.init = '1';
-      new Chart(cat, {
-        type: 'doughnut',
+    if (embudo && !embudo.dataset.init) {
+      embudo.dataset.init = '1';
+      // Datos reales de la base demo (foto 16/07/2026): gestiones que alcanzaron cada etapa.
+      new Chart(embudo, {
+        type: 'bar',
         data: {
-          labels: ['Plomería', 'Electricidad', 'Gas', 'Albañilería', 'Pintura', 'Otros'],
+          labels: ['Ingresado', 'Asignación', 'Presupuesto', 'Ejecución', 'Conformidad', 'Cobro', 'Liquidación', 'Finalizado'],
           datasets: [{
-            data: [82, 68, 54, 41, 32, 70],
-            backgroundColor: ['#059669', '#2563EB', '#EA580C', '#7C3AED', '#F59E0B', '#737373'],
-            borderColor: '#FFFFFF',
-            borderWidth: 2,
+            data: [173, 161, 145, 126, 116, 113, 96, 90],
+            backgroundColor: ['rgba(5,150,105,0.45)','rgba(5,150,105,0.52)','rgba(5,150,105,0.60)','rgba(5,150,105,0.68)','rgba(5,150,105,0.76)','rgba(5,150,105,0.84)','rgba(5,150,105,0.92)','#059669'],
+            borderRadius: 2,
           }]
         },
         options: {
+          indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'right',
-              labels: { color: '#0A0A0A', font: { family: 'Inter Tight', size: 13, weight: 500 }, padding: 14, boxWidth: 14 }
-            }
-          },
-          cutout: '62%',
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#737373', font: { family: 'JetBrains Mono', size: 11 } } },
+            y: { grid: { display: false }, ticks: { color: '#0A0A0A', font: { family: 'Inter Tight', size: 12.5, weight: 500 } } }
+          }
         }
       });
       chartsInitialized = true;
     }
 
-    if (tend && !tend.dataset.init) {
-      tend.dataset.init = '1';
-      new Chart(tend, {
-        type: 'line',
+    if (ingresos && !ingresos.dataset.init) {
+      ingresos.dataset.init = '1';
+      // Datos reales de la base demo (foto 16/07/2026): cobros por mes, en millones de $.
+      new Chart(ingresos, {
+        type: 'bar',
         data: {
-          labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+          labels: ['Dic', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'],
           datasets: [{
-            label: 'Ingresadas',
-            data: [42, 51, 48, 67, 72, 67],
-            borderColor: '#059669',
-            backgroundColor: 'rgba(5,150,105,0.1)',
-            tension: 0.35,
-            borderWidth: 3,
-            pointRadius: 5,
-            pointBackgroundColor: '#059669',
-            pointBorderColor: '#FFFFFF',
-            pointBorderWidth: 2,
-            fill: true,
+            label: 'Fee de la casa',
+            data: [0.33, 0.68, 0.40, 0.67, 0.60, 0.72, 1.79, 2.50],
+            backgroundColor: '#059669',
+            borderRadius: 2,
           },{
-            label: 'Finalizadas',
-            data: [38, 47, 45, 60, 68, 64],
-            borderColor: '#404040',
-            backgroundColor: 'transparent',
-            tension: 0.35,
-            borderWidth: 2,
-            pointRadius: 4,
-            pointBackgroundColor: '#404040',
-            pointBorderColor: '#FFFFFF',
-            pointBorderWidth: 2,
-            borderDash: [4, 4],
+            label: 'Pago al técnico',
+            data: [1.93, 4.23, 2.29, 3.70, 3.69, 4.50, 10.17, 7.88],
+            backgroundColor: '#A3A3A3',
+            borderRadius: 2,
           }]
         },
         options: {
@@ -4144,8 +4130,8 @@
             }
           },
           scales: {
-            x: { grid: { display: false }, ticks: { color: '#737373', font: { family: 'JetBrains Mono', size: 12 } } },
-            y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#737373', font: { family: 'JetBrains Mono', size: 12 } } }
+            x: { stacked: true, grid: { display: false }, ticks: { color: '#737373', font: { family: 'JetBrains Mono', size: 12 } } },
+            y: { stacked: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#737373', font: { family: 'JetBrains Mono', size: 12 }, callback: v => '$' + v + ' M' } }
           }
         }
       });
