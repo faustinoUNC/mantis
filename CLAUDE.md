@@ -47,6 +47,18 @@ Evolución del MANTIS original (`/Users/fausti/Downloads/projects/tesis/sist_ges
 ### 5. MCP
 - Perfil MCP del proyecto: `~/.claude/mcp-profiles/mantis.json` (Supabase HTTP oficial, proyecto `ejwokycbyjtlxwusbhtt`). Nunca editar `.mcp.json` a mano.
 
-### 6. Reset de datos de prueba
+### 6. Presentación de la tesis — dónde vive y cómo se publica al link original
+- **Fuente de verdad: `presentacion/` de ESTE repo** (`index.html` + `mantis-icon.png`). Toda edición se hace acá. Al pushear a `main`, Vercel la despliega solo (proyecto `mantis-presentacion`).
+- **El link original del jurado** sale del repo viejo (`tesisausi-gif/tesis`, clonado en `/Users/fausti/Downloads/projects/tesis/sist_gestion_incidentes`), que también tiene auto-deploy de Vercel. Para actualizarlo hay que **sincronizar** (copiar, no editar allá):
+  ```bash
+  cd /Users/fausti/Downloads/projects/tesis/sist_gestion_incidentes
+  git fetch origin && git pull --rebase origin main   # ¡siempre! main se fuerza-pushea seguido
+  cp /Users/fausti/Downloads/projects/mantis/presentacion/index.html presentacion/
+  cp /Users/fausti/Downloads/projects/mantis/presentacion/mantis-icon.png presentacion/
+  git add presentacion/ && git commit -m "docs(presentacion): sync desde el repo de MANTIS 2" && git push origin main
+  ```
+- Reglas: (1) **NUNCA editar la presentación en el repo tesis** — se pisa en el próximo sync; (2) copiar SIEMPRE con `cp`, no copiar/pegar contenido en el editor (el 2026-07-17 una copia a mano quedó con el encoding roto: "GestiÃ³n", "Â·"); (3) si el sync da conflicto en `presentacion/index.html`, gana la versión del repo MANTIS 2.
+
+### 7. Reset de datos de prueba
 - **`./scripts/reset-datos.sh`** — borra los datos operativos (gestiones + historial, inbox, notificaciones, emails, fotos del bucket) y conserva usuarios, técnicos, cartera, legajos y especialidades. Usarlo cuando Fausti pida "limpiar la base" para probar de cero. Lee la service key de `codigo/.env.local`; no requiere psql.
 - Usuarios de prueba (patrón `ausitesis+nombre@gmail.com` / `nombre123`): admin, gestorcomercialuno (rol gestor de mantenimiento), tecnicouno. NO existe un usuario gestor administrativo de prueba (verificado en DB 2026-07-14) — el admin cubre ese rol. También hay usuarios `+demo*` sembrados por `demo-seed.sql`. Todos los emails entregan en ausitesis@gmail.com.
