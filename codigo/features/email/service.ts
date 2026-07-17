@@ -121,13 +121,13 @@ const EMAILS_ESTADO: Record<
   { asunto: string; titulo: string; cuerpo: (direccion: string) => string }
 > = {
   reporte_recibido: {
-    asunto: "Recibimos tu reporte de mantenimiento",
-    titulo: "Tu reporte quedó registrado",
+    asunto: "Nueva gestión de mantenimiento",
+    titulo: "Gestión de mantenimiento registrada",
     cuerpo: (d) =>
-      `La inmobiliaria ya está gestionando el mantenimiento reportado en ${d}. Te vamos a avisar cuando haya novedades.`,
+      `La inmobiliaria está gestionando un mantenimiento en ${d}. Te vamos a avisar cuando haya novedades.`,
   },
   tecnico_asignado: {
-    asunto: "Un técnico va a atender tu reporte",
+    asunto: "Técnico asignado para el mantenimiento",
     titulo: "Técnico asignado",
     cuerpo: (d) =>
       `Ya hay un técnico asignado para el mantenimiento en ${d}. Se va a coordinar la visita a la brevedad.`,
@@ -136,7 +136,7 @@ const EMAILS_ESTADO: Record<
     asunto: "El mantenimiento quedó resuelto",
     titulo: "Trabajo terminado ✔",
     cuerpo: (d) =>
-      `El mantenimiento en ${d} quedó terminado y verificado por la inmobiliaria. ¡Gracias por avisarnos!`,
+      `El mantenimiento en ${d} quedó terminado y verificado por la inmobiliaria.`,
   },
 };
 
@@ -235,9 +235,11 @@ export async function enviarEmailDocumento(datos: {
   await enviarEmail(datos);
 }
 
-// Email de estado al INQUILINO del legajo de la gestión (PRD §8 — el
-// inquilino recibe, nunca accede). Lookups con admin client: el flujo que
-// dispara ya validó el acceso.
+// Email de estado a inquilino y propietario de la gestión (PRD §8 — ninguno
+// accede al sistema, solo reciben). Se avisa a los dos siempre: la
+// inmobiliaria puede iniciar la gestión sin que ninguno la haya reportado,
+// así que el texto no da por hecho quién reportó qué. Lookups con admin
+// client: el flujo que dispara ya validó el acceso.
 export async function emailEstadoGestion(
   gestionId: string,
   tipo: keyof typeof EMAILS_ESTADO
@@ -245,31 +247,47 @@ export async function emailEstadoGestion(
   const admin = createAdminClient();
   const { data: g } = await admin
     .from("gestiones")
-    .select("legajo_id, propiedades(direccion)")
+    .select("legajo_id, propiedades(direccion, propietarios(nombre, email))")
     .eq("id", gestionId)
     .single();
-  if (!g?.legajo_id) return; // propiedad sin inquilino — no hay a quién avisar
+  if (!g) return;
 
-  const { data: legajo } = await admin
-    .from("legajos")
-    .select("inquilinos(nombre, email)")
-    .eq("id", g.legajo_id)
-    .single();
-  const inquilino = legajo?.inquilinos as unknown as {
-    nombre: string;
-    email: string;
+  const propiedad = g.propiedades as unknown as {
+    direccion: string;
+    propietarios: { nombre: string; email: string } | null;
   } | null;
-  if (!inquilino?.email) return;
 
-  const propiedad = g.propiedades as unknown as { direccion: string } | null;
+  const destinatarios: { nombre: string; email: string }[] = [];
+
+  if (g.legajo_id) {
+    const { data: legajo } = await admin
+      .from("legajos")
+      .select("inquilinos(nombre, email)")
+      .eq("id", g.legajo_id)
+      .single();
+    const inquilino = legajo?.inquilinos as unknown as {
+      nombre: string;
+      email: string;
+    } | null;
+    if (inquilino?.email) destinatarios.push(inquilino);
+  }
+
+  const propietario = propiedad?.propietarios;
+  if (propietario?.email) destinatarios.push(propietario);
+
+  if (destinatarios.length === 0) return;
+
   const def = EMAILS_ESTADO[tipo];
-  await enviarEmail({
-    para: inquilino.email,
-    destinatario: inquilino.nombre,
-    asunto: def.asunto,
-    titulo: def.titulo,
-    cuerpo: def.cuerpo(propiedad?.direccion ?? "tu propiedad"),
-    tipo,
-    gestion_id: gestionId,
-  });
+  const direccion = propiedad?.direccion ?? "la propiedad";
+  for (const destinatario of destinatarios) {
+    await enviarEmail({
+      para: destinatario.email,
+      destinatario: destinatario.nombre,
+      asunto: def.asunto,
+      titulo: def.titulo,
+      cuerpo: def.cuerpo(direccion),
+      tipo,
+      gestion_id: gestionId,
+    });
+  }
 }
