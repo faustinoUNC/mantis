@@ -122,64 +122,50 @@ function Obra({ obra }: { obra: ObraHistorial }) {
   );
 }
 
-function Capitulo({
-  capitulo,
-  abiertoInicial,
-}: {
-  capitulo: CapituloHistorial;
-  abiertoInicial: boolean;
-}) {
-  const [abierto, setAbierto] = useState(abiertoInicial);
-  const periodo = capitulo.vigente
-    ? `desde el ${fechaCorta(capitulo.desde!)}`
-    : capitulo.desde && capitulo.hasta
-      ? `${fechaCorta(capitulo.desde)} a ${fechaCorta(capitulo.hasta)}`
-      : capitulo.desde
-        ? `desde el ${fechaCorta(capitulo.desde)}`
-        : capitulo.hasta
-          ? `hasta el ${fechaCorta(capitulo.hasta)}`
-          : null;
+function periodoDe(capitulo: CapituloHistorial): string | null {
+  if (capitulo.vigente) return `desde el ${fechaCorta(capitulo.desde!)}`;
+  if (capitulo.desde && capitulo.hasta)
+    return `${fechaCorta(capitulo.desde)} a ${fechaCorta(capitulo.hasta)}`;
+  if (capitulo.desde) return `desde el ${fechaCorta(capitulo.desde)}`;
+  if (capitulo.hasta) return `hasta el ${fechaCorta(capitulo.hasta)}`;
+  return null;
+}
+
+// Etiqueta corta para el selector de período. Los capítulos "sin ocupar" se
+// desambiguan por año cuando hay más de uno.
+function etiquetaDe(capitulo: CapituloHistorial, repetidos: boolean): string {
+  if (capitulo.tipo === "legajo") return capitulo.titulo;
+  const anio = (capitulo.hasta ?? capitulo.desde)?.slice(0, 4);
+  return repetidos && anio ? `Sin ocupar ${anio}` : "Sin ocupar";
+}
+
+// Ficha del capítulo elegido + sus obras. Sin acordeón: con muchos legajos el
+// selector de arriba es el índice, y acá nunca hay más que UN período.
+function PanelCapitulo({ capitulo }: { capitulo: CapituloHistorial }) {
+  const periodo = periodoDe(capitulo);
   return (
-    <div className="relative pl-6">
-      <span
-        aria-hidden
-        className={`absolute left-0 top-2 size-3 rounded-full border-2 ${
-          capitulo.vigente
-            ? "border-brand bg-brand-soft"
-            : "border-border-strong bg-surface-2"
-        }`}
-      />
+    <div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <button
-          type="button"
-          className="flex items-center gap-2 text-left"
-          onClick={() => setAbierto(!abierto)}
-          aria-expanded={abierto}
-        >
-          <span className="font-medium">{capitulo.titulo}</span>
-          {capitulo.vigente && <Badge tono="brand">Vigente</Badge>}
-          <span className="text-[13px] text-muted">
-            {periodo ? `${periodo} · ` : ""}
-            {capitulo.obras.length}{" "}
-            {capitulo.obras.length === 1 ? "obra" : "obras"}
+        <span className="font-medium">{capitulo.titulo}</span>
+        {capitulo.vigente && <Badge tono="brand">Vigente</Badge>}
+        <span className="text-[13px] text-muted">
+          {periodo ? `${periodo} · ` : ""}
+          {capitulo.obras.length}{" "}
+          {capitulo.obras.length === 1 ? "obra" : "obras"}
+        </span>
+        {capitulo.legajo_id && (
+          <span className="ml-auto">
+            <ResumenObras legajoId={capitulo.legajo_id} />
           </span>
-          <span
-            className={`text-muted transition-transform ${abierto ? "rotate-90" : ""}`}
-            aria-hidden
-          >
-            ›
-          </span>
-        </button>
-        {capitulo.legajo_id && <ResumenObras legajoId={capitulo.legajo_id} />}
+        )}
       </div>
-      {abierto && capitulo.obras.length > 0 && (
+      {capitulo.obras.length > 0 ? (
         <div className="mt-3 flex flex-col gap-2">
           {capitulo.obras.map((o) => (
             <Obra key={o.id} obra={o} />
           ))}
         </div>
-      )}
-      {abierto && capitulo.obras.length === 0 && (
+      ) : (
         <p className="mt-2 text-sm text-muted">Sin obras en este período.</p>
       )}
     </div>
@@ -187,6 +173,12 @@ function Capitulo({
 }
 
 export function Historial({ capitulos }: { capitulos: CapituloHistorial[] }) {
+  // Selector de período (segmentado idéntico a Finanzas/Auditoría): un botón
+  // por capítulo + "Todas". Arranca en el período vigente; si no hay, en Todas.
+  const [seleccion, setSeleccion] = useState<number | "todas">(() => {
+    const vigente = capitulos.findIndex((c) => c.vigente);
+    return vigente >= 0 ? vigente : "todas";
+  });
   const obras = capitulos.flatMap((c) => c.obras);
   // Las canceladas sin cargo se ven (apagadas) pero no cuentan en los números:
   // no pasó nada y no costó nada.
@@ -251,20 +243,66 @@ export function Historial({ capitulos }: { capitulos: CapituloHistorial[] }) {
         </Card>
       )}
 
-      <div className="relative mt-4 flex flex-col gap-6">
-        <span
-          aria-hidden
-          className="absolute left-[5px] top-2 bottom-2 w-px bg-border"
-        />
-        {capitulos.map((c, i) => (
-          <Capitulo
-            key={c.legajo_id ?? `desocupada-${i}`}
-            capitulo={c}
-            // Abiertos hasta el primer capítulo con legajo inclusive — el
-            // período que el gestor vino a mirar; lo más viejo, colapsado.
-            abiertoInicial={i <= Math.max(0, capitulos.findIndex((x) => x.tipo === "legajo"))}
-          />
-        ))}
+      {capitulos.length > 1 && (
+        <div className="mt-4 flex flex-wrap rounded-md border border-border overflow-hidden w-fit">
+          {capitulos.map((c, i) => (
+            <button
+              key={c.legajo_id ?? `desocupada-${i}`}
+              type="button"
+              onClick={() => setSeleccion(i)}
+              className={`text-sm px-3.5 py-1.5 transition-colors whitespace-nowrap ${
+                seleccion === i
+                  ? "bg-brand text-white"
+                  : "bg-surface text-muted hover:text-foreground"
+              }`}
+            >
+              {etiquetaDe(c, capitulos.filter((x) => x.tipo === "desocupada").length > 1)}
+              <span
+                className={`ml-1.5 text-[12px] tabular-nums ${
+                  seleccion === i ? "text-white/75" : "text-muted"
+                }`}
+              >
+                {c.obras.length}
+              </span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setSeleccion("todas")}
+            className={`text-sm px-3.5 py-1.5 transition-colors whitespace-nowrap ${
+              seleccion === "todas"
+                ? "bg-brand text-white"
+                : "bg-surface text-muted hover:text-foreground"
+            }`}
+          >
+            Todas
+            <span
+              className={`ml-1.5 text-[12px] tabular-nums ${
+                seleccion === "todas" ? "text-white/75" : "text-muted"
+              }`}
+            >
+              {obras.length}
+            </span>
+          </button>
+        </div>
+      )}
+
+      <div className="mt-4">
+        {seleccion === "todas" || !capitulos[seleccion] ? (
+          <div className="flex flex-col gap-2">
+            {[...obras]
+              .sort((a, b) =>
+                (b.terminada_en ?? b.reportada_en).localeCompare(
+                  a.terminada_en ?? a.reportada_en
+                )
+              )
+              .map((o) => (
+                <Obra key={o.id} obra={o} />
+              ))}
+          </div>
+        ) : (
+          <PanelCapitulo capitulo={capitulos[seleccion]} />
+        )}
       </div>
     </section>
   );
