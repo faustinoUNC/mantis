@@ -59,6 +59,12 @@ Evolución del MANTIS original (`/Users/fausti/Downloads/projects/tesis/sist_ges
   ```
 - Reglas: (1) **NUNCA editar la presentación en el repo tesis** — se pisa en el próximo sync; (2) copiar SIEMPRE con `cp`, no copiar/pegar contenido en el editor (el 2026-07-17 una copia a mano quedó con el encoding roto: "GestiÃ³n", "Â·"); (3) si el sync da conflicto en `presentacion/index.html`, gana la versión del repo MANTIS 2.
 
-### 7. Reset de datos de prueba
+### 7. Tarjetas de Trello — formato obligatorio
+- Las cards se escriben **sintéticas, simples y a alto nivel** — las leen testers (Rami/Giuliano), no devs. NADA de citas `archivo:línea`, ni números internos de investigación, ni jerga de código.
+- **Título**: qué pasaba en una frase + estado entre paréntesis. Ej.: "Reasignación: el técnico nuevo heredaba la inspección y el rechazo del saliente (STORY-983, resuelto — falta re-verificar)".
+- **Descripción en 3 bloques**: `**El error (alto nivel)**` (bullets simples de lo que veía el usuario), `**La causa**` (UN párrafo, con el commit del fix si ya está resuelto) y `**Cómo testearlo**` (pasos numerados con ✅ verificables desde la UI, incluyendo la regresión del flujo normal).
+- Modelo a copiar: card #107 (https://trello.com/c/wMJxT4XH). El detalle técnico completo va en la STORY y/o el case file, nunca en la card.
+
+### 8. Reset de datos de prueba
 - **`./scripts/reset-datos.sh`** — borra los datos operativos (gestiones + historial, inbox, notificaciones, emails, fotos del bucket) y conserva usuarios, técnicos, cartera, legajos y especialidades. Usarlo cuando Fausti pida "limpiar la base" para probar de cero. Lee la service key de `codigo/.env.local`; no requiere psql.
 - Usuarios de prueba (patrón `ausitesis+nombre@gmail.com` / `nombre123`): admin, gestorcomercialuno (rol gestor de mantenimiento), tecnicouno. NO existe un usuario gestor administrativo de prueba (verificado en DB 2026-07-14) — el admin cubre ese rol. También hay usuarios `+demo*` sembrados por `demo-seed.sql`. Todos los emails entregan en ausitesis@gmail.com.
