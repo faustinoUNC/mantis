@@ -2429,11 +2429,16 @@
         <rect class="uc-system" x="200" y="60" width="1080" height="600" rx="2"/>
         <text class="uc-system-label" x="740" y="46" text-anchor="middle">SISTEMA MANTIS</text>
 
-        <!-- Divisores de fase (verticales sutiles) -->
-        <line class="uc-phase-divider" x1="416" y1="80" x2="416" y2="640"/>
-        <line class="uc-phase-divider" x1="632" y1="80" x2="632" y2="640"/>
-        <line class="uc-phase-divider" x1="848" y1="80" x2="848" y2="640"/>
-        <line class="uc-phase-divider" x1="1064" y1="80" x2="1064" y2="640"/>
+        <!-- Divisores de fase (verticales sutiles) — solo hasta la franja transversal -->
+        <line class="uc-phase-divider" x1="416" y1="80" x2="416" y2="455"/>
+        <line class="uc-phase-divider" x1="632" y1="80" x2="632" y2="455"/>
+        <line class="uc-phase-divider" x1="848" y1="80" x2="848" y2="455"/>
+        <line class="uc-phase-divider" x1="1064" y1="80" x2="1064" y2="455"/>
+
+        <!-- Franja transversal (gobierno + timeline): fuera de las etapas del funnel -->
+        <rect x="201" y="465" width="1078" height="194" fill="rgba(0,0,0,0.022)"/>
+        <line class="uc-phase-divider" x1="200" y1="465" x2="1280" y2="465"/>
+        <text class="uc-phase-label" x="740" y="489" text-anchor="middle">GOBIERNO · EXCLUSIVO DEL ADMINISTRADOR · TRANSVERSAL A TODO EL FUNNEL</text>
 
         <!-- Labels de fase -->
         <text class="uc-phase-label" x="308" y="84" text-anchor="middle">INGRESO</text>
@@ -2449,9 +2454,9 @@
         <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="308" y2="370"/>
         <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="524" y2="150"/>
         <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="740" y2="370"/>
-        <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="1172" y2="150"/>
-        <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="1172" y2="480"/>
-        <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="740" y2="600"/>
+        <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="1172" y2="140"/>
+        <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="1172" y2="425"/>
+        <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="740" y2="616"/>
         <!-- Técnico (origen ~1360,210) → sus UCs -->
         <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="524" y2="260"/>
         <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="740" y2="150"/>
@@ -2459,17 +2464,17 @@
         <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="956" y2="150"/>
         <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="956" y2="260"/>
         <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="956" y2="370"/>
-        <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="740" y2="600"/>
+        <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="740" y2="616"/>
         <!-- Gestor administrativo (origen ~1360,540) → sus UCs -->
-        <line class="uc-assoc uc-assoc-fin" x1="1360" y1="540" x2="1172" y2="260"/>
-        <line class="uc-assoc uc-assoc-fin" x1="1360" y1="540" x2="1172" y2="370"/>
-        <line class="uc-assoc uc-assoc-fin" x1="1360" y1="540" x2="740" y2="600"/>
-        <!-- Administrador (origen ~120,550) → sus UCs exclusivos de gobierno -->
-        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="308" y2="480"/>
-        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="524" y2="480"/>
-        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="740" y2="480"/>
-        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="956" y2="480"/>
-        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="740" y2="600"/>
+        <line class="uc-assoc uc-assoc-fin" x1="1360" y1="540" x2="1172" y2="235"/>
+        <line class="uc-assoc uc-assoc-fin" x1="1360" y1="540" x2="1172" y2="330"/>
+        <line class="uc-assoc uc-assoc-fin" x1="1360" y1="540" x2="740" y2="616"/>
+        <!-- Administrador (origen ~120,550) → sus UCs exclusivos de gobierno (fila transversal) -->
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="335" y2="537"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="605" y2="537"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="875" y2="537"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="1145" y2="537"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="740" y2="616"/>
 
         <!-- ════ ACTORES (stick figures CLICKEABLES) ════ -->
         <!-- GESTOR DE MANTENIMIENTO (izquierda arriba) -->
@@ -2583,52 +2588,51 @@
           <text x="956" y="374">Subir conformidad</text>
         </g>
 
-        <!-- FASE CIERRE Y FINANZAS -->
+        <!-- FASE CIERRE Y FINANZAS (4 UC · filas propias, por encima de la franja transversal) -->
         <g class="uc-node" data-uc="validar-conformidad" data-actors="ges,adm">
-          <ellipse cx="1172" cy="150" rx="92" ry="28"/>
-          <text x="1172" y="154">Validar conformidad</text>
+          <ellipse cx="1172" cy="140" rx="92" ry="28"/>
+          <text x="1172" y="144">Validar conformidad</text>
         </g>
         <g class="uc-node" data-uc="registrar-cobro" data-actors="fin,adm">
-          <ellipse cx="1172" cy="260" rx="92" ry="28"/>
-          <text x="1172" y="256">Emitir nota de cobro</text>
-          <text x="1172" y="270" style="font-size: 10.5px; fill: var(--ink-faded);">y registrar el cobro</text>
+          <ellipse cx="1172" cy="235" rx="92" ry="28"/>
+          <text x="1172" y="231">Emitir nota de cobro</text>
+          <text x="1172" y="245" style="font-size: 10.5px; fill: var(--ink-faded);">y registrar el cobro</text>
         </g>
         <g class="uc-node" data-uc="liquidar-tecnico" data-actors="fin,adm">
-          <ellipse cx="1172" cy="370" rx="92" ry="28"/>
-          <text x="1172" y="374">Liquidar al técnico</text>
+          <ellipse cx="1172" cy="330" rx="92" ry="28"/>
+          <text x="1172" y="334">Liquidar al técnico</text>
         </g>
         <g class="uc-node" data-uc="calificar-tecnico" data-actors="ges,adm">
-          <ellipse cx="1172" cy="480" rx="92" ry="28"/>
-          <text x="1172" y="484">Calificar al técnico</text>
+          <ellipse cx="1172" cy="425" rx="92" ry="28"/>
+          <text x="1172" y="429">Calificar al técnico</text>
         </g>
 
-        <!-- GOBIERNO (exclusivo del administrador) -->
-        <text class="uc-phase-label" x="632" y="440" text-anchor="middle">— GOBIERNO · EXCLUSIVO DEL ADMINISTRADOR —</text>
+        <!-- GOBIERNO (exclusivo del administrador · fila transversal, no atada a etapas) -->
         <g class="uc-node" data-uc="reasignar-gestion" data-actors="adm">
-          <ellipse cx="308" cy="480" rx="92" ry="28"/>
-          <text x="308" y="476">Reasignar gestiones</text>
-          <text x="308" y="490" style="font-size: 10.5px; fill: var(--ink-faded);">entre gestores</text>
+          <ellipse cx="335" cy="537" rx="92" ry="28"/>
+          <text x="335" y="533">Reasignar gestiones</text>
+          <text x="335" y="547" style="font-size: 10.5px; fill: var(--ink-faded);">entre gestores</text>
         </g>
         <g class="uc-node" data-uc="administrar-empleados" data-actors="adm">
-          <ellipse cx="524" cy="480" rx="98" ry="28"/>
-          <text x="524" y="476">Administrar empleados</text>
-          <text x="524" y="490" style="font-size: 10.5px; fill: var(--ink-faded);">roles · bloqueo en tiempo real</text>
+          <ellipse cx="605" cy="537" rx="98" ry="28"/>
+          <text x="605" y="533">Administrar empleados</text>
+          <text x="605" y="547" style="font-size: 10.5px; fill: var(--ink-faded);">roles · bloqueo en tiempo real</text>
         </g>
         <g class="uc-node" data-uc="mantener-especialidades" data-actors="adm">
-          <ellipse cx="740" cy="480" rx="92" ry="28"/>
-          <text x="740" y="484">Mantener especialidades</text>
+          <ellipse cx="875" cy="537" rx="92" ry="28"/>
+          <text x="875" y="541">Mantener especialidades</text>
         </g>
         <g class="uc-node" data-uc="consultar-auditoria" data-actors="adm">
-          <ellipse cx="956" cy="480" rx="92" ry="28"/>
-          <text x="956" y="476">Consultar auditoría</text>
-          <text x="956" y="490" style="font-size: 10.5px; fill: var(--ink-faded);">negocio + sistema</text>
+          <ellipse cx="1145" cy="537" rx="92" ry="28"/>
+          <text x="1145" y="533">Consultar auditoría</text>
+          <text x="1145" y="547" style="font-size: 10.5px; fill: var(--ink-faded);">negocio + sistema</text>
         </g>
 
-        <!-- TRANSVERSAL: Ver Timeline (abajo, conectado a los 4) -->
+        <!-- TRANSVERSAL: Ver Timeline (en la franja, conectado a los 4) -->
         <g class="uc-node" data-uc="ver-timeline" data-actors="ges,tec,fin,adm">
-          <ellipse cx="740" cy="600" rx="115" ry="30" style="stroke-dasharray: 5 3;"/>
-          <text x="740" y="596" style="font-size: 11.5px; font-weight: 600;">Ver timeline de la gestión</text>
-          <text x="740" y="612" style="font-size: 10.5px; fill: var(--ink-faded); font-style: italic;">transversal · los 4 actores</text>
+          <ellipse cx="740" cy="616" rx="115" ry="30" style="stroke-dasharray: 5 3;"/>
+          <text x="740" y="612" style="font-size: 12px; font-weight: 600;">Ver timeline de la gestión</text>
+          <text x="740" y="628" style="font-size: 10.5px; fill: var(--ink-faded); font-style: italic;">transversal · los 4 actores</text>
         </g>
       </svg>
     </div>
