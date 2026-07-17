@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ComboFiltrable } from "@/components/ui/combo-filtrable.client";
 import {
   descargarResumenObras,
   enviarResumenObras,
@@ -131,12 +132,14 @@ function periodoDe(capitulo: CapituloHistorial): string | null {
   return null;
 }
 
-// Etiqueta corta para el selector de período. Los capítulos "sin ocupar" se
-// desambiguan por año cuando hay más de uno.
-function etiquetaDe(capitulo: CapituloHistorial, repetidos: boolean): string {
-  if (capitulo.tipo === "legajo") return capitulo.titulo;
-  const anio = (capitulo.hasta ?? capitulo.desde)?.slice(0, 4);
-  return repetidos && anio ? `Sin ocupar ${anio}` : "Sin ocupar";
+// Etiqueta del desplegable de períodos: quién + cuándo + cuántas obras — se
+// encuentra al inquilino tipeando su nombre (ComboFiltrable, patrón STORY-981:
+// los legajos crecen con los años).
+function etiquetaDe(capitulo: CapituloHistorial): string {
+  const nombre = capitulo.tipo === "legajo" ? capitulo.titulo : "Sin ocupar";
+  const cuando = capitulo.vigente ? "vigente" : periodoDe(capitulo);
+  const n = `${capitulo.obras.length} ${capitulo.obras.length === 1 ? "obra" : "obras"}`;
+  return `${nombre}${cuando ? ` — ${cuando}` : ""} · ${n}`;
 }
 
 // Ficha del capítulo elegido + sus obras. Sin acordeón: con muchos legajos el
@@ -173,11 +176,11 @@ function PanelCapitulo({ capitulo }: { capitulo: CapituloHistorial }) {
 }
 
 export function Historial({ capitulos }: { capitulos: CapituloHistorial[] }) {
-  // Selector de período (segmentado idéntico a Finanzas/Auditoría): un botón
-  // por capítulo + "Todas". Arranca en el período vigente; si no hay, en Todas.
-  const [seleccion, setSeleccion] = useState<number | "todas">(() => {
+  // Selector de período: desplegable con búsqueda (ComboFiltrable). "" =
+  // todas las obras; si hay legajo vigente, arranca parado ahí.
+  const [seleccion, setSeleccion] = useState<string>(() => {
     const vigente = capitulos.findIndex((c) => c.vigente);
-    return vigente >= 0 ? vigente : "todas";
+    return vigente >= 0 ? String(vigente) : "";
   });
   const obras = capitulos.flatMap((c) => c.obras);
   // Las canceladas sin cargo se ven (apagadas) pero no cuentan en los números:
@@ -244,51 +247,22 @@ export function Historial({ capitulos }: { capitulos: CapituloHistorial[] }) {
       )}
 
       {capitulos.length > 1 && (
-        <div className="mt-4 flex flex-wrap rounded-md border border-border overflow-hidden w-fit">
-          {capitulos.map((c, i) => (
-            <button
-              key={c.legajo_id ?? `desocupada-${i}`}
-              type="button"
-              onClick={() => setSeleccion(i)}
-              className={`text-sm px-3.5 py-1.5 transition-colors whitespace-nowrap ${
-                seleccion === i
-                  ? "bg-brand text-white"
-                  : "bg-surface text-muted hover:text-foreground"
-              }`}
-            >
-              {etiquetaDe(c, capitulos.filter((x) => x.tipo === "desocupada").length > 1)}
-              <span
-                className={`ml-1.5 text-[12px] tabular-nums ${
-                  seleccion === i ? "text-white/75" : "text-muted"
-                }`}
-              >
-                {c.obras.length}
-              </span>
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setSeleccion("todas")}
-            className={`text-sm px-3.5 py-1.5 transition-colors whitespace-nowrap ${
-              seleccion === "todas"
-                ? "bg-brand text-white"
-                : "bg-surface text-muted hover:text-foreground"
-            }`}
-          >
-            Todas
-            <span
-              className={`ml-1.5 text-[12px] tabular-nums ${
-                seleccion === "todas" ? "text-white/75" : "text-muted"
-              }`}
-            >
-              {obras.length}
-            </span>
-          </button>
+        <div className="mt-4 w-full max-w-sm">
+          <ComboFiltrable
+            label="Período"
+            opciones={capitulos.map((c, i) => ({
+              value: String(i),
+              label: etiquetaDe(c),
+            }))}
+            value={seleccion}
+            onChange={setSeleccion}
+            textoTodos={`Todas las obras · ${obras.length}`}
+          />
         </div>
       )}
 
       <div className="mt-4">
-        {seleccion === "todas" || !capitulos[seleccion] ? (
+        {seleccion === "" || !capitulos[Number(seleccion)] ? (
           <div className="flex flex-col gap-2">
             {[...obras]
               .sort((a, b) =>
@@ -301,7 +275,7 @@ export function Historial({ capitulos }: { capitulos: CapituloHistorial[] }) {
               ))}
           </div>
         ) : (
-          <PanelCapitulo capitulo={capitulos[seleccion]} />
+          <PanelCapitulo capitulo={capitulos[Number(seleccion)]} />
         )}
       </div>
     </section>
