@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Historial } from "@/components/cartera/historial.client";
 import { Legajos } from "@/components/cartera/legajos.client";
 import { PropietarioSeccion } from "@/components/cartera/propietario.client";
 import { BotonGoogleMaps, MapaDireccion } from "@/components/ui/mapa";
 import {
+  historialPropiedad,
   legajosDePropiedad,
   listarInquilinosSinLegajo,
   listarPersonas,
@@ -18,12 +20,14 @@ export default async function PropiedadPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [propiedad, legajos, inquilinosLibres, propietarios] = await Promise.all([
-    obtenerPropiedad(id),
-    legajosDePropiedad(id),
-    listarInquilinosSinLegajo(),
-    listarPersonas("propietarios"),
-  ]);
+  const [propiedad, legajos, inquilinosLibres, propietarios, capitulos] =
+    await Promise.all([
+      obtenerPropiedad(id),
+      legajosDePropiedad(id),
+      listarInquilinosSinLegajo(),
+      listarPersonas("propietarios"),
+      historialPropiedad(id),
+    ]);
   if (!propiedad) notFound();
 
   const propietario = propiedad.propietarios as unknown as Persona | null;
@@ -65,6 +69,8 @@ export default async function PropiedadPage({
         legajos={legajos}
         inquilinosActivos={inquilinosLibres}
       />
+
+      {capitulos && <Historial capitulos={capitulos} />}
     </div>
   );
 }

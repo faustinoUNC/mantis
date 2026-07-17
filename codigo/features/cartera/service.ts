@@ -439,9 +439,16 @@ export async function cerrarLegajo(
   return { ok: true };
 }
 
-// ── Resumen de obras por legajo (STORY-802) ──
+// ── Resumen de obras por legajo (STORY-802) + historial (STORY-985) ──
 
-async function datosResumen(legajoId: string) {
+// ¿Puede el caller leer historial/resúmenes? Rol staff + visibilidad RLS de la
+// fila de cartera (hoy toda la cartera es staff-only; si mañana se acota, esto
+// lo respeta). Devuelve el admin client para leer las gestiones de TODOS los
+// gestores (la RLS de gestiones limita al gestor de mantenimiento a las suyas).
+async function accesoLectura(
+  tabla: "legajos" | "propiedades",
+  id: string
+) {
   const { obtenerUsuarioActual } = await import("@/features/auth/service");
   const actual = await obtenerUsuarioActual();
   if (
@@ -450,21 +457,121 @@ async function datosResumen(legajoId: string) {
   ) {
     return null;
   }
-
-  // Defensa en profundidad: el caller debe poder VER este legajo según RLS
-  // (hoy toda la cartera es staff-only; si mañana se acota, esto lo respeta).
   const sesion = await createClient();
   const { data: visible } = await sesion
-    .from("legajos")
+    .from(tabla)
     .select("id")
-    .eq("id", legajoId)
+    .eq("id", id)
     .maybeSingle();
   if (!visible) return null;
-
-  // Admin client SOLO para las gestiones: el resumen debe incluir las de
-  // TODOS los gestores (la RLS de gestiones limita al gestor a las propias).
   const { createAdminClient } = await import("@/shared/lib/supabase/admin");
-  const admin = createAdminClient();
+  return createAdminClient();
+}
+
+type FilaObra = {
+  id: string;
+  legajo_id: string | null;
+  descripcion: string;
+  etapa: string;
+  costo_final: number | null;
+  cargo_admin: number | null;
+  cobrado_monto: number | null;
+  cargo_cancelacion: number | null;
+  pagador: string | null;
+  creado_en: string;
+  especialidades: { nombre: string } | null;
+  tecnico: { nombre: string } | null;
+  presupuestos: { estado: string; descripcion_trabajo: string | null }[];
+};
+
+// Las gestiones de un legajo o de toda la propiedad, como obras del historial
+// (STORY-985): estado honesto, qué se hizo y fecha de terminación real.
+async function obrasDe(
+  admin: NonNullable<Awaited<ReturnType<typeof accesoLectura>>>,
+  columna: "legajo_id" | "propiedad_id",
+  id: string
+): Promise<import("./historial").ObraHistorial[]> {
+  const { estadoObra, costoObra } = await import("./historial");
+  const { data } = await admin
+    .from("gestiones")
+    .select(
+      "id, legajo_id, descripcion, etapa, costo_final, cargo_admin, cobrado_monto, cargo_cancelacion, pagador, creado_en, especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, descripcion_trabajo)"
+    )
+    .eq(columna, id)
+    .order("creado_en");
+  const filas = (data ?? []) as unknown as FilaObra[];
+  if (filas.length === 0) return [];
+
+  // Fecha de terminación real: última salida de obra a Conformidad (criterio
+  // STORY-984) — lo que sigue es circuito de plata, no obra.
+  const { data: eventos } = await admin
+    .from("eventos_gestion")
+    .select("gestion_id, creado_en")
+    .eq("tipo", "transicion")
+    .eq("a_etapa", "conformidad")
+    .in("gestion_id", filas.map((f) => f.id))
+    .order("creado_en");
+  const terminadaEn = new Map<string, string>();
+  for (const e of (eventos ?? []) as { gestion_id: string; creado_en: string }[]) {
+    terminadaEn.set(e.gestion_id, e.creado_en); // ordenado asc: queda la última
+  }
+
+  return filas.map((g) => {
+    const estado = estadoObra(g.etapa, g.cargo_cancelacion);
+    return {
+      id: g.id,
+      legajo_id: g.legajo_id,
+      estado,
+      con_cargo: estado === "cancelada" && g.cargo_cancelacion != null,
+      trabajo:
+        g.presupuestos.find((p) => p.estado === "aprobado")?.descripcion_trabajo ??
+        null,
+      problema: g.descripcion,
+      especialidad: g.especialidades?.nombre ?? "—",
+      tecnico: g.tecnico?.nombre ?? null,
+      costo: costoObra(g),
+      pagador: g.pagador,
+      reportada_en: g.creado_en,
+      terminada_en: estado === "terminada" ? (terminadaEn.get(g.id) ?? null) : null,
+    };
+  });
+}
+
+// Historial completo de la propiedad (STORY-985): TODAS sus obras — con y sin
+// legajo — agrupadas en capítulos por período de ocupación.
+export async function historialPropiedad(
+  propiedadId: string
+): Promise<import("./historial").CapituloHistorial[] | null> {
+  const admin = await accesoLectura("propiedades", propiedadId);
+  if (!admin) return null;
+  const { armarCapitulos } = await import("./historial");
+  const [{ data: legajos }, obras] = await Promise.all([
+    admin
+      .from("legajos")
+      .select("id, fecha_inicio, fecha_fin, inquilinos(nombre)")
+      .eq("propiedad_id", propiedadId),
+    obrasDe(admin, "propiedad_id", propiedadId),
+  ]);
+  type L = {
+    id: string;
+    fecha_inicio: string;
+    fecha_fin: string | null;
+    inquilinos: { nombre: string } | null;
+  };
+  return armarCapitulos(
+    ((legajos ?? []) as unknown as L[]).map((l) => ({
+      id: l.id,
+      inquilino_nombre: l.inquilinos?.nombre ?? "—",
+      fecha_inicio: l.fecha_inicio,
+      fecha_fin: l.fecha_fin,
+    })),
+    obras
+  );
+}
+
+async function datosResumen(legajoId: string) {
+  const admin = await accesoLectura("legajos", legajoId);
+  if (!admin) return null;
 
   const { data: legajo } = await admin
     .from("legajos")
@@ -475,14 +582,6 @@ async function datosResumen(legajoId: string) {
     .single();
   if (!legajo) return null;
 
-  const { data: gestiones } = await admin
-    .from("gestiones")
-    .select(
-      "descripcion, etapa, costo_final, cargo_admin, cobrado_monto, pagador, creado_en, especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre)"
-    )
-    .eq("legajo_id", legajoId)
-    .order("creado_en");
-
   type L = {
     fecha_inicio: string;
     fecha_fin: string | null;
@@ -492,20 +591,15 @@ async function datosResumen(legajoId: string) {
       propietarios: { nombre: string; email: string } | null;
     } | null;
   };
-  type G = {
-    descripcion: string;
-    etapa: string;
-    costo_final: number | null;
-    cargo_admin: number | null;
-    cobrado_monto: number | null;
-    pagador: string | null;
-    creado_en: string;
-    especialidades: { nombre: string } | null;
-    tecnico: { nombre: string } | null;
-  };
   const l = legajo as unknown as L;
   const fechaCorta = (f: string) =>
     new Date(`${f.slice(0, 10)}T00:00:00`).toLocaleDateString("es-AR");
+
+  // Canceladas sin cargo: afuera del documento del propietario — no pasó nada
+  // y no costó nada. Con cargo pagado sí: es plata que salió y esto es evidencia.
+  const obras = (await obrasDe(admin, "legajo_id", legajoId)).filter(
+    (o) => o.estado !== "cancelada" || o.con_cargo
+  );
 
   return {
     emailPropietario: l.propiedades?.propietarios?.email ?? null,
@@ -515,22 +609,16 @@ async function datosResumen(legajoId: string) {
       inquilino: l.inquilinos?.nombre ?? "—",
       periodo: `${fechaCorta(l.fecha_inicio)} — ${l.fecha_fin ? fechaCorta(l.fecha_fin) : "vigente"}`,
       fecha: new Date().toLocaleDateString("es-AR"),
-      obras: ((gestiones ?? []) as unknown as G[]).map((g) => ({
-        fecha: fechaCorta(g.creado_en),
-        especialidad: g.especialidades?.nombre ?? "—",
-        descripcion: g.descripcion,
-        tecnico: g.tecnico?.nombre ?? null,
-        // STORY-942: el costo que ve el propietario es lo COBRADO (con fee
-        // adentro) — el mismo número de su nota de cobro, sin delatar la
-        // comisión. Fallback para obras sin cobro registrado.
-        costo:
-          g.cobrado_monto != null
-            ? Number(g.cobrado_monto)
-            : g.costo_final != null
-              ? Number(g.costo_final) + Number(g.cargo_admin ?? 0)
-              : null,
-        pagador: g.pagador,
-        finalizada: g.etapa === "finalizado",
+      obras: obras.map((o) => ({
+        estado: o.estado,
+        fecha: fechaCorta(o.terminada_en ?? o.reportada_en),
+        reportada: fechaCorta(o.reportada_en),
+        especialidad: o.especialidad,
+        trabajo: o.trabajo,
+        problema: o.problema,
+        tecnico: o.tecnico,
+        costo: o.costo,
+        pagador: o.pagador,
       })),
     },
   };
