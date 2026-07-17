@@ -264,17 +264,17 @@ export async function obtenerGestion(
         .order("creado_en", { ascending: false }),
       supabase
         .from("presupuestos")
-        .select("id, monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, motivo_rechazo, creado_en")
+        .select("id, tecnico_id, monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, motivo_rechazo, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
       supabase
         .from("avances")
-        .select("id, tipo, nota, foto_path, creado_en")
+        .select("id, tecnico_id, tipo, nota, foto_path, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
       supabase
         .from("conformidades")
-        .select("id, foto_path, estado, motivo_rechazo, creado_en")
+        .select("id, tecnico_id, foto_path, estado, motivo_rechazo, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
     ]);
@@ -338,6 +338,7 @@ export async function obtenerGestion(
     avances: await Promise.all(
       (avances ?? []).map(async (a) => ({
         id: a.id,
+        tecnico_id: a.tecnico_id,
         tipo: a.tipo,
         nota: a.nota,
         foto_url: await fotoConUrl(a.foto_path),
@@ -347,6 +348,7 @@ export async function obtenerGestion(
     conformidades: await Promise.all(
       (conformidades ?? []).map(async (c) => ({
         id: c.id,
+        tecnico_id: c.tecnico_id,
         estado: c.estado,
         motivo_rechazo: c.motivo_rechazo,
         foto_url: await fotoConUrl(c.foto_path),
@@ -872,11 +874,13 @@ export async function enviarPresupuesto(
 
   // STORY-943: sin inspección registrada no hay presupuesto — el gestor
   // decide quién paga en base a lo que el técnico encontró (la UI ya lo
-  // bloquea; esto cubre refresh y carreras).
+  // bloquea; esto cubre refresh y carreras). STORY-983: la inspección tiene
+  // que ser DE ESTE técnico — la de un saliente desasignado no cuenta.
   const { count: inspecciones } = await supabase
     .from("avances")
     .select("id", { count: "exact", head: true })
     .eq("gestion_id", gestionId)
+    .eq("tecnico_id", actual.id)
     .eq("tipo", "inspeccion");
   if (!inspecciones) {
     return {
@@ -887,6 +891,7 @@ export async function enviarPresupuesto(
 
   const { error } = await supabase.from("presupuestos").insert({
     gestion_id: gestionId,
+    tecnico_id: actual.id,
     monto_materiales: datos.monto_materiales,
     monto_mano_obra: datos.monto_mano_obra,
     descripcion_trabajo: datos.descripcion_trabajo.trim(),
@@ -1173,12 +1178,14 @@ export async function subirConformidad(
     }
 
     // STORY-936: sin al menos una nota de avance el gestor estuvo ciego
-    // toda la obra — no se termina sin contar qué se hizo.
+    // toda la obra — no se termina sin contar qué se hizo. STORY-983: el
+    // avance tiene que ser DE ESTE técnico, no de un saliente desasignado.
     const supabaseCheck = await createClient();
     const { data: avances } = await supabaseCheck
       .from("avances")
       .select("id")
       .eq("gestion_id", gestionId)
+      .eq("tecnico_id", ctx.actual.id)
       .eq("tipo", "avance")
       .limit(1);
     if (!avances?.length) {
@@ -1230,6 +1237,7 @@ export async function subirConformidad(
 
   const { error } = await supabase.from("conformidades").insert({
     gestion_id: gestionId,
+    tecnico_id: ctx.actual.id,
     foto_path: foto,
   });
   if (error) return { ok: false, error: "No se pudo subir la conformidad." };

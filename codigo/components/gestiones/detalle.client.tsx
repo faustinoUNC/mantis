@@ -499,11 +499,17 @@ function FormPresupuestoTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const pendiente = gestion.presupuestos.some((p) => p.estado === "enviado");
   // STORY-943: sin inspección registrada no hay presupuesto — el gestor
-  // decide quién paga en base a lo que el técnico encontró.
-  const hayInspeccion = gestion.avances.some((a) => a.tipo === "inspeccion");
-  // El último presupuesto (vienen ordenados desc): si fue rechazado, el
-  // técnico tiene que ver el motivo antes de armar el nuevo
-  const ultimo = gestion.presupuestos[0];
+  // decide quién paga en base a lo que el técnico encontró. STORY-983: tiene
+  // que ser SU inspección — la de un saliente desasignado no cuenta.
+  const hayInspeccion = gestion.avances.some(
+    (a) => a.tipo === "inspeccion" && a.tecnico_id === gestion.tecnico_id
+  );
+  // Su último presupuesto (vienen ordenados desc): si fue rechazado, el
+  // técnico tiene que ver el motivo antes de armar el nuevo. STORY-983: los
+  // de un saliente (rechazados con "Técnico desasignado") no son suyos.
+  const ultimo = gestion.presupuestos.find(
+    (p) => p.tecnico_id === gestion.tecnico_id
+  );
   if (pendiente) {
     return <p className="text-sm text-muted">Presupuesto enviado — esperando al gestor.</p>;
   }
@@ -644,7 +650,11 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
     if (gestion.presupuesto_enviado_en) setMailEnviado(true);
   }
   const enviado = gestion.presupuestos.find((p) => p.estado === "enviado");
-  const inspecciones = gestion.avances.filter((a) => a.tipo === "inspeccion");
+  // STORY-983: el gestor evalúa el presupuesto del técnico ACTUAL — las
+  // inspecciones de un saliente quedan en el historial de abajo.
+  const inspecciones = gestion.avances.filter(
+    (a) => a.tipo === "inspeccion" && a.tecnico_id === gestion.tecnico_id
+  );
 
   if (!enviado) {
     // STORY-966: el botón "Volver a Asignación" que vivía acá se unificó en la
@@ -811,16 +821,24 @@ function FormAvance({ gestion }: { gestion: GestionDetalle }) {
 
 function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
-  const ultima = gestion.conformidades[0];
+  // STORY-983: SU última conformidad — la rechazada con "Técnico desasignado"
+  // de un saliente no es de este técnico.
+  const ultima = gestion.conformidades.find(
+    (c) => c.tecnico_id === gestion.tecnico_id
+  );
   const esperando = ultima?.estado === "subida";
   // STORY-934/964/965: al TERMINAR la obra se rinde el total real gastado +
   // las fotos de los comprobantes (una por ticket). La resubida de una
   // rechazada no lo vuelve a pedir.
   const terminando = gestion.etapa === "en_ejecucion";
 
-  // STORY-936: para terminar hace falta al menos una nota de avance.
+  // STORY-936: para terminar hace falta al menos una nota de avance —
+  // STORY-983: propia, no de un saliente desasignado.
   const sinAvance =
-    terminando && !gestion.avances.some((a) => a.tipo === "avance");
+    terminando &&
+    !gestion.avances.some(
+      (a) => a.tipo === "avance" && a.tecnico_id === gestion.tecnico_id
+    );
 
   if (esperando) {
     return <p className="text-sm text-muted">Conformidad subida — esperando revisión del gestor.</p>;

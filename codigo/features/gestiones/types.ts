@@ -79,6 +79,9 @@ export interface Evento {
 
 export interface Presupuesto {
   id: string;
+  // STORY-983: autor del presupuesto — null = de un técnico anterior a una
+  // desasignación (no atribuible). El rechazo solo se le muestra a su autor.
+  tecnico_id: string | null;
   monto_materiales: number;
   monto_mano_obra: number;
   descripcion_trabajo: string | null;
@@ -91,6 +94,9 @@ export interface Presupuesto {
 
 export interface Avance {
   id: string;
+  // STORY-983: los gates (inspección obligatoria, avance antes de terminar)
+  // solo cuentan lo del técnico actual — lo del saliente es historial.
+  tecnico_id: string;
   tipo: "inspeccion" | "avance";
   nota: string;
   foto_url: string | null;
@@ -99,6 +105,8 @@ export interface Avance {
 
 export interface Conformidad {
   id: string;
+  // STORY-983: autor — null = de un técnico anterior a una desasignación.
+  tecnico_id: string | null;
   foto_url: string | null;
   estado: "subida" | "aprobada" | "rechazada";
   motivo_rechazo: string | null;
