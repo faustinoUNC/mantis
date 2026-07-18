@@ -34,6 +34,6 @@ Nada más cambia (misma lógica, mismos guards de etapa/gestor_id). `cargo_cance
 
 ## Dev Agent Record
 
-- **Commit:** `e788d59` (pusheado a main 2026-07-18).
+- **Commit:** `ead1a55` (pusheado a main 2026-07-18).
 - **Migración:** `story_1000_whitelist_finanzas_gestor_administrativo` (aplicada al proyecto `ejwokycbyjtlxwusbhtt`).
 - **Verificación:** simulación SQL del rol gestor_administrativo post-fix: `recargo_tarjeta_*`, `medio_cobro_2`/`cobrado_monto_2` y `adelanto_materiales` pasan; `etapa` sigue bloqueada (`etapa_solo_por_funcion`) y una columna no financiera (`descripcion`) sigue dando `sin_permiso`. E2E en la app como admin: cobro tarjeta simple y combinado avanzan a Liquidación técnico.
