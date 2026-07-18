@@ -19,7 +19,9 @@ export interface TecnicoDetalle extends TecnicoResumen {
   motivo_rechazo: string | null;
   especialidad_ids: string[];
   tieneMatricula: boolean;
-  docs: { tipo: string; url: string }[]; // "DNI", "Matrícula" o "Matrícula N"
+  // "DNI", "Matrícula" o "Matrícula N". `path` solo viene en las matrículas
+  // (permite borrarlas); el DNI no se puede eliminar desde acá.
+  docs: { tipo: string; url: string; path?: string }[];
 }
 
 export interface Franja {

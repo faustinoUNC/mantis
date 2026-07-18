@@ -152,6 +152,12 @@ const TRAZOS: Record<string, React.ReactNode> = {
     </>
   ),
   check: <path d="M20 6 9 17l-5-5" />,
+  papelera: (
+    <>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </>
+  ),
 };
 
 export type IconoId = keyof typeof TRAZOS;

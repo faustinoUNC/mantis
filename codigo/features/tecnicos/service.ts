@@ -542,7 +542,10 @@ export async function obtenerTecnico(
     const { data } = await admin.storage
       .from(BUCKET)
       .createSignedUrl(path, 3600);
-    if (data?.signedUrl) docs.push({ tipo, url: data.signedUrl });
+    // `path` solo se expone para las matrículas: es lo que permite borrarlas
+    // desde la UI (el DNI no se puede eliminar).
+    if (data?.signedUrl)
+      docs.push({ tipo, url: data.signedUrl, path: tipo !== "DNI" ? path : undefined });
   }
 
   type TE = { especialidad_id: string; especialidades: { nombre: string } | null };
@@ -698,6 +701,54 @@ export async function actualizarEspecialidadesTecnico(
 
   revalidatePath(`/tecnicos/${tecnicoId}`);
   revalidatePath("/tecnicos");
+  return { ok: true };
+}
+
+// Borrar una matrícula ya cargada (staff de mantenimiento). Falta desde que
+// existe la carga: la administración podía agregar matrículas pero no sacar
+// una vieja/errónea. Bloqueado si es la última y el técnico todavía tiene
+// una especialidad que la exige — ahí primero hay que sacarle la especialidad.
+export async function eliminarMatriculaTecnico(
+  tecnicoId: string,
+  path: string
+): Promise<ActionResult> {
+  const permiso = await exigirStaffMantenimiento();
+  if (!permiso.ok) return permiso;
+
+  const admin = createAdminClient();
+  const { data: tecnico } = await admin
+    .from("tecnicos")
+    .select("doc_matricula_paths, tecnico_especialidades(especialidades(requiere_matricula))")
+    .eq("id", tecnicoId)
+    .single();
+  if (!tecnico) return { ok: false, error: "Técnico no encontrado." };
+
+  const existentes = tecnico.doc_matricula_paths ?? [];
+  if (!existentes.includes(path)) {
+    return { ok: false, error: "Esa matrícula ya no está." };
+  }
+
+  type TE = { especialidades: { requiere_matricula: boolean } | null };
+  const exigeMatricula = (
+    tecnico.tecnico_especialidades as unknown as TE[]
+  ).some((te) => te.especialidades?.requiere_matricula);
+  const restantes = existentes.filter((p: string) => p !== path);
+  if (exigeMatricula && restantes.length === 0) {
+    return {
+      ok: false,
+      error:
+        "Es la última matrícula y el técnico tiene una especialidad que la exige: sacale esa especialidad o subí otra matrícula antes de borrar esta.",
+    };
+  }
+
+  await admin.storage.from(BUCKET).remove([path]);
+  const { error } = await admin
+    .from("tecnicos")
+    .update({ doc_matricula_paths: restantes })
+    .eq("id", tecnicoId);
+  if (error) return { ok: false, error: "No se pudo borrar la matrícula." };
+
+  revalidatePath(`/tecnicos/${tecnicoId}`);
   return { ok: true };
 }
 

@@ -35,6 +35,9 @@ export function EspecialidadesTecnico({
   const exigeMatricula = catalogo.some(
     (e) => seleccionadas.has(e.id) && e.requiere_matricula
   );
+  // Si ya tiene una matrícula cargada el archivo es opcional (puede sumar
+  // una nueva para la especialidad que se está agregando); si no tiene
+  // ninguna, es obligatorio.
   const faltaMatricula = exigeMatricula && !tieneMatricula;
 
   async function guardar(e: React.FormEvent<HTMLFormElement>) {
@@ -119,11 +122,15 @@ export function EspecialidadesTecnico({
             </label>
           ))}
         </div>
-        {faltaMatricula && (
+        {exigeMatricula && (
           <InputArchivo
-            label="Matrícula (obligatoria para la especialidad elegida)"
+            label={
+              faltaMatricula
+                ? "Matrícula (obligatoria para la especialidad elegida)"
+                : "Sumar otra matrícula (opcional)"
+            }
             name="doc_matricula"
-            required
+            required={faltaMatricula}
             accept="image/*,.pdf"
             multiple
           />

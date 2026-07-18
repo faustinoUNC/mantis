@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DatosTecnico } from "@/components/tecnicos/datos-tecnico.client";
+import { DocumentacionTecnico } from "@/components/tecnicos/documentacion-tecnico.client";
 import { EspecialidadesTecnico } from "@/components/tecnicos/especialidades-tecnico.client";
 import { Evaluacion } from "@/components/tecnicos/evaluacion.client";
 import { listarEspecialidadesActivas } from "@/features/especialidades/service";
@@ -72,24 +73,7 @@ export default async function TecnicoDetallePage({
         <h2 className="text-[13px] font-medium text-muted mb-3">
           Documentación
         </h2>
-        {tecnico.docs.length === 0 ? (
-          <p className="text-sm text-muted">Sin documentación cargada.</p>
-        ) : (
-          <ul className="flex flex-wrap gap-3">
-            {tecnico.docs.map((doc) => (
-              <li key={doc.tipo}>
-                <a
-                  href={doc.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border-strong text-sm font-medium hover:bg-surface-2 transition-colors"
-                >
-                  {doc.tipo} ↗
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
+        <DocumentacionTecnico tecnicoId={id} docs={tecnico.docs} />
       </Card>
 
       {tecnico.estado === "rechazado" && tecnico.motivo_rechazo && (
