@@ -23,6 +23,6 @@
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de push)_
+- **Commit:** `a869c97` (pusheado a main 2026-07-18).
 - **Archivos:** `codigo/components/tecnicos/tecnicos.client.tsx`.
 - **Verificación:** `tsc`/eslint verdes. E2E en el navegador: al tocar "Rechazados" la tabla muestra solo los 3 técnicos rechazados y el segmentado marca el activo en esmeralda; se combina con el buscador y el paginado.
