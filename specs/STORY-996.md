@@ -22,6 +22,6 @@
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de push)_
+- **Commit:** `aaeebc5` (pusheado a main 2026-07-18).
 - **Archivos:** `codigo/components/gestiones/detalle.client.tsx` (helper `ConTooltip`, `Metrica` y Calif/en-curso con tooltip estético, lista sin `overflow-hidden` + filas `first/last` redondeadas, textos cortos), `codigo/components/metricas/panel-metricas.client.tsx` (10 `ayuda` acortadas).
 - **Verificación:** `tsc`/eslint verdes. E2E en el navegador: el tooltip de "Presup." muestra la cajita oscura "Cuánto se pasó de lo presupuestado (+20% = gastó de más)." arriba de la métrica, sin recorte; las 10 descripciones del Inicio renderizan cortas.
