@@ -71,7 +71,7 @@ export function InputArchivo({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 min-w-0">
       <label htmlFor={id} className="text-[13px] font-medium text-muted">
         {label}
       </label>

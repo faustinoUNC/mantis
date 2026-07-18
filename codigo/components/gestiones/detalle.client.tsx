@@ -242,18 +242,18 @@ function TiraDias({ franjas }: { franjas: TecnicoDisponible["franjas"] }) {
   );
 }
 
-function ChipStat({
+// STORY-987: una métrica inline del detalle (label muted + valor con tono),
+// con la misma ayuda que antes vivía en la card de métricas.
+function Metrica({
   label,
   valor,
   ayuda,
   tono = "neutro",
-  align = "izq",
 }: {
   label: string;
   valor: string;
   ayuda: string;
   tono?: "neutro" | "alerta" | "bien";
-  align?: "izq" | "der";
 }) {
   const color =
     tono === "alerta"
@@ -262,28 +262,24 @@ function ChipStat({
         ? "text-brand"
         : "text-foreground";
   return (
-    <div className="group/chip relative flex flex-col cursor-help" title={ayuda}>
-      <span className="text-[10px] uppercase tracking-wide text-muted underline decoration-dotted decoration-muted/40 underline-offset-2">
-        {label}
-      </span>
-      <span className={`text-[13px] font-semibold ${color}`}>{valor}</span>
-      <span
-        className={`pointer-events-none absolute bottom-full z-20 mb-1.5 w-44 rounded-md bg-foreground px-2.5 py-1.5 text-[11px] leading-snug text-background opacity-0 shadow-overlay transition-opacity duration-150 group-hover/chip:opacity-100 ${
-          align === "der" ? "right-0" : "left-0"
-        }`}
-      >
-        {ayuda}
-      </span>
-    </div>
+    <span className="inline-flex items-baseline gap-1 cursor-help" title={ayuda}>
+      <span className="text-muted">{label}</span>
+      <span className={`font-semibold ${color}`}>{valor}</span>
+    </span>
   );
 }
 
-function ScorecardTecnico({
+// STORY-987: fila compacta (reemplaza la card con 7 métricas). Colapsada: 2
+// líneas (nombre + calif; especialidades + carga/horarios). Seleccionada:
+// suma una 3ª línea con el resto de las métricas. Escala a decenas de técnicos.
+function FilaTecnico({
   tecnico,
+  especialidadGestion,
   seleccionado,
   onSelect,
 }: {
   tecnico: TecnicoDisponible;
+  especialidadGestion: string;
   seleccionado: boolean;
   onSelect: () => void;
 }) {
@@ -304,81 +300,95 @@ function ScorecardTecnico({
           valor: `${s.desvioPlazoPct > 0 ? "+" : ""}${s.desvioPlazoPct}%`,
           tono: s.desvioPlazoPct > 10 ? ("alerta" as const) : ("bien" as const),
         };
+  // La que matchea con la gestión va destacada; las otras, en muted con "+N".
+  const otras = tecnico.especialidades.filter((e) => e !== especialidadGestion);
+  const MAX_OTRAS = 3;
+  const otrasVisibles = otras.slice(0, MAX_OTRAS);
+  const restoOtras = otras.length - otrasVisibles.length;
+  const enCurso = s?.obrasActivas ?? 0;
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`text-left rounded-lg border p-3 transition-all ${
-        seleccionado
-          ? "border-brand bg-brand-soft/40 ring-1 ring-brand"
-          : "border-border hover:border-border-strong"
+      className={`w-full text-left px-3 py-2.5 transition-colors ${
+        seleccionado ? "bg-brand-soft/40" : "hover:bg-surface-2"
       }`}
     >
-      <div className="flex items-center justify-between gap-3 mb-2.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span
-            className={`size-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-              seleccionado ? "border-brand" : "border-border-strong"
-            }`}
-          >
-            {seleccionado && <span className="size-2 rounded-full bg-brand" />}
+      <div className="flex items-center gap-2">
+        <span
+          className={`size-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+            seleccionado ? "border-brand" : "border-border-strong"
+          }`}
+        >
+          {seleccionado && <span className="size-2 rounded-full bg-brand" />}
+        </span>
+        <span className="font-medium truncate min-w-0 flex-1">{tecnico.nombre}</span>
+        <span
+          className={`text-[13px] font-semibold shrink-0 ${
+            s?.estrellas != null && s.estrellas >= 4 ? "text-brand" : "text-muted"
+          }`}
+          title="Promedio de estrellas que le pusieron los gestores al terminar sus trabajos."
+        >
+          {s?.estrellas != null ? `${s.estrellas.toFixed(1)}★` : "s/d ★"}
+        </span>
+      </div>
+
+      <div className="mt-1.5 pl-6 flex items-center gap-x-2 gap-y-1 flex-wrap">
+        <span className="inline-flex items-center rounded-sm bg-brand-soft px-1.5 py-0.5 text-[11px] font-medium text-brand-active shrink-0">
+          {especialidadGestion}
+        </span>
+        {otrasVisibles.length > 0 && (
+          <span className="text-[11px] text-muted min-w-0">
+            {otrasVisibles.join(" · ")}
+            {restoOtras > 0 && <span className="text-muted/70"> +{restoOtras}</span>}
           </span>
-          <div className="min-w-0">
-            <span className="font-medium truncate block">{tecnico.nombre}</span>
-            {tecnico.especialidades.length > 0 && (
-              <span className="text-[11px] text-muted truncate block">
-                {tecnico.especialidades.join(" · ")}
-              </span>
-            )}
-          </div>
+        )}
+        <span className="ml-auto flex items-center gap-2 shrink-0">
+          <span
+            className={`text-[11px] ${enCurso >= 4 ? "text-urgente-fuerte font-medium" : "text-muted"}`}
+            title="Trabajos activos que tiene asignados ahora (su carga actual)."
+          >
+            {enCurso} en curso
+          </span>
+          <span className="text-muted/40">·</span>
+          <TiraDias franjas={tecnico.franjas} />
+        </span>
+      </div>
+
+      {seleccionado && (
+        <div className="mt-2 pl-6 flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
+          <Metrica
+            label="Presup."
+            valor={desvio.valor}
+            ayuda="Cumplimiento de presupuesto (igual que en Informes): materiales que rindió vs. los que presupuestó, en $. Ej.: +20% = cada $100 presupuestados salieron $120. La mano de obra no entra (es fija)."
+            tono={desvio.tono}
+          />
+          <Metrica
+            label="Plazo"
+            valor={plazo.valor}
+            ayuda="Cumplimiento de plazo (igual que en Informes): días reales de obra vs. el plazo que comprometió en el presupuesto. Ej.: +30% = una obra de 10 días le llevó 13."
+            tono={plazo.tono}
+          />
+          <Metrica
+            label="Hechas"
+            valor={s ? String(s.obrasRealizadas) : "0"}
+            ayuda="Trabajos que ya finalizó (su experiencia acumulada). Las canceladas no cuentan."
+            tono={s && s.obrasRealizadas > 0 ? "bien" : "neutro"}
+          />
+          <Metrica
+            label="Rechaza"
+            valor={s?.pctRechazoAsig != null ? `${s.pctRechazoAsig}%` : "s/d"}
+            ayuda="De las asignaciones que le mandaron, qué porcentaje rechazó."
+            tono={s?.pctRechazoAsig != null && s.pctRechazoAsig >= 30 ? "alerta" : "neutro"}
+          />
+          <Metrica
+            label="Abandonó"
+            valor={s ? String(s.abandonos) : "0"}
+            ayuda="Trabajos que dejó a mitad de camino (el gestor tuvo que desasignarlo y otro técnico rehízo la obra)."
+            tono={s && s.abandonos > 0 ? "alerta" : "neutro"}
+          />
         </div>
-        <TiraDias franjas={tecnico.franjas} />
-      </div>
-      <div className="grid grid-cols-3 gap-x-2 gap-y-2.5 pl-6">
-        <ChipStat
-          label="Calif."
-          valor={s?.estrellas != null ? `${s.estrellas.toFixed(1)}★` : "s/d"}
-          ayuda="Promedio de estrellas que le pusieron los gestores al terminar sus trabajos."
-          tono={s?.estrellas != null && s.estrellas >= 4 ? "bien" : "neutro"}
-        />
-        <ChipStat
-          label="Presupuesto"
-          valor={desvio.valor}
-          ayuda="Cumplimiento de presupuesto (igual que en Informes): materiales que rindió vs. los que presupuestó, en $. Ej.: +20% = cada $100 presupuestados salieron $120. La mano de obra no entra (es fija)."
-          tono={desvio.tono}
-        />
-        <ChipStat
-          label="Plazo"
-          valor={plazo.valor}
-          ayuda="Cumplimiento de plazo (igual que en Informes): días reales de obra vs. el plazo que comprometió en el presupuesto. Ej.: +30% = una obra de 10 días le llevó 13."
-          tono={plazo.tono}
-          align="der"
-        />
-        <ChipStat
-          label="Hechas"
-          valor={s ? String(s.obrasRealizadas) : "0"}
-          ayuda="Trabajos que ya finalizó (su experiencia acumulada). Las canceladas no cuentan."
-          tono={s && s.obrasRealizadas > 0 ? "bien" : "neutro"}
-        />
-        <ChipStat
-          label="En curso"
-          valor={s ? String(s.obrasActivas) : "0"}
-          ayuda="Trabajos activos que tiene asignados ahora (su carga actual)."
-          tono={s && s.obrasActivas >= 4 ? "alerta" : "neutro"}
-        />
-        <ChipStat
-          label="Rechaza"
-          valor={s?.pctRechazoAsig != null ? `${s.pctRechazoAsig}%` : "s/d"}
-          ayuda="De las asignaciones que le mandaron, qué porcentaje rechazó."
-          tono={s?.pctRechazoAsig != null && s.pctRechazoAsig >= 30 ? "alerta" : "neutro"}
-        />
-        <ChipStat
-          label="Abandonó"
-          valor={s ? String(s.abandonos) : "0"}
-          ayuda="Trabajos que dejó a mitad de camino (el gestor tuvo que desasignarlo y otro técnico rehízo la obra)."
-          tono={s && s.abandonos > 0 ? "alerta" : "neutro"}
-        />
-      </div>
+      )}
     </button>
   );
 }
@@ -430,11 +440,12 @@ function AccionAsignar({
         Elegí al técnico viendo su desempeño. <span className="font-medium">s/d</span> = sin
         datos suficientes.
       </p>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="rounded-lg border border-border divide-y divide-border overflow-hidden stagger">
         {tecnicos.map((t) => (
-          <ScorecardTecnico
+          <FilaTecnico
             key={t.id}
             tecnico={t}
+            especialidadGestion={gestion.especialidad}
             seleccionado={elegido === t.id}
             onSelect={() => setElegido(t.id)}
           />
