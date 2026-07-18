@@ -1,6 +1,11 @@
-# STORY-989 — Sidebar del staff colapsable a rail de íconos (v1.0)
+# STORY-989 — Sidebar del staff colapsable a rail de íconos (v1.1)
 
-**Estado:** ✅ done · **Origen:** Fausti (UX): agregar al panel izquierdo una flechita para colapsarlo contra el borde, quedando solo los íconos y aprovechando más pantalla.
+**Estado:** ✅ done · **Origen:** Fausti (UX)
+
+## v1.1 — retoques (pedido de Fausti)
+
+- La **flechita de colapso va abajo de todo** (último elemento del sidebar, debajo del pie), en vez de arriba bajo el encabezado.
+- En el rail, cada ícono muestra su nombre con un **tooltip estético** (caja `bg-foreground`, a la derecha del ícono) en vez del `title` nativo del browser. La `<nav>` del rail pasa a `overflow-visible` (los ítems del staff entran de sobra) para que el tooltip no quede recortado; expandida sigue con `overflow-y-auto`.: agregar al panel izquierdo una flechita para colapsarlo contra el borde, quedando solo los íconos y aprovechando más pantalla.
 
 ## Alcance (Regla #0)
 

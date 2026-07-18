@@ -65,9 +65,9 @@ export function SidebarStaff({
         <Link
           key={item.href}
           href={item.href}
-          title={rail ? item.label : undefined}
+          aria-label={rail ? item.label : undefined}
           className={cn(
-            "flex items-center rounded-md text-sm font-medium transition-colors shrink-0",
+            "group/nav relative flex items-center rounded-md text-sm font-medium transition-colors shrink-0",
             modo === "mobile" ? "gap-2.5 px-3 min-h-tap" : rail ? "justify-center min-h-tap" : "gap-2.5 px-3 py-2",
             esActivo
               ? "bg-brand-soft text-brand-active"
@@ -76,6 +76,13 @@ export function SidebarStaff({
         >
           <Icono id={item.icono} size={17} />
           {!rail && item.label}
+          {/* STORY-989 v1.1: tooltip estético en el rail (reemplaza el title
+              nativo) — aparece a la derecha del ícono al hacer hover. */}
+          {rail && (
+            <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-[12px] font-medium text-background opacity-0 shadow-overlay transition-opacity duration-150 group-hover/nav:opacity-100">
+              {item.label}
+            </span>
+          )}
         </Link>
       );
     });
@@ -92,20 +99,32 @@ export function SidebarStaff({
       >
         <div
           className={cn(
-            "flex items-center mb-3",
+            "flex items-center mb-6",
             colapsado ? "justify-center" : "justify-between px-3"
           )}
         >
           {!colapsado && marca}
           {campana}
         </div>
+        {/* Rail angosto: sin scroll (los ítems del staff entran de sobra) para
+            que los tooltips a la derecha no queden recortados por el overflow. */}
+        <nav
+          className={cn(
+            "flex flex-col gap-1 flex-1",
+            colapsado ? "overflow-visible" : "overflow-y-auto"
+          )}
+        >
+          {enlaces("desktop")}
+        </nav>
+        <div className="pt-4 border-t border-border">{pie}</div>
+        {/* STORY-989 v1.1: la flechita para colapsar/expandir va abajo de todo. */}
         <button
           type="button"
           onClick={alternar}
           title={colapsado ? "Expandir panel" : "Colapsar panel"}
           aria-label={colapsado ? "Expandir panel" : "Colapsar panel"}
           className={cn(
-            "flex items-center min-h-tap rounded-md text-muted hover:text-foreground hover:bg-surface-2 transition-colors mb-2",
+            "mt-2 flex items-center min-h-tap rounded-md text-muted hover:text-foreground hover:bg-surface-2 transition-colors",
             colapsado ? "justify-center" : "justify-end px-3"
           )}
         >
@@ -113,10 +132,6 @@ export function SidebarStaff({
             <Icono id="chevron" size={18} />
           </span>
         </button>
-        <nav className="flex flex-col gap-1 flex-1 overflow-y-auto">
-          {enlaces("desktop")}
-        </nav>
-        <div className="pt-4 border-t border-border">{pie}</div>
       </aside>
 
       {/* Mobile: barra superior + fila de navegación scrolleable */}
