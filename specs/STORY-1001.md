@@ -1,6 +1,6 @@
 # STORY-1001 — Gestiones vinculadas: camino para trabajo adicional descubierto durante la ejecución (v1.0)
 
-**Estado:** 🚧 en desarrollo · **Origen:** card Trello #19 (https://trello.com/c/qaMAFpGd) + party mode 2026-07-18. El técnico abre una pared por una filtración y encuentra cables pelados: hoy no hay forma de modelar ese trabajo adicional (el presupuesto solo existe en la etapa Presupuesto y no hay camino hacia atrás desde En ejecución). La card original proponía gestiones madre/hija con **bloqueo** de la madre y un **visor gráfico** de dependencias; el comentario posterior de Fausti simplificó: crear una gestión nueva normal indicando al cargarla que "surgió de" otra. El party convergió en la versión simple, con argumentos: el bloqueo genera la espiral hija-cancelada-traba-la-madre y el caso real más común (descubrimiento durante la **inspección**, en etapa Presupuesto) quedaba afuera de la regla "solo En ejecución" de la card original.
+**Estado:** ✅ done · **Origen:** card Trello #19 (https://trello.com/c/qaMAFpGd) + party mode 2026-07-18. El técnico abre una pared por una filtración y encuentra cables pelados: hoy no hay forma de modelar ese trabajo adicional (el presupuesto solo existe en la etapa Presupuesto y no hay camino hacia atrás desde En ejecución). La card original proponía gestiones madre/hija con **bloqueo** de la madre y un **visor gráfico** de dependencias; el comentario posterior de Fausti simplificó: crear una gestión nueva normal indicando al cargarla que "surgió de" otra. El party convergió en la versión simple, con argumentos: el bloqueo genera la espiral hija-cancelada-traba-la-madre y el caso real más común (descubrimiento durante la **inspección**, en etapa Presupuesto) quedaba afuera de la regla "solo En ejecución" de la card original.
 
 ## Decisiones de diseño (party 2026-07-18, aprobadas por Fausti)
 
@@ -44,6 +44,6 @@
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente — implementada y verificada E2E el 2026-07-18, espera OK de Fausti)_
+- **Commit:** `7b9f893` (2026-07-18).
 - **Archivos:** `codigo/features/gestiones/types.ts`, `codigo/features/gestiones/service.ts`, `codigo/components/gestiones/tablero.client.tsx`, `codigo/components/gestiones/detalle.client.tsx`, `codigo/components/ui/iconos.tsx` (ícono `vinculo`) + migración `story_1001_gestiones_gestion_origen_id` (aplicada).
 - **Verificación:** `tsc`/eslint verdes. E2E navegador (Admin): alta con combo "¿Surgió de otra gestión?" → propiedad autocompletada y bloqueada → creada con vínculo; tablero con chip en ambas cards (madre "1", title "Surgió de: …"/"1 gestión surgió de esta") y anillo esmeralda en la madre al hover sobre la hija; detalle hija con "Surgió de: … · Asignación" linkeado; detalle madre con sección "Gestiones vinculadas · 1"; cartel ámbar en Conformidad con vinculada viva (botones Aprobar/Rechazar habilitados — informa, no bloquea). Embed self-join de PostgREST validado por curl antes de cablear. Dato de prueba borrado.
