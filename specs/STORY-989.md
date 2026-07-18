@@ -30,6 +30,6 @@ Sidebar de staff (`components/paneles/sidebar.client.tsx`, desktop `md:` únicam
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de push)_
+- **Commit:** `6d5eb31` (pusheado a main 2026-07-18).
 - **Archivos:** `codigo/components/paneles/sidebar.client.tsx` (estado de colapso vía `useSyncExternalStore` sobre localStorage — sin setState-en-effect ni mismatch de hidratación; toggle + rail), `codigo/components/paneles/panel-shell.tsx` (pie oculta nombre/rol + "Salir" y centra con `group-data-[colapsado=true]/side:*`).
 - **Verificación:** `tsc`/eslint verdes. E2E en el navegador (Playwright, admin): colapsa a `w-16` con solo íconos (10 links, 0 con texto), expande de vuelta, y el estado persiste al navegar de `/admin` a `/tablero` (`data-colapsado=true`, localStorage `1`). Sin errores de hidratación.
