@@ -2,6 +2,28 @@
 // Usados por el sidebar de staff y la navegación inferior del técnico.
 
 const TRAZOS: Record<string, React.ReactNode> = {
+  // STORY-997: acciones icon-only
+  mas: <path d="M12 5v14M5 12h14" />,
+  cerrar: <path d="M18 6 6 18M6 6l12 12" />,
+  inhabilitar: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m5.6 5.6 12.8 12.8" />
+    </>
+  ),
+  editar: (
+    <>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </>
+  ),
+  llave: (
+    <>
+      <circle cx="7.5" cy="15.5" r="4.5" />
+      <path d="m11 12 7.5-7.5" />
+      <path d="m15 5 3 3" />
+    </>
+  ),
   inicio: (
     <>
       <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />

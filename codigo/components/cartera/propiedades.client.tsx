@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { ConTooltip } from "@/components/ui/con-tooltip.client";
+import { Icono } from "@/components/ui/iconos";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import type { Propiedad } from "@/features/cartera/types";
 import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
@@ -27,12 +29,15 @@ export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
       <div className="mb-5">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight">Administración</h1>
-          <Link
-            href="/cartera/nueva"
-            className="inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-md font-medium text-[0.9375rem] bg-brand text-white hover:bg-brand-hover transition-colors"
-          >
-            Nueva administración
-          </Link>
+          <ConTooltip ayuda="Nueva administración" pos="abajo-der">
+            <Link
+              href="/cartera/nueva"
+              aria-label="Nueva administración"
+              className="grid place-items-center aspect-square min-h-tap rounded-md bg-brand text-white hover:bg-brand-hover transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            >
+              <Icono id="mas" size={18} />
+            </Link>
+          </ConTooltip>
         </div>
         <p className="text-sm text-muted mt-1">
           Las propiedades que administra la inmobiliaria.

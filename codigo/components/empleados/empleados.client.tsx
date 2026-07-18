@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
+import { BotonIcono } from "@/components/ui/boton-icono.client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
@@ -218,33 +219,24 @@ function Fila({ empleado }: { empleado: Empleado }) {
             </Button>
           </div>
         ) : (
-          <>
+          <div className="flex items-center justify-end gap-1">
             {passEnviado && (
-              <span className="text-[13px] font-medium text-brand mr-2">
+              <span className="text-[13px] font-medium text-brand mr-1">
                 Link enviado ✓
               </span>
             )}
-            <Button variante="fantasma" className="min-h-0 h-8 px-2.5 text-sm" onClick={() => setEditando(true)}>
-              Editar
-            </Button>
-            <Button
+            <BotonIcono icono="editar" titulo="Editar" variante="fantasma" pos="abajo-der" onClick={() => setEditando(true)} />
+            <BotonIcono icono="llave" titulo="Restablecer contraseña" variante="fantasma" pos="abajo-der" onClick={() => setConfirmandoPass(true)} />
+            <BotonIcono
+              icono={empleado.esta_activo ? "inhabilitar" : "check"}
+              titulo={empleado.esta_activo ? "Inhabilitar" : "Habilitar"}
               variante="fantasma"
-              className="min-h-0 h-8 px-2.5 text-sm"
-              onClick={() => setConfirmandoPass(true)}
-            >
-              Contraseña
-            </Button>
-            <Button
-              variante="fantasma"
+              pos="abajo-der"
               disabled={guardando}
-              className={`min-h-0 h-8 px-2.5 text-sm ${
-                empleado.esta_activo ? "text-error hover:text-error" : ""
-              }`}
+              className={empleado.esta_activo ? "text-error hover:text-error" : ""}
               onClick={empleado.esta_activo ? () => setConfirmando(true) : () => aplicarEstado(true)}
-            >
-              {empleado.esta_activo ? "Inhabilitar" : "Habilitar"}
-            </Button>
-          </>
+            />
+          </div>
         )}
       </td>
     </tr>
@@ -275,9 +267,13 @@ export function Empleados({ empleados }: { empleados: Empleado[] }) {
       <div className="mb-5">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight">Empleados</h1>
-          <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
-            {creando ? "Cerrar" : "Nuevo empleado"}
-          </Button>
+          <BotonIcono
+            icono={creando ? "cerrar" : "mas"}
+            titulo={creando ? "Cerrar" : "Nuevo empleado"}
+            variante={creando ? "secundario" : "primario"}
+            pos="abajo-der"
+            onClick={() => setCreando(!creando)}
+          />
         </div>
         <p className="text-sm text-muted mt-1">
           Las cuentas del personal y qué puede hacer cada uno.

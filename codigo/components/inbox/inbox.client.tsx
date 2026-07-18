@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
+import { BotonIcono } from "@/components/ui/boton-icono.client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ComboFiltrable } from "@/components/ui/combo-filtrable.client";
@@ -215,9 +216,14 @@ export function Inbox({
               <span className="ml-2 text-brand">· {pendientes.length}</span>
             )}
           </h1>
-          <Button variante="secundario" disabled={sincronizando} onClick={sincronizar}>
-            {sincronizando ? "Buscando mails…" : "Actualizar"}
-          </Button>
+          <BotonIcono
+            icono="refrescar"
+            titulo={sincronizando ? "Buscando mails…" : "Actualizar"}
+            variante="secundario"
+            pos="abajo-der"
+            disabled={sincronizando}
+            onClick={sincronizar}
+          />
         </div>
         <p className="text-sm text-muted mt-1">
           Los correos que llegan pidiendo un mantenimiento, listos para convertir en gestión.

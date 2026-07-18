@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { BotonIcono } from "@/components/ui/boton-icono.client";
+import { ConTooltip } from "@/components/ui/con-tooltip.client";
+import { Icono } from "@/components/ui/iconos";
 import { Card } from "@/components/ui/card";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { Paginador } from "@/components/ui/paginador.client";
@@ -63,30 +65,34 @@ function Fila({ tecnico }: { tecnico: TecnicoResumen }) {
         )}
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        <Link
-          href={`/tecnicos/${tecnico.id}`}
-          className="text-sm font-medium text-brand hover:text-brand-hover mr-3"
-        >
-          Ver detalle
-        </Link>
-        {tecnico.estado === "aprobado" && tecnico.esta_activo !== null && (
-          <Button
-            variante="fantasma"
-            disabled={guardando}
-            className={`min-h-0 h-8 px-2.5 text-sm ${
-              tecnico.esta_activo ? "text-error hover:text-error" : ""
-            }`}
-            onClick={async () => {
-              setGuardando(true);
-              setError(null);
-              const r = await cambiarEstadoTecnico(tecnico.id, !tecnico.esta_activo);
-              setGuardando(false);
-              if (!r.ok) setError(r.error);
-            }}
-          >
-            {tecnico.esta_activo ? "Inhabilitar" : "Habilitar"}
-          </Button>
-        )}
+        <div className="flex items-center justify-end gap-1">
+          <ConTooltip ayuda="Ver detalle" pos="abajo-der">
+            <Link
+              href={`/tecnicos/${tecnico.id}`}
+              aria-label="Ver detalle"
+              className="grid place-items-center size-11 rounded-md text-muted hover:text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            >
+              <Icono id="ojo" size={18} />
+            </Link>
+          </ConTooltip>
+          {tecnico.estado === "aprobado" && tecnico.esta_activo !== null && (
+            <BotonIcono
+              icono={tecnico.esta_activo ? "inhabilitar" : "check"}
+              titulo={tecnico.esta_activo ? "Inhabilitar" : "Habilitar"}
+              variante="fantasma"
+              pos="abajo-der"
+              disabled={guardando}
+              className={tecnico.esta_activo ? "text-error hover:text-error" : ""}
+              onClick={async () => {
+                setGuardando(true);
+                setError(null);
+                const r = await cambiarEstadoTecnico(tecnico.id, !tecnico.esta_activo);
+                setGuardando(false);
+                if (!r.ok) setError(r.error);
+              }}
+            />
+          )}
+        </div>
         {error && (
           <p role="alert" className="mt-1.5 max-w-72 text-[12px] font-medium text-error text-right whitespace-normal">
             {error}
@@ -142,9 +148,13 @@ export function Tecnicos({
               </Badge>
             )}
           </h1>
-          <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
-            {creando ? "Cerrar" : "Alta manual"}
-          </Button>
+          <BotonIcono
+            icono={creando ? "cerrar" : "mas"}
+            titulo={creando ? "Cerrar" : "Alta manual"}
+            variante={creando ? "secundario" : "primario"}
+            pos="abajo-der"
+            onClick={() => setCreando(!creando)}
+          />
         </div>
         <p className="text-sm text-muted mt-1">
           La red de técnicos: especialidades, desempeño y solicitudes nuevas.

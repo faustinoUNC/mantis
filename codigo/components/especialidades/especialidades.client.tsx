@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { BotonIcono } from "@/components/ui/boton-icono.client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FiltrosLista } from "@/components/ui/filtros-lista.client";
@@ -129,17 +130,17 @@ function Fila({ especialidad }: { especialidad: Especialidad }) {
         </Badge>
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        <Button variante="fantasma" className="min-h-0 h-8 px-2.5 text-sm" onClick={() => setEditando(true)}>
-          Editar
-        </Button>
-        <Button
-          variante="fantasma"
-          disabled={guardando}
-          className="min-h-0 h-8 px-2.5 text-sm"
-          onClick={toggleEstado}
-        >
-          {especialidad.activa ? "Desactivar" : "Reactivar"}
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <BotonIcono icono="editar" titulo="Editar" variante="fantasma" pos="abajo-der" onClick={() => setEditando(true)} />
+          <BotonIcono
+            icono={especialidad.activa ? "inhabilitar" : "check"}
+            titulo={especialidad.activa ? "Desactivar" : "Reactivar"}
+            variante="fantasma"
+            pos="abajo-der"
+            disabled={guardando}
+            onClick={toggleEstado}
+          />
+        </div>
       </td>
     </tr>
   );
@@ -165,9 +166,13 @@ export function Especialidades({
       <div className="mb-5">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight">Especialidades</h1>
-          <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
-            {creando ? "Cerrar" : "Nueva especialidad"}
-          </Button>
+          <BotonIcono
+            icono={creando ? "cerrar" : "mas"}
+            titulo={creando ? "Cerrar" : "Nueva especialidad"}
+            variante={creando ? "secundario" : "primario"}
+            pos="abajo-der"
+            onClick={() => setCreando(!creando)}
+          />
         </div>
         <p className="text-sm text-muted mt-1">
           Los rubros de trabajo que se le pueden asignar a un técnico.

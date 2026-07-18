@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { BotonIcono } from "@/components/ui/boton-icono.client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ComboFiltrable } from "@/components/ui/combo-filtrable.client";
@@ -229,9 +230,13 @@ export function Tablero({
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight">Tablero</h1>
           {puedeCrear && (
-            <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
-              {creando ? "Cerrar" : "Nueva gestión"}
-            </Button>
+            <BotonIcono
+              icono={creando ? "cerrar" : "mas"}
+              titulo={creando ? "Cerrar" : "Nueva gestión"}
+              variante={creando ? "secundario" : "primario"}
+              pos="abajo-der"
+              onClick={() => setCreando(!creando)}
+            />
           )}
         </div>
         <p className="text-sm text-muted mt-1">
