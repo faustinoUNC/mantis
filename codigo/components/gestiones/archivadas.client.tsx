@@ -85,10 +85,10 @@ export function Archivadas({ gestiones }: { gestiones: Archivada[] }) {
     <div className="animate-aparecer">
       <RefrescoVivo tabla="gestiones" />
       <div className="mb-5">
-        <p className="text-[13px] font-medium text-muted">Archivo</p>
-        <h1 className="text-2xl font-semibold tracking-tight mt-0.5">
-          Gestiones archivadas
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Archivo</h1>
+        <p className="text-sm text-muted mt-1">
+          Las gestiones cerradas o canceladas, para consultarlas cuando haga falta.
+        </p>
       </div>
 
       <FiltrosLista

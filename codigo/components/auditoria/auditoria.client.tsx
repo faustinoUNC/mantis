@@ -127,14 +127,12 @@ export function Auditoria({
 
   return (
     <div className="animate-aparecer">
-      <p className="text-[13px] font-medium text-muted">Trazabilidad</p>
-      <h1 className="text-2xl font-semibold tracking-tight mt-0.5 mb-1">
-        Auditoría
-      </h1>
-      <p className="text-sm text-muted mb-4">
-        Quién hizo qué y cuándo — los timestamps del event log sirven como
-        evidencia de plazos.
-      </p>
+      <div className="mb-5">
+        <h1 className="text-2xl font-semibold tracking-tight">Auditoría</h1>
+        <p className="text-sm text-muted mt-1">
+          Quién hizo qué y cuándo en todo el sistema.
+        </p>
+      </div>
 
       {/* Mismo segmentado que el selector de período de Informes */}
       <div className="flex rounded-md border border-border overflow-hidden w-fit mb-4">

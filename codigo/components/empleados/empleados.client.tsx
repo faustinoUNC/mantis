@@ -272,14 +272,16 @@ export function Empleados({ empleados }: { empleados: Empleado[] }) {
 
   return (
     <div className="animate-aparecer">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-[13px] font-medium text-muted">Mantenedor</p>
-          <h1 className="text-2xl font-semibold tracking-tight mt-0.5">Empleados</h1>
+      <div className="mb-5">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight">Empleados</h1>
+          <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
+            {creando ? "Cerrar" : "Nuevo empleado"}
+          </Button>
         </div>
-        <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
-          {creando ? "Cerrar" : "Nuevo empleado"}
-        </Button>
+        <p className="text-sm text-muted mt-1">
+          Las cuentas del personal y qué puede hacer cada uno.
+        </p>
       </div>
 
       {creando && <FormNuevo onListo={() => setCreando(false)} />}

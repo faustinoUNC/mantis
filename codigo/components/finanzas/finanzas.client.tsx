@@ -132,14 +132,12 @@ export function Finanzas({
 
   return (
     <div className="animate-aparecer">
-      <p className="text-[13px] font-medium text-muted">Finanzas</p>
-      <h1 className="text-2xl font-semibold tracking-tight mt-0.5 mb-1">
-        Cobros y liquidaciones
-      </h1>
-      <p className="text-sm text-muted mb-4">
-        La plata pendiente y la cerrada, en un solo lugar. Tocá una tarjeta
-        para ir a la gestión.
-      </p>
+      <div className="mb-5">
+        <h1 className="text-2xl font-semibold tracking-tight">Finanzas</h1>
+        <p className="text-sm text-muted mt-1">
+          Lo que falta cobrar y lo que ya se cerró, en un solo lugar.
+        </p>
+      </div>
 
       {/* Resumen de un vistazo — tocar una card lleva a su pestaña */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

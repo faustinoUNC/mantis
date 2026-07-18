@@ -207,21 +207,21 @@ export function Inbox({
   return (
     <div className="animate-aparecer max-w-2xl">
       <RefrescoVivo tabla="inbox_reportes" />
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-[13px] font-medium text-muted">
-            Casilla de reportes — se traen los mails con “mantenimiento” en el asunto
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight mt-0.5">
+      <div className="mb-5">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight">
             Inbox
             {pendientes.length > 0 && (
               <span className="ml-2 text-brand">· {pendientes.length}</span>
             )}
           </h1>
+          <Button variante="secundario" disabled={sincronizando} onClick={sincronizar}>
+            {sincronizando ? "Buscando mails…" : "Actualizar"}
+          </Button>
         </div>
-        <Button variante="secundario" disabled={sincronizando} onClick={sincronizar}>
-          {sincronizando ? "Buscando mails…" : "Actualizar"}
-        </Button>
+        <p className="text-sm text-muted mt-1">
+          Los correos que llegan pidiendo un mantenimiento, listos para convertir en gestión.
+        </p>
       </div>
 
       {errorSync && (

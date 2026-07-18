@@ -225,18 +225,18 @@ export function Tablero({
   return (
     <div className="animate-aparecer">
       <RefrescoVivo tabla="gestiones" />
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-[13px] font-medium text-muted">Funnel</p>
-          <h1 className="text-2xl font-semibold tracking-tight mt-0.5">
-            Gestiones de mantenimiento
-          </h1>
+      <div className="mb-5">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight">Tablero</h1>
+          {puedeCrear && (
+            <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
+              {creando ? "Cerrar" : "Nueva gestión"}
+            </Button>
+          )}
         </div>
-        {puedeCrear && (
-          <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
-            {creando ? "Cerrar" : "Nueva gestión"}
-          </Button>
-        )}
+        <p className="text-sm text-muted mt-1">
+          Seguí cada mantenimiento por su etapa, del reporte a la liquidación.
+        </p>
       </div>
 
       {creando && (

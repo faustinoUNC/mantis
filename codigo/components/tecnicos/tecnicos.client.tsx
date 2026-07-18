@@ -132,10 +132,9 @@ export function Tecnicos({
 
   return (
     <div className="animate-aparecer">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-[13px] font-medium text-muted">Red de técnicos</p>
-          <h1 className="text-2xl font-semibold tracking-tight mt-0.5 flex items-center gap-3">
+      <div className="mb-5">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-3">
             Técnicos
             {pendientes > 0 && (
               <Badge tono="urgente">
@@ -143,10 +142,13 @@ export function Tecnicos({
               </Badge>
             )}
           </h1>
+          <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
+            {creando ? "Cerrar" : "Alta manual"}
+          </Button>
         </div>
-        <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
-          {creando ? "Cerrar" : "Alta manual"}
-        </Button>
+        <p className="text-sm text-muted mt-1">
+          La red de técnicos: especialidades, desempeño y solicitudes nuevas.
+        </p>
       </div>
 
       {creando && (

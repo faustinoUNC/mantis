@@ -162,16 +162,16 @@ export function Especialidades({
 
   return (
     <div className="animate-aparecer">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-[13px] font-medium text-muted">Mantenedor</p>
-          <h1 className="text-2xl font-semibold tracking-tight mt-0.5">
-            Especialidades
-          </h1>
+      <div className="mb-5">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight">Especialidades</h1>
+          <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
+            {creando ? "Cerrar" : "Nueva especialidad"}
+          </Button>
         </div>
-        <Button onClick={() => setCreando(!creando)} variante={creando ? "secundario" : "primario"}>
-          {creando ? "Cerrar" : "Nueva especialidad"}
-        </Button>
+        <p className="text-sm text-muted mt-1">
+          Los rubros de trabajo que se le pueden asignar a un técnico.
+        </p>
       </div>
 
       {creando && <FormNueva onListo={() => setCreando(false)} />}

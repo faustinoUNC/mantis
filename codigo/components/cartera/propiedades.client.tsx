@@ -24,14 +24,19 @@ export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
 
   return (
     <div className="animate-aparecer">
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-semibold tracking-tight">Administraciones</h1>
-        <Link
-          href="/cartera/nueva"
-          className="inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-md font-medium text-[0.9375rem] bg-brand text-white hover:bg-brand-hover transition-colors"
-        >
-          Nueva administración
-        </Link>
+      <div className="mb-5">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight">Administración</h1>
+          <Link
+            href="/cartera/nueva"
+            className="inline-flex items-center justify-center gap-2 min-h-tap px-4 rounded-md font-medium text-[0.9375rem] bg-brand text-white hover:bg-brand-hover transition-colors"
+          >
+            Nueva administración
+          </Link>
+        </div>
+        <p className="text-sm text-muted mt-1">
+          Los edificios y las propiedades que administra la inmobiliaria.
+        </p>
       </div>
 
       <FiltrosLista

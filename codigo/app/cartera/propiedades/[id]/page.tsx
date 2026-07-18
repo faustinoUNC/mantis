@@ -38,7 +38,7 @@ export default async function PropiedadPage({
         href="/cartera/propiedades"
         className="text-sm font-medium text-muted hover:text-foreground"
       >
-        ← Administraciones
+        ← Administración
       </Link>
 
       <div className="mt-3 flex items-start justify-between gap-4">
