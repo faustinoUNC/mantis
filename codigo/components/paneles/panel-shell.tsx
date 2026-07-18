@@ -51,10 +51,10 @@ export async function PanelShell({
         type="submit"
         aria-label="Salir"
         title="Salir"
-        className="flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium text-muted hover:text-foreground hover:bg-surface-2 transition-colors"
+        className="flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium text-muted hover:text-foreground hover:bg-surface-2 transition-colors group-data-[colapsado=true]/side:justify-center group-data-[colapsado=true]/side:px-0"
       >
         <Icono id="salir" size={17} />
-        <span className="md:inline hidden">Salir</span>
+        <span className="md:inline hidden group-data-[colapsado=true]/side:hidden">Salir</span>
       </button>
     </form>
   );
@@ -96,9 +96,9 @@ export async function PanelShell({
         campana={<Campana key="campana" usuarioId={usuario.id} iniciales={notificaciones} />}
         pie={
           <div key="pie" className="flex md:flex-col md:gap-3 items-center md:items-stretch">
-            <div className="hidden md:flex items-center gap-2.5 px-3 min-w-0">
+            <div className="hidden md:flex items-center gap-2.5 px-3 min-w-0 group-data-[colapsado=true]/side:justify-center group-data-[colapsado=true]/side:px-0">
               <Avatar nombre={usuario.nombre} size="md" />
-              <div className="min-w-0">
+              <div className="min-w-0 group-data-[colapsado=true]/side:hidden">
                 <p className="text-sm font-medium truncate">{usuario.nombre}</p>
                 <p className="text-[11px] text-muted truncate">
                   {NOMBRE_ROL[usuario.rol]}
