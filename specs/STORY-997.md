@@ -34,7 +34,7 @@ Se crea un componente reutilizable **`BotonIcono`** (botón cuadrado 44×44 con 
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de push)_
+- **Commit:** `4bb7c1d` (pusheado a main 2026-07-18).
 - **Íconos nuevos:** `mas`, `cerrar`, `inhabilitar`, `editar`, `llave` (además de reusar `ojo`, `check`, `refrescar`).
 - **Archivos:** `components/ui/iconos.tsx`, `components/ui/con-tooltip.client.tsx` (nuevo), `components/ui/boton-icono.client.tsx` (nuevo); pantallas: `gestiones/tablero`, `tecnicos/tecnicos` (toggle + fila Ver detalle/Inhabilitar), `empleados/empleados` (toggle + fila Editar/Contraseña/Inhabilitar), `especialidades/especialidades` (toggle + fila Editar/Desactivar), `inbox/inbox` (Actualizar), `cartera/propiedades` (Nueva administración link).
 - **Verificación:** `tsc`/eslint verdes. E2E en el navegador (Técnicos): header ＋ "Alta manual" y por fila 👁 "Ver detalle" + ⃠ "Inhabilitar"; los tooltips estéticos aparecen al hover sin recorte de la tabla.
