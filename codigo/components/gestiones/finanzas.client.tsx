@@ -166,7 +166,10 @@ function FormCobro({
           </div>
         )}
 
-        <Button type="submit" disabled={cargando !== null || seExcede || mismoMedio}>
+        <Button
+          type="submit"
+          disabled={cargando !== null || seExcede || mismoMedio || (combinado && monto2Num <= 0)}
+        >
           {cargando === "cobro" ? "Registrando…" : cta}
         </Button>
       </div>
@@ -185,6 +188,9 @@ function FormCobro({
       )}
       {combinado && mismoMedio && !seExcede && (
         <p className="text-sm font-medium text-error">Elegí dos medios de pago distintos.</p>
+      )}
+      {combinado && !seExcede && !mismoMedio && monto2Num <= 0 && (
+        <p className="text-sm font-medium text-error">Ingresá el monto del segundo medio.</p>
       )}
       {error && <p className="text-sm font-medium text-error">{error}</p>}
     </form>
