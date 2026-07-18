@@ -10,6 +10,7 @@ import {
   ERROR_DUPLICADO_DB,
 } from "@/shared/utils/duplicados";
 import { errorTelefono, normalizarTelefono } from "@/shared/utils/telefono";
+import { TIPOS_INMUEBLE } from "./types";
 import type { Legajo, Persona, Propiedad, RefPersona, TipoPersona } from "./types";
 
 // RLS staff-only hace cumplir los permisos en las 4 tablas de cartera.
@@ -238,6 +239,12 @@ export async function crearAdministracion(datos: {
 }): Promise<ActionResult<{ propiedadId: string }>> {
   if (!datos.propiedad.direccion) {
     return { ok: false, error: "Completá la dirección de la propiedad." };
+  }
+  if (
+    datos.propiedad.tipo &&
+    !TIPOS_INMUEBLE.includes(datos.propiedad.tipo as (typeof TIPOS_INMUEBLE)[number])
+  ) {
+    return { ok: false, error: "Tipo de inmueble inválido." };
   }
 
   const propietario = await resolverPersona("propietarios", datos.propietario);

@@ -9,10 +9,10 @@ import {
   type DireccionElegida,
 } from "@/components/ui/buscador-direccion.client";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { MapaDireccion } from "@/components/ui/mapa";
+import { Select } from "@/components/ui/select";
 import { crearAdministracion } from "@/features/cartera/service";
-import type { Persona } from "@/features/cartera/types";
+import { TIPOS_INMUEBLE, type Persona } from "@/features/cartera/types";
 import { cn } from "@/shared/utils/cn";
 import {
   PERSONA_VACIA,
@@ -227,12 +227,18 @@ export function AltaAdministracion({
                 onElegir={setPin}
                 placeholder="Av. Colón 1234, Córdoba"
               />
-              <Input
+              <Select
                 label="Tipo"
                 value={tipo}
                 onChange={(e) => setTipo(e.target.value)}
-                placeholder="Depto, Casa, Local… (opcional)"
-              />
+              >
+                <option value="">Sin especificar</option>
+                {TIPOS_INMUEBLE.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </Select>
             </div>
             {pin && (
               <div className="mt-4 animate-aparecer">

@@ -9,6 +9,17 @@ export interface Persona {
 
 export type TipoPersona = "propietarios" | "inquilinos";
 
+export const TIPOS_INMUEBLE = [
+  "Departamento",
+  "Casa",
+  "PH",
+  "Local",
+  "Oficina",
+  "Cochera",
+] as const;
+
+export type TipoInmueble = (typeof TIPOS_INMUEBLE)[number];
+
 // Referencia de persona para el alta de administración: existente o nueva.
 export type RefPersona =
   | { id: string }
