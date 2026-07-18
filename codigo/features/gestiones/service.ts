@@ -577,7 +577,7 @@ export async function tecnicosDisponibles(
   );
 
   const stats = await estadisticasTecnicos(candidatos.map((t) => t.id));
-  return candidatos.map((t) => ({
+  const lista = candidatos.map((t) => ({
     id: t.id,
     nombre: t.nombre,
     especialidades: (t.todas ?? [])
@@ -586,6 +586,14 @@ export async function tecnicosDisponibles(
     franjas: t.franjas_disponibilidad ?? [],
     stats: stats.get(t.id) ?? null,
   }));
+  // STORY-987 v1.2: mejor calificados primero (los sin calificación quedan al
+  // final); se desempata por nombre para un orden estable.
+  return lista.sort((a, b) => {
+    const ea = a.stats?.estrellas ?? -1;
+    const eb = b.stats?.estrellas ?? -1;
+    if (eb !== ea) return eb - ea;
+    return a.nombre.localeCompare(b.nombre);
+  });
 }
 
 // STORY-915: desempeño agregado por técnico para el scorecard de asignación.
