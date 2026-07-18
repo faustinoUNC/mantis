@@ -37,6 +37,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 
 | Story | Título | Estado |
 |---|---|---|
+| [STORY-996](STORY-996.md) | Simplificar las explicaciones de métricas: en la card de asignación de técnico el `title` nativo pasa a un tooltip estético (`ConTooltip`, cajita `bg-foreground`) con textos cortos, y en el Inicio las 10 descripciones `ayuda` se acortan a una línea sin jerga ("igual que en Informes"/"event log"/"circuito") — pedido UX de Fausti | ✅ done |
 | [STORY-995](STORY-995.md) | Visor de fotos único (lightbox): tap en cualquier miniatura del detalle → overlay a pantalla completa (reemplaza el `<a target=_blank>` de la 991); token `visor-foto` en el contract — evolución del contract propuesta en la auditoría UX | 📝 borrador |
 | [STORY-994](STORY-994.md) | Reconciliar la escala tipográfica: decidir body 14 vs 15px (~213 usos de `text-sm`) y micro (token `caption:12px` o piso duro 13px) para eliminar los tres "chicos" que conviven sin criterio — evolución del contract, requiere decisión de Fausti | 📝 borrador |
 | [STORY-993](STORY-993.md) | Skeletons de carga por ruta (`loading.tsx`): hoy no hay ni uno en toda la app y el contract los manda; esqueletos del layout final en detalle, tablero, informes, finanzas e inbox (patrón `SkeletonCard`, respeta reduced-motion) — cumplimiento pendiente detectado en la auditoría UX | 📝 borrador |

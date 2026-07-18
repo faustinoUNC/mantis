@@ -668,7 +668,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
 
       {/* ══ 1. Para resolver hoy ══ */}
       <Bloque titulo="Para resolver hoy">
-        <MetricCard titulo="Gestiones estancadas" ayuda="Gestiones activas frenadas hace un día o más en su etapa — qué destrabar primero." n={estancadas.n} humildad={false}>
+        <MetricCard titulo="Gestiones estancadas" ayuda="Las que están frenadas hace un día o más en su etapa." n={estancadas.n} humildad={false}>
           <ul className="divide-y divide-border max-h-72 overflow-y-auto">
             {estancadas.lista.map((g) => (
               <FilaAccionable key={g.id} id={g.id} principal={g.direccion} secundario={`${g.etapa} · ${g.descripcion}`} dato={g.dias === 1 ? "1 día" : `${g.dias} días`} alerta={g.dias >= DIAS_ESTANCADA_AMBAR} color={rampaMagnitud(g.dias / estancadas.max)} />
@@ -678,7 +678,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
 
         {/* Cobro unificado: resumen de plata (barra "Por cobrar") + lista de las
             gestiones en cobro, ordenadas por antigüedad. */}
-        <MetricCard titulo="Gestiones pendientes de cobro" ayuda="Cuánta plata falta cobrar y hace cuánto espera cada gestión — qué cobrar primero. Es el mismo 'Por cobrar' del módulo Finanzas." n={cobranza.length} humildad={false}>
+        <MetricCard titulo="Gestiones pendientes de cobro" ayuda="Cuánta plata falta cobrar y desde cuándo espera cada una." n={cobranza.length} humildad={false}>
           <div className="space-y-4">
             <div>
               <div className="flex items-baseline justify-between gap-2">
@@ -711,7 +711,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
 
       {/* ══ 2. Orden por valor — dónde está la plata (fee) de la casa ══ */}
       <Bloque titulo="Orden por valor" cols={1}>
-        <MetricCard titulo="Gestiones ordenadas por fee" ayuda="Gestiones activas con fee ya definido, de mayor a menor — dónde está la plata que la casa va a ganar, para no dejarla caer en el camino." n={porFee.length} humildad={false}>
+        <MetricCard titulo="Gestiones ordenadas por fee" ayuda="Las gestiones abiertas ordenadas por lo que gana la inmobiliaria." n={porFee.length} humildad={false}>
           <ul className="divide-y divide-border max-h-72 overflow-y-auto">
             {porFee.map((g) => (
               <FilaAccionable key={g.id} id={g.id} principal={g.direccion} secundario={`${g.etapa} · ${g.descripcion}`} dato={plata(g.fee)} alerta={false} color={BRAND} />
@@ -725,7 +725,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           Solo staff de mantenimiento: el administrativo no gestiona técnicos. ══ */}
       {metricas.rol !== "gestor_administrativo" && (
       <Bloque titulo="Cobertura de especialidades" cols={1}>
-        <MetricCard titulo="Presión por especialidad" ayuda="Gestiones activas por técnico disponible en cada especialidad — cuanto más alta la presión, menos gente para la carga abierta. Arriba y en rojo: trabajo abierto sin ningún técnico." n={presion.lista.length} unidad="especialidades" alcance="ahora" humildad={false}>
+        <MetricCard titulo="Presión por especialidad" ayuda="Trabajo abierto por técnico disponible en cada rubro. En rojo: sin ningún técnico." n={presion.lista.length} unidad="especialidades" alcance="ahora" humildad={false}>
           <ul className="space-y-3 pt-1 max-h-72 overflow-y-auto">
             {presion.lista.map((r) => (
               <li key={r.esp} className="flex items-center gap-3">
@@ -776,7 +776,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           </ResponsiveContainer>
         </MetricCard>
 
-        <MetricCard titulo="Tiempo de ciclo" ayuda="Días de creación a finalización sin el tiempo de obra — la eficiencia del circuito, no el tamaño del trabajo." n={ciclo.n}>
+        <MetricCard titulo="Tiempo de ciclo" ayuda="Días de principio a fin, sin contar el tiempo de obra." n={ciclo.n}>
           {ciclo.pocos ? (
             <p className="text-sm text-muted py-16 text-center">Pocos datos en este período para ver la evolución. Probá un período más amplio.</p>
           ) : (
@@ -796,7 +796,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           )}
         </MetricCard>
 
-        <MetricCard titulo="Cuellos de botella" ayuda="Días promedio por etapa, sin el tiempo de ejecución — la del circuito más lenta es la que frena todo." n={filas.length}>
+        <MetricCard titulo="Cuellos de botella" ayuda="Días promedio en cada etapa. La más alta es la que frena todo." n={filas.length}>
           {cuellos.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Faltan transiciones para medir.</p>
           ) : (
@@ -817,7 +817,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
 
       {/* ══ Dinero (según el período) ══ */}
       <Bloque titulo="Dinero" cols={1}>
-        <MetricCard titulo="Ingresos cobrados" ayuda="Lo cobrado por período, separando la ganancia de la casa (fee) del pago al técnico." n={dinero.n}>
+        <MetricCard titulo="Ingresos cobrados" ayuda="Lo cobrado en el período: ganancia de la casa vs. pago al técnico." n={dinero.n}>
           {dinero.pocos ? (
             <p className="text-sm text-muted py-16 text-center">Pocos cobros en este período. Probá un período más amplio.</p>
           ) : (
@@ -864,7 +864,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       <section className="mb-8">
         <h3 className="text-[13px] font-semibold text-muted mb-3">Histórico · desempeño de técnicos</h3>
         <div className="grid gap-4 grid-cols-1 mb-4">
-        <MetricCard titulo="Calificación de técnicos" ayuda="Promedio de estrellas y obras finalizadas por técnico — quién resuelve mejor y cuánto hizo. Si dejó obras a mitad de camino (abandonos), se marca al lado." n={nCalificadas} unidad="calificaciones" alcance="historico">
+        <MetricCard titulo="Calificación de técnicos" ayuda="Estrellas promedio y obras terminadas por técnico." n={nCalificadas} unidad="calificaciones" alcance="historico">
           {ranking.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Todavía no hay técnicos con obra registrada.</p>
           ) : (
@@ -889,7 +889,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         </MetricCard>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-        <MetricCard titulo="Cumplimiento de presupuesto" ayuda="Por técnico: suma de los materiales que rindió al terminar cada obra vs. los que había presupuestado, en $ sobre todas sus obras. Ej.: +20% = cada $100 presupuestados terminaron costando $120. La mano de obra no entra (es fija) y las obras grandes pesan más que las chicas." n={nDesvio} alcance="historico">
+        <MetricCard titulo="Cumplimiento de presupuesto" ayuda="Por técnico: cuánto se pasó de lo presupuestado en materiales. +20% = gastó $120 por cada $100." n={nDesvio} alcance="historico">
           {desvio.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Faltan gestiones cerradas con presupuesto para medir.</p>
           ) : (
@@ -910,7 +910,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           )}
         </MetricCard>
 
-        <MetricCard titulo="Cumplimiento de plazo" ayuda="Técnicos que tardaron más de lo que comprometieron y cuánto — a quién seguirle los tiempos (los que cumplen o se adelantan no se listan)." n={nDesvioPlazo} alcance="historico">
+        <MetricCard titulo="Cumplimiento de plazo" ayuda="Técnicos que tardaron más de lo que prometieron, y cuánto." n={nDesvioPlazo} alcance="historico">
           {desvioPlazo.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Ningún técnico se pasó del plazo que comprometió.</p>
           ) : (

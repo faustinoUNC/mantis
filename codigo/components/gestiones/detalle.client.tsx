@@ -243,8 +243,35 @@ function TiraDias({ franjas }: { franjas: TecnicoDisponible["franjas"] }) {
   );
 }
 
-// STORY-987: una métrica inline del detalle (label muted + valor con tono),
-// con la misma ayuda que antes vivía en la card de métricas.
+// STORY-996: tooltip estético (reemplaza el title nativo, feo) — cajita
+// bg-foreground al hacer hover, como el del sidebar. "arriba" para los datos
+// de la izquierda; "abajo-der" para los del borde derecho (calif / en curso).
+function ConTooltip({
+  children,
+  ayuda,
+  pos = "arriba",
+  className = "",
+}: {
+  children: React.ReactNode;
+  ayuda: string;
+  pos?: "arriba" | "abajo-der";
+  className?: string;
+}) {
+  return (
+    <span className={`group/tt relative cursor-help ${className}`}>
+      {children}
+      <span
+        className={`pointer-events-none absolute z-50 w-max max-w-[220px] rounded-md bg-foreground px-2.5 py-1.5 text-[11px] font-normal leading-snug text-background opacity-0 shadow-overlay transition-opacity duration-150 group-hover/tt:opacity-100 ${
+          pos === "arriba" ? "bottom-full left-0 mb-1.5" : "top-full right-0 mt-1.5"
+        }`}
+      >
+        {ayuda}
+      </span>
+    </span>
+  );
+}
+
+// STORY-987: una métrica inline del detalle (label muted + valor con tono).
 function Metrica({
   label,
   valor,
@@ -263,10 +290,10 @@ function Metrica({
         ? "text-brand"
         : "text-foreground";
   return (
-    <span className="inline-flex items-baseline gap-1 cursor-help" title={ayuda}>
+    <ConTooltip ayuda={ayuda} className="inline-flex items-baseline gap-1">
       <span className="text-muted">{label}</span>
       <span className={`font-semibold ${color}`}>{valor}</span>
-    </span>
+    </ConTooltip>
   );
 }
 
@@ -311,7 +338,7 @@ function FilaTecnico({
     <button
       type="button"
       onClick={onSelect}
-      className={`w-full text-left px-3 py-2.5 transition-colors ${
+      className={`w-full text-left px-3 py-2.5 transition-colors first:rounded-t-lg last:rounded-b-lg ${
         seleccionado ? "bg-brand-soft/40" : "hover:bg-surface-2"
       }`}
     >
@@ -324,14 +351,15 @@ function FilaTecnico({
           {seleccionado && <span className="size-2 rounded-full bg-brand" />}
         </span>
         <span className="font-medium truncate min-w-0 flex-1">{tecnico.nombre}</span>
-        <span
-          className={`text-[13px] font-semibold shrink-0 ${
-            s?.estrellas != null && s.estrellas >= 4 ? "text-brand" : "text-muted"
-          }`}
-          title="Promedio de estrellas que le pusieron los gestores al terminar sus trabajos."
-        >
-          {s?.estrellas != null ? `${s.estrellas.toFixed(1)}★` : "s/d ★"}
-        </span>
+        <ConTooltip ayuda="Promedio de estrellas de sus trabajos." pos="abajo-der" className="shrink-0">
+          <span
+            className={`text-[13px] font-semibold ${
+              s?.estrellas != null && s.estrellas >= 4 ? "text-brand" : "text-muted"
+            }`}
+          >
+            {s?.estrellas != null ? `${s.estrellas.toFixed(1)}★` : "s/d ★"}
+          </span>
+        </ConTooltip>
       </div>
 
       <div className="mt-1.5 pl-6 flex items-center gap-x-2 gap-y-1 flex-wrap">
@@ -345,12 +373,13 @@ function FilaTecnico({
           </span>
         )}
         <span className="ml-auto flex items-center gap-2 shrink-0">
-          <span
-            className={`text-[12px] ${enCurso >= 4 ? "text-urgente-fuerte font-medium" : "text-muted"}`}
-            title="Trabajos activos que tiene asignados ahora (su carga actual)."
-          >
-            {enCurso} en curso
-          </span>
+          <ConTooltip ayuda="Trabajos que tiene abiertos ahora." pos="abajo-der">
+            <span
+              className={`text-[12px] ${enCurso >= 4 ? "text-urgente-fuerte font-medium" : "text-muted"}`}
+            >
+              {enCurso} en curso
+            </span>
+          </ConTooltip>
           <span className="text-muted/40">·</span>
           <TiraDias franjas={tecnico.franjas} />
         </span>
@@ -361,31 +390,31 @@ function FilaTecnico({
           <Metrica
             label="Presup."
             valor={desvio.valor}
-            ayuda="Cumplimiento de presupuesto (igual que en Informes): materiales que rindió vs. los que presupuestó, en $. Ej.: +20% = cada $100 presupuestados salieron $120. La mano de obra no entra (es fija)."
+            ayuda="Cuánto se pasó de lo presupuestado (+20% = gastó de más)."
             tono={desvio.tono}
           />
           <Metrica
             label="Plazo"
             valor={plazo.valor}
-            ayuda="Cumplimiento de plazo (igual que en Informes): días reales de obra vs. el plazo que comprometió en el presupuesto. Ej.: +30% = una obra de 10 días le llevó 13."
+            ayuda="Cuánto se pasó del plazo que prometió."
             tono={plazo.tono}
           />
           <Metrica
             label="Hechas"
             valor={s ? String(s.obrasRealizadas) : "0"}
-            ayuda="Trabajos que ya finalizó (su experiencia acumulada). Las canceladas no cuentan."
+            ayuda="Trabajos que ya terminó."
             tono={s && s.obrasRealizadas > 0 ? "bien" : "neutro"}
           />
           <Metrica
             label="Rechaza"
             valor={s?.pctRechazoAsig != null ? `${s.pctRechazoAsig}%` : "s/d"}
-            ayuda="De las asignaciones que le mandaron, qué porcentaje rechazó."
+            ayuda="% de asignaciones que rechazó."
             tono={s?.pctRechazoAsig != null && s.pctRechazoAsig >= 30 ? "alerta" : "neutro"}
           />
           <Metrica
             label="Abandonó"
             valor={s ? String(s.abandonos) : "0"}
-            ayuda="Trabajos que dejó a mitad de camino (el gestor tuvo que desasignarlo y otro técnico rehízo la obra)."
+            ayuda="Trabajos que dejó a mitad de camino."
             tono={s && s.abandonos > 0 ? "alerta" : "neutro"}
           />
         </div>
@@ -441,7 +470,7 @@ function AccionAsignar({
         Elegí al técnico viendo su desempeño. <span className="font-medium">s/d</span> = sin
         datos suficientes.
       </p>
-      <div className="rounded-lg border border-border divide-y divide-border overflow-hidden stagger">
+      <div className="rounded-lg border border-border divide-y divide-border stagger">
         {tecnicos.map((t) => (
           <FilaTecnico
             key={t.id}
