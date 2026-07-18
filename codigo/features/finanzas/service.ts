@@ -17,6 +17,17 @@ import {
 } from "./medios";
 import { generarPDF, type DatosDocumento } from "./pdf";
 
+const BUCKET = "gestiones";
+const MAX_COMPROBANTE_BYTES = 8 * 1024 * 1024;
+// STORY-986: comprobante de pago real que la administración sube al liquidar
+// — PDF (transferencia) o imagen (foto del recibo firmado).
+const MIME_COMPROBANTE: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
 async function exigirAdministrativo() {
   const actual = await obtenerUsuarioActual();
   if (
@@ -55,7 +66,7 @@ async function exigirMantenimiento(gestionId: string) {
 // Los overrides permiten previsualizar con lo tipeado SIN escribir en la DB.
 async function datosDocumento(
   gestionId: string,
-  tipo: "nota" | "comprobante" | "presupuesto",
+  tipo: "nota" | "detalle" | "presupuesto",
   overrides?: { cargoAdmin?: number; pagador?: Pagador }
 ): Promise<
   | { datos: DatosDocumento; emailDestinatario: string | null }
@@ -90,7 +101,7 @@ async function datosDocumento(
   };
   const j = g as unknown as Joined;
   const aprobado = j.presupuestos.find((p) => p.estado === "aprobado");
-  // STORY-934: en nota y comprobante la línea de materiales usa la RENDICIÓN
+  // STORY-934: en nota y detalle la línea de materiales usa la RENDICIÓN
   // real del técnico (fallback: lo presupuestado, para gestiones viejas).
   const materialesRendidos = g.materiales_total != null;
   // Para el PDF de presupuesto: el vigente (aprobado, o el último enviado)
@@ -109,7 +120,7 @@ async function datosDocumento(
   // STORY-943: ya no hay "sugerido" — sin elección explícita no hay
   // destinatario (los flujos lo validan antes de llegar acá).
   const pagador = overrides?.pagador ?? g.pagador ?? null;
-  if (tipo === "comprobante") {
+  if (tipo === "detalle") {
     destinatarioNombre = j.tecnico?.nombre ?? "—";
     destinatarioRotulo = "Técnico";
     emailDestinatario = j.tecnico?.email ?? null;
@@ -145,14 +156,14 @@ async function datosDocumento(
   // sin desglose de obra (no hubo obra terminada que facturar).
   const esCancelacion = tipo === "nota" && g.cargo_cancelacion != null;
   // El fee de la inmobiliaria viaja al PAGADOR: entra al presupuesto (lo
-  // aprueba sabiendo el total real) y a la nota. Nunca al comprobante.
+  // aprueba sabiendo el total real) y a la nota. Nunca al detalle del técnico.
   const total = esCancelacion
     ? Number(g.cargo_cancelacion)
     : tipo === "presupuesto"
       ? Number(vigente?.monto_materiales ?? 0) +
         Number(vigente?.monto_mano_obra ?? 0) +
         cargoAdmin
-      : tipo === "comprobante"
+      : tipo === "detalle"
         ? Number(g.liq_monto ?? g.costo_final ?? 0)
         : Number(g.costo_final ?? 0) + cargoAdmin;
 
@@ -161,10 +172,10 @@ async function datosDocumento(
     datos: {
       tipo,
       numero: g.id.slice(0, 8).toUpperCase(),
-      // Comprobante: la fecha del documento es la del pago real (no la de
-      // regeneración/descarga), para que valga como constancia.
+      // Detalle: la fecha del documento es la del pago real (no la de
+      // regeneración/descarga), para que valga como constancia del pago.
       fecha:
-        tipo === "comprobante" && g.liq_pagada_en
+        tipo === "detalle" && g.liq_pagada_en
           ? new Date(g.liq_pagada_en).toLocaleDateString("es-AR")
           : new Date().toLocaleDateString("es-AR"),
       destinatarioNombre,
@@ -191,15 +202,15 @@ async function datosDocumento(
       facturaRef: tipo === "presupuesto" || esCancelacion ? null : g.liq_factura_ref,
       cancelacion: esCancelacion,
       medioPago:
-        tipo === "comprobante" && g.liq_medio
+        tipo === "detalle" && g.liq_medio
           ? MEDIO_LIQUIDACION_LABEL[g.liq_medio as MedioLiquidacion]
           : null,
       plazoDias: tipo === "presupuesto" ? vigente?.plazo_dias ?? null : null,
       materialesRendidos: tipo !== "presupuesto" && materialesRendidos,
       // STORY-977: el adelanto es un ajuste entre inmobiliaria↔técnico — solo
-      // se muestra en el comprobante del técnico, nunca en la nota al pagador.
+      // se muestra en el detalle del técnico, nunca en la nota al pagador.
       adelantoMateriales:
-        tipo === "comprobante" ? Number(g.adelanto_materiales ?? 0) : null,
+        tipo === "detalle" ? Number(g.adelanto_materiales ?? 0) : null,
     },
   };
 }
@@ -281,10 +292,12 @@ export async function emitirNotaCobro(gestionId: string): Promise<ActionResult> 
       : `Te enviamos el detalle del trabajo realizado en ${doc.datos.direccion}. El documento adjunto tiene el desglose completo.`,
     tipo: "nota_cobro",
     gestion_id: gestionId,
-    adjunto: {
-      filename: `nota-cobro-${doc.datos.numero}.pdf`,
-      contentBase64: pdf,
-    },
+    adjuntos: [
+      {
+        filename: `nota-cobro-${doc.datos.numero}.pdf`,
+        contentBase64: pdf,
+      },
+    ],
   });
 
   const supabase = await createClient();
@@ -312,7 +325,7 @@ export interface DocumentoGenerado {
 
 export async function descargarDocumento(
   gestionId: string,
-  tipo: "nota" | "comprobante"
+  tipo: "nota" | "detalle"
 ): Promise<ActionResult<DocumentoGenerado>> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
@@ -325,7 +338,7 @@ export async function descargarDocumento(
     ok: true,
     data: {
       base64,
-      filename: `${tipo === "nota" ? "nota-cobro" : "comprobante-liquidacion"}-${doc.datos.numero}.pdf`,
+      filename: `${tipo === "nota" ? "nota-cobro" : "detalle-liquidacion"}-${doc.datos.numero}.pdf`,
       destinatario: {
         nombre: doc.datos.destinatarioNombre,
         rotulo: doc.datos.destinatarioRotulo,
@@ -404,10 +417,12 @@ export async function enviarPresupuestoEmail(
     cuerpo: `Te enviamos el presupuesto por el trabajo a realizar en ${doc.datos.direccion}. El documento adjunto tiene el detalle completo.`,
     tipo: "presupuesto",
     gestion_id: gestionId,
-    adjunto: {
-      filename: `presupuesto-${doc.datos.numero}.pdf`,
-      contentBase64: pdf,
-    },
+    adjuntos: [
+      {
+        filename: `presupuesto-${doc.datos.numero}.pdf`,
+        contentBase64: pdf,
+      },
+    ],
   });
 
   // STORY-935: marca persistida del envío — habilita "Aprobar y ejecutar"
@@ -609,12 +624,38 @@ export async function registrarAdelantoMateriales(
 // sin rendición). La administración solo confirma el medio de pago.
 export async function registrarLiquidacion(
   gestionId: string,
-  datos: { medio: MedioLiquidacion }
+  formData: FormData
 ): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
-  if (!MEDIOS_LIQUIDACION.includes(datos.medio)) {
+  const medio = String(formData.get("medio")) as MedioLiquidacion;
+  if (!MEDIOS_LIQUIDACION.includes(medio)) {
     return { ok: false, error: "Indicá el método de pago." };
+  }
+
+  // STORY-986: comprobante de pago real, opcional. Se valida y sube ANTES de
+  // registrar la liquidación — si el archivo es inválido no se liquida a medias.
+  let comprobantePath: string | null = null;
+  let comprobanteExt: string | null = null;
+  let comprobanteBytes: Buffer | null = null;
+  const comprobante = formData.get("comprobante");
+  if (comprobante instanceof File && comprobante.size > 0) {
+    const ext = MIME_COMPROBANTE[comprobante.type];
+    if (!ext) {
+      return { ok: false, error: "El comprobante tiene que ser un PDF o una imagen (JPG, PNG o WEBP)." };
+    }
+    if (comprobante.size > MAX_COMPROBANTE_BYTES) {
+      return { ok: false, error: "El comprobante no puede superar los 8 MB." };
+    }
+    comprobanteBytes = Buffer.from(await comprobante.arrayBuffer());
+    comprobanteExt = ext;
+    const path = `${gestionId}/comprobante-pago-${Date.now()}.${ext}`;
+    const admin = createAdminClient();
+    const { error: upErr } = await admin.storage
+      .from(BUCKET)
+      .upload(path, comprobanteBytes, { contentType: comprobante.type });
+    if (upErr) return { ok: false, error: "No se pudo subir el comprobante. Probá de nuevo." };
+    comprobantePath = path;
   }
 
   const supabase = await createClient();
@@ -653,34 +694,49 @@ export async function registrarLiquidacion(
     .from("gestiones")
     .update({
       liq_monto: monto,
-      liq_medio: datos.medio,
+      liq_medio: medio,
       liq_pagada_en: new Date().toISOString(),
+      liq_comprobante_path: comprobantePath,
     })
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo registrar la liquidación." };
 
-  const doc = await datosDocumento(gestionId, "comprobante");
+  const doc = await datosDocumento(gestionId, "detalle");
   if (doc?.emailDestinatario) {
     const pdf = await generarPDF(doc.datos);
+    // Siempre va el detalle; si se subió un comprobante de pago, se suma como
+    // segundo adjunto (STORY-986).
+    const adjuntos = [
+      {
+        filename: `detalle-liquidacion-${doc.datos.numero}.pdf`,
+        contentBase64: pdf,
+      },
+    ];
+    if (comprobanteBytes && comprobanteExt) {
+      adjuntos.push({
+        filename: `comprobante-pago-${doc.datos.numero}.${comprobanteExt}`,
+        contentBase64: comprobanteBytes.toString("base64"),
+      });
+    }
     await enviarEmailDocumento({
       para: doc.emailDestinatario,
       destinatario: doc.datos.destinatarioNombre,
-      asunto: `Comprobante de liquidación — ${doc.datos.direccion}`,
+      asunto: `Detalle de tu liquidación — ${doc.datos.direccion}`,
       titulo: "Liquidación de tu trabajo",
-      cuerpo: `Registramos el pago por el trabajo en ${doc.datos.direccion}. Adjuntamos el comprobante con el detalle.`,
-      tipo: "comprobante_liquidacion",
+      cuerpo: comprobanteBytes
+        ? `Registramos el pago por el trabajo en ${doc.datos.direccion}. Adjuntamos el detalle de la liquidación y el comprobante de pago.`
+        : `Registramos el pago por el trabajo en ${doc.datos.direccion}. Adjuntamos el detalle de la liquidación.`,
+      tipo: "detalle_liquidacion",
       gestion_id: gestionId,
-      adjunto: {
-        filename: `comprobante-${doc.datos.numero}.pdf`,
-        contentBase64: pdf,
-      },
+      adjuntos,
     });
   }
 
   await registrarEvento(gestionId, "liquidacion_registrada", actual.id, {
     monto,
-    medio: datos.medio,
+    medio,
     ...(sobrante > 0 ? { sobrante } : {}),
+    ...(comprobantePath ? { comprobante: true } : {}),
   });
   return avanzarEtapa(gestionId, "finalizado");
 }

@@ -68,7 +68,7 @@ async function enviarEmail(datos: {
   cuerpo: string;
   tipo: string;
   gestion_id?: string;
-  adjunto?: { filename: string; contentBase64: string };
+  adjuntos?: { filename: string; contentBase64: string }[];
   cta?: Cta;
 }): Promise<void> {
   const admin = createAdminClient();
@@ -87,13 +87,11 @@ async function enviarEmail(datos: {
         to: [destinoEntregable(datos.para)],
         subject: datos.asunto,
         html: plantilla(datos.titulo, datos.cuerpo, datos.destinatario, datos.cta),
-        ...(datos.adjunto && {
-          attachments: [
-            {
-              filename: datos.adjunto.filename,
-              content: datos.adjunto.contentBase64,
-            },
-          ],
+        ...(datos.adjuntos?.length && {
+          attachments: datos.adjuntos.map((a) => ({
+            filename: a.filename,
+            content: a.contentBase64,
+          })),
         }),
       }),
     });
@@ -221,7 +219,9 @@ export async function emailRecuperarContrasena(
   });
 }
 
-// Documentos de finanzas (nota de cobro / comprobante) con PDF adjunto.
+// Documentos de finanzas (nota de cobro / detalle de liquidación) con uno o
+// más PDF/archivos adjuntos (STORY-986: la liquidación puede sumar el
+// comprobante de pago real subido por la administración).
 export async function enviarEmailDocumento(datos: {
   para: string;
   destinatario?: string;
@@ -230,7 +230,7 @@ export async function enviarEmailDocumento(datos: {
   cuerpo: string;
   tipo: string;
   gestion_id: string;
-  adjunto: { filename: string; contentBase64: string };
+  adjuntos: { filename: string; contentBase64: string }[];
 }): Promise<void> {
   await enviarEmail(datos);
 }

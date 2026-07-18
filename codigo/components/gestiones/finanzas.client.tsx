@@ -4,6 +4,7 @@ import { useState } from "react";
 import { EnvioDocumento } from "@/components/gestiones/envio-documento.client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputArchivo } from "@/components/ui/input-archivo.client";
 import { Select } from "@/components/ui/select";
 import {
   MEDIO_COBRO_LABEL,
@@ -11,7 +12,6 @@ import {
   MEDIOS_COBRO,
   MEDIOS_LIQUIDACION,
   type MedioCobro,
-  type MedioLiquidacion,
 } from "@/features/finanzas/medios";
 import {
   descargarDocumento,
@@ -441,28 +441,43 @@ export function FinanzasAcciones({
           </div>
         )}
         <form
-          className="flex flex-wrap items-end gap-3"
+          className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
-            const medio = String(
-              new FormData(e.currentTarget).get("medio")
-            ) as MedioLiquidacion;
-            correr("liq", () => registrarLiquidacion(gestion.id, { medio }));
+            const formData = new FormData(e.currentTarget);
+            correr("liq", () => registrarLiquidacion(gestion.id, formData));
           }}
         >
-          <div className="min-w-44">
-            <Select label="Método de pago" name="medio" defaultValue="transferencia">
-              {MEDIOS_LIQUIDACION.map((m) => (
-                <option key={m} value={m}>
-                  {MEDIO_LIQUIDACION_LABEL[m]}
-                </option>
-              ))}
-            </Select>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-44">
+              <Select label="Método de pago" name="medio" defaultValue="transferencia">
+                {MEDIOS_LIQUIDACION.map((m) => (
+                  <option key={m} value={m}>
+                    {MEDIO_LIQUIDACION_LABEL[m]}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
-          <Button type="submit" disabled={cargando !== null}>
-            {cargando === "liq" ? "Registrando…" : "Liquidar y finalizar →"}
-          </Button>
-          {error && <p className="text-sm font-medium text-error w-full">{error}</p>}
+          {/* STORY-986: comprobante de pago real, opcional. Si se sube, se suma
+              al email del técnico junto al detalle de la liquidación. */}
+          <div className="max-w-md">
+            <InputArchivo
+              label="Comprobante de pago (opcional)"
+              name="comprobante"
+              accept="application/pdf,image/*"
+            />
+            <p className="mt-1.5 text-[13px] text-muted">
+              Transferencia (PDF o imagen) o foto del recibo firmado. Si no
+              adjuntás nada, al técnico le llega solo el detalle.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" disabled={cargando !== null}>
+              {cargando === "liq" ? "Registrando…" : "Liquidar y finalizar →"}
+            </Button>
+            {error && <p className="text-sm font-medium text-error w-full">{error}</p>}
+          </div>
         </form>
       </div>
     );
@@ -476,8 +491,8 @@ export function FinanzasAcciones({
         generar={() => descargarDocumento(gestion.id, "nota")}
       />
       <EnvioDocumento
-        etiqueta="comprobante de liquidación"
-        generar={() => descargarDocumento(gestion.id, "comprobante")}
+        etiqueta="detalle de liquidación"
+        generar={() => descargarDocumento(gestion.id, "detalle")}
       />
     </div>
   );

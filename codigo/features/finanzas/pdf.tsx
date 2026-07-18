@@ -27,7 +27,9 @@ const s = StyleSheet.create({
 });
 
 export interface DatosDocumento {
-  tipo: "nota" | "comprobante" | "presupuesto";
+  // STORY-986: "detalle" = la planilla de liquidación que arma MANTIS para el
+  // técnico (no es un comprobante de pago — ese se sube aparte).
+  tipo: "nota" | "detalle" | "presupuesto";
   numero: string;
   fecha: string;
   destinatarioNombre: string;
@@ -47,7 +49,7 @@ export interface DatosDocumento {
   // STORY-972: nota de una cancelación con cargo — el total ES el cargo
   cancelacion?: boolean;
   // STORY-977: adelanto de materiales ya entregado al técnico — solo en el
-  // comprobante (nunca en la nota al pagador, no le corresponde verlo).
+  // detalle de liquidación (nunca en la nota al pagador, no le corresponde verlo).
   adelantoMateriales?: number | null;
 }
 
@@ -60,7 +62,7 @@ function monto(n: number) {
 
 const TITULO_DOC: Record<DatosDocumento["tipo"], string> = {
   nota: "Nota de cobro",
-  comprobante: "Comprobante de liquidación",
+  detalle: "Detalle de liquidación",
   presupuesto: "Presupuesto de obra",
 };
 
@@ -91,7 +93,7 @@ function Documento({ datos }: { datos: DatosDocumento }) {
           <Text style={s.valor}>{datos.direccion}</Text>
         </View>
 
-        {datos.tipo === "comprobante" && (
+        {datos.tipo === "detalle" && (
           <View style={s.caja}>
             <Text style={s.label}>Pago registrado</Text>
             <Text style={s.valor}>
@@ -120,11 +122,11 @@ function Documento({ datos }: { datos: DatosDocumento }) {
           )}
         </View>
 
-        {/* STORY-942: el desglose solo lo ve el TÉCNICO en su comprobante.
+        {/* STORY-942: el desglose solo lo ve el TÉCNICO en su detalle.
             Presupuesto y nota van al pagador con UN solo número (el total,
             fee incluido) — la comisión no se expone. */}
         <View style={s.caja}>
-          {datos.tipo === "comprobante" && datos.presupuesto && (
+          {datos.tipo === "detalle" && datos.presupuesto && (
             <>
               <View style={s.filaTabla}>
                 <Text>

@@ -657,10 +657,12 @@ export async function enviarResumenObras(legajoId: string): Promise<ActionResult
     cuerpo: `Te enviamos el detalle de los trabajos de mantenimiento realizados en ${r.datos.direccion} durante el período ${r.datos.periodo}.`,
     tipo: "resumen_obras",
     gestion_id: undefined as unknown as string,
-    adjunto: {
-      filename: `resumen-obras-${legajoId.slice(0, 8)}.pdf`,
-      contentBase64: base64,
-    },
+    adjuntos: [
+      {
+        filename: `resumen-obras-${legajoId.slice(0, 8)}.pdf`,
+        contentBase64: base64,
+      },
+    ],
   });
   return { ok: true };
 }
