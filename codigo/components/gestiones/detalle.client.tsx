@@ -52,6 +52,8 @@ import type {
   Presupuesto,
   TecnicoDisponible,
 } from "@/features/gestiones/types";
+import { ETAPAS_TERMINALES } from "@/features/gestiones/types";
+import { Icono } from "@/components/ui/iconos";
 
 // Formato manual determinístico: toLocaleString mete un espacio invisible
 // (U+202F) distinto entre Node y el navegador → error de hidratación.
@@ -953,6 +955,11 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const [rechazando, setRechazando] = useState(false);
   const subida = gestion.conformidades.find((c) => c.estado === "subida");
+  // STORY-1001: vinculadas aún en curso al momento de firmar "quedó bien
+  // terminado" — CARTEL informativo, nunca candado (terminal = sin cartel).
+  const vinculadasVivas = gestion.vinculadas.filter(
+    (v) => !ETAPAS_TERMINALES.has(v.etapa)
+  );
   const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
   // STORY-934: el costo sugerido sale de la obra REAL — materiales rendidos
   // por el técnico + la mano de obra presupuestada. Así lo que paga el
@@ -1073,6 +1080,29 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
           <span className="font-mono">{plata(costoFinal)}</span>
         </div>
       </div>
+      {/* STORY-1001: aviso de vinculadas abiertas — se puede aprobar igual;
+          la decisión es del gestor y queda a su nombre en la Auditoría. */}
+      {vinculadasVivas.length > 0 && (
+        <div
+          className="max-w-md rounded-md border border-urgente-soft-border bg-urgente-soft px-4 py-3 text-sm"
+          role="status"
+        >
+          <p className="font-semibold text-urgente-fuerte">
+            {vinculadasVivas.length === 1
+              ? "Hay una gestión vinculada sin terminar"
+              : `Hay ${vinculadasVivas.length} gestiones vinculadas sin terminar`}
+          </p>
+          {vinculadasVivas.map((v) => (
+            <p key={v.id} className="mt-1">
+              {v.descripcion} — {etiquetaEtapa(v.etapa)}
+            </p>
+          ))}
+          <p className="text-[13px] text-muted mt-2">
+            Podés aprobar igual: es solo un aviso para no cerrar esta obra con
+            el trabajo derivado todavía abierto.
+          </p>
+        </div>
+      )}
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
@@ -1768,6 +1798,23 @@ export function DetalleGestion({
         {gestion.descripcion}
       </h1>
 
+      {/* STORY-1001: nació vinculada a otra gestión (trabajo adicional
+          descubierto en la inspección/ejecución de aquella). Bajo la RLS del
+          técnico el origen puede no ser visible → la línea no se muestra. */}
+      {gestion.origen && (
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted">
+          <Icono id="vinculo" size={14} />
+          Surgió de:
+          <Link
+            href={`/gestiones/${gestion.origen.id}`}
+            className="font-medium text-brand hover:text-brand-hover"
+          >
+            {gestion.origen.descripcion}
+          </Link>
+          <Badge tono="neutro">{etiquetaEtapa(gestion.origen.etapa)}</Badge>
+        </p>
+      )}
+
       {/* STORY-976: el aviso del técnico no puede depender de que el gestor
           baje hasta la Actividad — banner arriba de todo, con las salidas. */}
       {esGestorOwner && gestion.aviso_no_continua_en && (
@@ -1777,6 +1824,42 @@ export function DetalleGestion({
       {gestion.etapa !== "cancelada" && <EtapaStepper etapa={gestion.etapa} />}
 
       <DatosGestion gestion={gestion} />
+
+      {/* STORY-1001: gestiones que surgieron de esta — fila simple con link
+          cruzado y etapa a la vista. Sin visor gráfico (Regla #0). */}
+      {gestion.vinculadas.length > 0 && (
+        <Card className="p-5 mt-4">
+          <div className="flex items-center gap-2">
+            <Icono id="vinculo" size={15} />
+            <p className="text-[13px] font-semibold">Gestiones vinculadas</p>
+            <span className="font-mono text-[12px] text-muted">
+              {gestion.vinculadas.length}
+            </span>
+          </div>
+          <p className="text-[13px] text-muted mt-0.5">
+            Surgieron de esta gestión (trabajo adicional descubierto en la
+            inspección o la ejecución).
+          </p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {gestion.vinculadas.map((v) => (
+              <li key={v.id}>
+                <Link
+                  href={`/gestiones/${v.id}`}
+                  className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 transition-colors hover:border-brand/40"
+                >
+                  <span className="min-w-0 truncate text-sm font-medium">
+                    {v.descripcion}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="text-[12px] text-muted">{v.especialidad}</span>
+                    <Badge tono="neutro">{etiquetaEtapa(v.etapa)}</Badge>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <PresenciaGestion
         gestionId={gestion.id}

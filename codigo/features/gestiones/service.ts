@@ -76,17 +76,27 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     desasignada_en: (g.desasignada_en as string | null) ?? null,
     aviso_no_continua_en: (g.aviso_no_continua_en as string | null) ?? null,
     creado_en: g.creado_en as string,
+    propiedad_id: g.propiedad_id as string,
+    gestion_origen_id: (g.gestion_origen_id as string | null) ?? null,
+    origen:
+      (g.origen as { id: string; descripcion: string; etapa: Etapa } | null) ??
+      null,
+    vinculadas_ids: ((g.vinculadas as { id: string }[] | null) ?? []).map(
+      (v) => v.id
+    ),
   };
 }
 
+// STORY-1001: origen (to-one por la columna) y vinculadas (to-many) son
+// self-embeds de gestiones — chip + hover del tablero y "Surgió de".
 const SELECT_RESUMEN =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestor_id, propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestor_id, propiedad_id, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // STORY-938: igual que SELECT_RESUMEN pero con el contacto de propietario/
 // inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
 // (gestor_id no va acá: obtenerGestion ya lo suma junto a tecnico_id y demás.)
 const SELECT_DETALLE =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, propiedades(direccion, tipo, unidad, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, tipo, unidad, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // Inquilino si la gestión tiene legajo vigente; si no, el propietario.
 function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_cliente"] {
@@ -182,6 +192,9 @@ export async function crearGestion(datos: {
   propiedad_id: string;
   especialidad_id: string;
   urgencia: Urgencia;
+  // STORY-1001: gestión de la que surgió esta (trabajo adicional descubierto
+  // en la inspección/ejecución). Opcional; el vínculo se fija acá y no se edita.
+  gestion_origen_id?: string;
 }): Promise<ActionResult<{ gestionId: string }>> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
@@ -198,17 +211,43 @@ export async function crearGestion(datos: {
   }
 
   const supabase = await createClient();
+
+  // STORY-1001: con origen, la propiedad ES la del origen (autoritativo) —
+  // la vinculada nace de la misma propiedad por definición.
+  let propiedadId = datos.propiedad_id;
+  if (datos.gestion_origen_id) {
+    const { data: origen } = await supabase
+      .from("gestiones")
+      .select("id, etapa, propiedad_id")
+      .eq("id", datos.gestion_origen_id)
+      .maybeSingle();
+    if (!origen) {
+      return { ok: false, error: "La gestión de origen no existe." };
+    }
+    if (ETAPAS_TERMINALES.has(origen.etapa)) {
+      return {
+        ok: false,
+        error: "La gestión de origen ya está cerrada — creala sin vínculo.",
+      };
+    }
+    propiedadId = origen.propiedad_id;
+  }
+
   const { data: legajo } = await supabase
     .from("legajos")
     .select("id")
-    .eq("propiedad_id", datos.propiedad_id)
+    .eq("propiedad_id", propiedadId)
     .is("fecha_fin", null)
     .maybeSingle();
 
   const { data: gestion, error } = await supabase
     .from("gestiones")
     .insert({
-      ...datos,
+      descripcion: datos.descripcion,
+      especialidad_id: datos.especialidad_id,
+      urgencia: datos.urgencia,
+      propiedad_id: propiedadId,
+      gestion_origen_id: datos.gestion_origen_id ?? null,
       legajo_id: legajo?.id ?? null,
       gestor_id: actual.id,
     })
@@ -255,6 +294,7 @@ export async function obtenerGestion(
     { data: presupuestos },
     { data: avances },
     { data: conformidades },
+    { data: vinculadas },
   ] =
     await Promise.all([
       supabase
@@ -277,6 +317,13 @@ export async function obtenerGestion(
         .select("id, tecnico_id, foto_path, estado, motivo_rechazo, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
+      // STORY-1001: gestiones que surgieron de esta (sección + cartel de
+      // conformidad). Query aparte: acá hace falta la especialidad.
+      supabase
+        .from("gestiones")
+        .select("id, descripcion, etapa, especialidades(nombre)")
+        .eq("gestion_origen_id", id)
+        .order("creado_en", { ascending: true }),
     ]);
 
   const base = normalizarFila(g as unknown as Record<string, unknown>);
@@ -359,6 +406,15 @@ export async function obtenerGestion(
         creado_en: c.creado_en,
       }))
     ),
+    vinculadas: (vinculadas ?? []).map((v) => {
+      const esp = v.especialidades as { nombre: string } | { nombre: string }[] | null;
+      return {
+        id: v.id,
+        descripcion: v.descripcion,
+        etapa: v.etapa as Etapa,
+        especialidad: (Array.isArray(esp) ? esp[0]?.nombre : esp?.nombre) ?? "—",
+      };
+    }),
   };
 }
 

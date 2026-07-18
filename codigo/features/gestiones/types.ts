@@ -64,6 +64,13 @@ export interface GestionResumen {
   // cualquier transición del funnel o resolverAvisoTecnico().
   aviso_no_continua_en: string | null;
   creado_en: string;
+  propiedad_id: string;
+  // STORY-1001: vínculo con la gestión que la originó (trabajo adicional
+  // descubierto en la inspección/ejecución). Se fija al crear, no se edita.
+  // Informativo: NUNCA bloquea el funnel de ninguna de las dos.
+  gestion_origen_id: string | null;
+  origen: { id: string; descripcion: string; etapa: Etapa } | null;
+  vinculadas_ids: string[]; // gestiones que surgieron de esta (chip + hover del tablero)
 }
 
 export interface Evento {
@@ -146,7 +153,6 @@ export interface GestionDetalle extends GestionResumen {
   aviso_no_continua_motivo: string | null;
   gestor_id: string;
   tecnico_id: string | null;
-  propiedad_id: string;
   // STORY-999: tipo y sub-descripción de ubicación de la propiedad, para
   // mostrarlos en la card de datos del detalle (solo el detalle los trae).
   propiedad_tipo: string | null;
@@ -159,6 +165,10 @@ export interface GestionDetalle extends GestionResumen {
   // STORY-914: calificación del técnico (una por gestión, se carga al finalizar)
   calificacion: { estrellas: number; comentario: string | null } | null;
   contacto_cliente: ContactoCliente | null;
+  // STORY-1001: gestiones que surgieron de esta (sección "Gestiones
+  // vinculadas" + cartel informativo al aprobar conformidad si alguna sigue
+  // en curso — cartel, NUNCA candado).
+  vinculadas: { id: string; descripcion: string; etapa: Etapa; especialidad: string }[];
 }
 
 // STORY-915: desempeño del técnico para decidir la asignación a golpe de vista.
