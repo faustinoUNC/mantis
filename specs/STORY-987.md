@@ -30,6 +30,6 @@ Reescribir `ScorecardTecnico` → **fila compacta** (`FilaTecnico`) y `AccionAsi
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de push)_
+- **Commit:** `8687a5d` (pusheado a main 2026-07-18).
 - **Archivos:** `codigo/components/gestiones/detalle.client.tsx` (`ScorecardTecnico`→`FilaTecnico`, `ChipStat`→`Metrica` inline, `AccionAsignar` grilla→lista `divide-y`+`stagger`).
 - **Verificación:** `tsc`/eslint verdes. E2E en el navegador (Playwright, admin, gestión en Asignación): la lista renderiza compacta, la especialidad que matchea va como chip esmeralda + resto con `+N` sin truncar, el detalle de métricas aparece solo en la fila seleccionada y cambia al elegir otra (verificado: 1 sola fila con detalle a la vez).

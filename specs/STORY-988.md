@@ -23,6 +23,6 @@ El form vacío no desborda. El overflow aparece **al adjuntar un documento con n
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de push)_
+- **Commit:** `8687a5d` (pusheado a main 2026-07-18).
 - **Archivos:** `codigo/components/ui/input-archivo.client.tsx` (`min-w-0` en el `<div>` raíz).
 - **Verificación:** `tsc`/eslint verdes. E2E a 360px (Playwright): con un documento adjunto de nombre largo el `scrollWidth` bajó de 631px (271px de overflow) a 360px (0 overflow); el nombre se trunca con "…" y el "×" + "Enviar solicitud" quedan visibles.
