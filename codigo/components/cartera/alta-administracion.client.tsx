@@ -9,6 +9,7 @@ import {
   type DireccionElegida,
 } from "@/components/ui/buscador-direccion.client";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { MapaDireccion } from "@/components/ui/mapa";
 import { Select } from "@/components/ui/select";
 import { crearAdministracion } from "@/features/cartera/service";
@@ -132,6 +133,9 @@ export function AltaAdministracion({
   // (pin exacto por lat/lon); tipear no dispara búsquedas en el mapa.
   const [direccion, setDireccion] = useState("");
   const [tipo, setTipo] = useState("");
+  // STORY-999: sub-descripción de ubicación — un único campo libre para
+  // piso+depto, casa/lote en complejo, nº de local, etc.
+  const [unidad, setUnidad] = useState("");
   const [pin, setPin] = useState<DireccionElegida | null>(null);
 
   function validarPaso(p: number): string | null {
@@ -156,7 +160,7 @@ export function AltaAdministracion({
     setEnviando(true);
     const r = await crearAdministracion({
       propietario: refPersona(propModo, propId, propNuevo),
-      propiedad: { direccion: direccion.trim(), tipo: tipo.trim() },
+      propiedad: { direccion: direccion.trim(), tipo: tipo.trim(), unidad: unidad.trim() },
     });
     if (!r.ok) {
       setEnviando(false);
@@ -239,6 +243,14 @@ export function AltaAdministracion({
                   </option>
                 ))}
               </Select>
+              <div className="sm:col-span-2">
+                <Input
+                  label="Piso / unidad"
+                  value={unidad}
+                  onChange={(e) => setUnidad(e.target.value)}
+                  placeholder="Piso 3, Depto B · Casa 12 · Local 4 (opcional)"
+                />
+              </div>
             </div>
             {pin && (
               <div className="mt-4 animate-aparecer">
@@ -271,7 +283,7 @@ export function AltaAdministracion({
               <FilaResumen
                 label="Propiedad"
                 valor={direccion}
-                detalle={tipo || undefined}
+                detalle={[tipo, unidad.trim()].filter(Boolean).join(" · ") || undefined}
                 onCambiar={() => irA(1)}
               />
             </div>

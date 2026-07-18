@@ -86,7 +86,7 @@ const SELECT_RESUMEN =
 // inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
 // (gestor_id no va acá: obtenerGestion ya lo suma junto a tecnico_id y demás.)
 const SELECT_DETALLE =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, propiedades(direccion, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, propiedades(direccion, tipo, unidad, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // Inquilino si la gestión tiene legajo vigente; si no, el propietario.
 function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_cliente"] {
@@ -296,6 +296,8 @@ export async function obtenerGestion(
     tecnico_id: string | null;
     propiedad_id: string;
     especialidad_id: string;
+    // STORY-999: tipo/unidad de la propiedad (embed del SELECT_DETALLE).
+    propiedades: { tipo: string | null; unidad: string | null } | null;
     // to-ONE (gestion_id UNIQUE): PostgREST devuelve objeto, no array.
     calificaciones:
       | { estrellas: number; comentario: string | null }
@@ -328,6 +330,8 @@ export async function obtenerGestion(
     gestor_id: fila.gestor_id,
     tecnico_id: fila.tecnico_id,
     propiedad_id: fila.propiedad_id,
+    propiedad_tipo: fila.propiedades?.tipo ?? null,
+    propiedad_unidad: fila.propiedades?.unidad ?? null,
     especialidad_id: fila.especialidad_id,
     // STORY-974: el tecnico_saliente congelado es un UUID — se nombra acá.
     eventos: (await nombrarSalientes(eventos ?? [], supabase)).map((e) => ({

@@ -78,7 +78,12 @@ export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
                   p.activa ? "" : "opacity-55"
                 }`}
               >
-                <td className="px-4 py-3 font-medium">{p.direccion}</td>
+                <td className="px-4 py-3 font-medium">
+                  {p.direccion}
+                  {p.unidad && (
+                    <span className="block text-[13px] font-normal text-muted">{p.unidad}</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-muted">{p.tipo ?? "—"}</td>
                 <td className="px-4 py-3 text-muted">{p.propietario_nombre}</td>
                 <td className="px-4 py-3">

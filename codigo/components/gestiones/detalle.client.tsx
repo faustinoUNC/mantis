@@ -97,21 +97,28 @@ function DatosGestion({ gestion }: { gestion: GestionDetalle }) {
   return (
     <Card className="p-5 mt-5">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-        <Dato label="Propiedad">
+        {/* STORY-999: la dirección envuelve (no se corta) y suma tipo · unidad. */}
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium text-muted">Propiedad</p>
           <a
             href={urlGoogleMaps(gestion.direccion)}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-brand hover:text-brand-hover"
+            className="mt-0.5 inline-flex items-start gap-1.5 text-[15px] font-medium text-brand hover:text-brand-hover"
             title="Abrir en Google Maps"
           >
-            <span className="truncate">{gestion.direccion}</span>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
+            <span className="break-words">{gestion.direccion}</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-1" aria-hidden>
               <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0" />
               <circle cx="12" cy="10" r="3" />
             </svg>
           </a>
-        </Dato>
+          {(gestion.propiedad_tipo || gestion.propiedad_unidad) && (
+            <p className="mt-0.5 text-[13px] text-muted">
+              {[gestion.propiedad_tipo, gestion.propiedad_unidad].filter(Boolean).join(" · ")}
+            </p>
+          )}
+        </div>
         {gestion.contacto_cliente && (
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-muted">

@@ -149,13 +149,14 @@ export async function listarPropiedades(): Promise<Propiedad[]> {
   const { data } = await supabase
     .from("propiedades")
     .select(
-      "id, direccion, tipo, propietario_id, activa, propietarios(nombre), legajos(id, fecha_fin, inquilinos(nombre))"
+      "id, direccion, tipo, unidad, propietario_id, activa, propietarios(nombre), legajos(id, fecha_fin, inquilinos(nombre))"
     )
     .order("direccion");
   type Fila = {
     id: string;
     direccion: string;
     tipo: string | null;
+    unidad: string | null;
     propietario_id: string;
     activa: boolean;
     propietarios: { nombre: string } | { nombre: string }[] | null;
@@ -174,6 +175,7 @@ export async function listarPropiedades(): Promise<Propiedad[]> {
       id: p.id,
       direccion: p.direccion,
       tipo: p.tipo,
+      unidad: p.unidad,
       propietario_id: p.propietario_id,
       propietario_nombre: prop?.nombre ?? "—",
       activa: p.activa,
@@ -235,7 +237,7 @@ async function resolverPersona(
 
 export async function crearAdministracion(datos: {
   propietario: RefPersona;
-  propiedad: { direccion: string; tipo: string };
+  propiedad: { direccion: string; tipo: string; unidad: string };
 }): Promise<ActionResult<{ propiedadId: string }>> {
   if (!datos.propiedad.direccion) {
     return { ok: false, error: "Completá la dirección de la propiedad." };
@@ -256,6 +258,7 @@ export async function crearAdministracion(datos: {
     .insert({
       direccion: datos.propiedad.direccion,
       tipo: datos.propiedad.tipo || null,
+      unidad: datos.propiedad.unidad.trim() || null,
       propietario_id: propietario.id,
     })
     .select("id")
@@ -299,7 +302,7 @@ export async function obtenerPropiedad(id: string) {
   const { data } = await supabase
     .from("propiedades")
     .select(
-      "id, direccion, tipo, activa, propietarios(id, nombre, email, telefono, documento:cuil, activo)"
+      "id, direccion, tipo, unidad, activa, propietarios(id, nombre, email, telefono, documento:cuil, activo)"
     )
     .eq("id", id)
     .single();

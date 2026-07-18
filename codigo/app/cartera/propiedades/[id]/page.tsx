@@ -46,7 +46,9 @@ export default async function PropiedadPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             {propiedad.direccion}
           </h1>
-          <p className="text-sm text-muted mt-1">{propiedad.tipo ?? "Sin tipo"}</p>
+          <p className="text-sm text-muted mt-1">
+            {[propiedad.tipo, propiedad.unidad].filter(Boolean).join(" · ") || "Sin tipo"}
+          </p>
         </div>
         {!propiedad.activa && <Badge tono="error">Inactiva</Badge>}
       </div>

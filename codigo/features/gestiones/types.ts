@@ -147,6 +147,10 @@ export interface GestionDetalle extends GestionResumen {
   gestor_id: string;
   tecnico_id: string | null;
   propiedad_id: string;
+  // STORY-999: tipo y sub-descripción de ubicación de la propiedad, para
+  // mostrarlos en la card de datos del detalle (solo el detalle los trae).
+  propiedad_tipo: string | null;
+  propiedad_unidad: string | null;
   especialidad_id: string;
   eventos: Evento[];
   presupuestos: Presupuesto[];

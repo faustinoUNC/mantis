@@ -13,6 +13,7 @@ export const TIPOS_INMUEBLE = [
   "Departamento",
   "Casa",
   "PH",
+  "Duplex",
   "Local",
   "Oficina",
   "Cochera",
@@ -29,6 +30,9 @@ export interface Propiedad {
   id: string;
   direccion: string;
   tipo: string | null;
+  // STORY-999: sub-descripción opcional de ubicación (piso/depto, casa en
+  // complejo, nº de local…). Un único campo libre para todos los casos.
+  unidad: string | null;
   propietario_id: string;
   propietario_nombre: string;
   activa: boolean;
