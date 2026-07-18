@@ -35,6 +35,6 @@
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente)_
-- **Archivos:** `codigo/features/cartera/types.ts`, `codigo/features/cartera/service.ts`, `codigo/components/cartera/alta-administracion.client.tsx`, `codigo/components/cartera/propiedades.client.tsx`, `codigo/app/cartera/propiedades/[id]/page.tsx`, `codigo/features/gestiones/types.ts`, `codigo/features/gestiones/service.ts`, `codigo/components/gestiones/detalle.client.tsx` + migración `propiedades.unidad`.
-- **Verificación:** _(pendiente)_
+- **Commit:** `1a0a7a8` (pusheado a main 2026-07-18).
+- **Archivos:** `codigo/features/cartera/types.ts`, `codigo/features/cartera/service.ts`, `codigo/components/cartera/alta-administracion.client.tsx`, `codigo/components/cartera/propiedades.client.tsx`, `codigo/app/cartera/propiedades/[id]/page.tsx`, `codigo/features/gestiones/types.ts`, `codigo/features/gestiones/service.ts`, `codigo/components/gestiones/detalle.client.tsx` + migración `propiedades_unidad`.
+- **Verificación:** `tsc`/eslint verdes. E2E en el navegador (Admin): alta con Duplex + "Piso 7, Depto B" → resumen "Duplex · Piso 7, Depto B" → detalle de propiedad idem. Detalle de gestión (Caseros 10) muestra la dirección en dos líneas (envuelta, sin cortar) + "Depto · Piso 2, Depto A". Datos de prueba limpiados.
