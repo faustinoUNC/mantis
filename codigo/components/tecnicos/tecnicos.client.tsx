@@ -109,6 +109,14 @@ const CAMPOS_BUSQUEDA: CampoBusqueda<TecnicoResumen>[] = [
   { id: "especialidad", label: "Especialidad", de: (t) => [t.especialidades.join(" ")] },
 ];
 
+// STORY-998: filtro por estado (mismo segmentado que Auditoría/Finanzas).
+const ESTADOS_FILTRO: { id: "todas" | EstadoTecnico; label: string }[] = [
+  { id: "todas", label: "Todas" },
+  { id: "pendiente", label: "Pendientes" },
+  { id: "aprobado", label: "Aprobados" },
+  { id: "rechazado", label: "Rechazados" },
+];
+
 export function Tecnicos({
   tecnicos,
   especialidades,
@@ -119,22 +127,24 @@ export function Tecnicos({
   const [creando, setCreando] = useState(false);
   const [consulta, setConsulta] = useState("");
   const [campo, setCampo] = useState("todo");
+  const [estadoFiltro, setEstadoFiltro] = useState<"todas" | EstadoTecnico>("todas");
   const pendientes = tecnicos.filter((t) => t.estado === "pendiente").length;
 
-  // Filtra por búsqueda y ordena pendientes primero.
+  // Filtra por estado + búsqueda y ordena pendientes primero.
   const filtrados = useMemo(
     () =>
       tecnicos
+        .filter((t) => estadoFiltro === "todas" || t.estado === estadoFiltro)
         .filter((t) => coincideCampo(consulta, campo, CAMPOS_BUSQUEDA, t))
         .sort(
           (a, b) =>
             (a.estado === "pendiente" ? -1 : 1) - (b.estado === "pendiente" ? -1 : 1)
         ),
-    [tecnicos, consulta, campo]
+    [tecnicos, consulta, campo, estadoFiltro]
   );
 
   const { pageItems, setPagina, paginadorProps } = usePaginado(filtrados);
-  useEffect(() => setPagina(1), [consulta, campo, setPagina]);
+  useEffect(() => setPagina(1), [consulta, campo, estadoFiltro, setPagina]);
 
   return (
     <div className="animate-aparecer">
@@ -171,6 +181,23 @@ export function Tecnicos({
         </Card>
       )}
 
+      <div className="flex rounded-md border border-border overflow-hidden w-fit mb-4">
+        {ESTADOS_FILTRO.map((e) => (
+          <button
+            key={e.id}
+            type="button"
+            onClick={() => setEstadoFiltro(e.id)}
+            className={`text-sm px-3.5 py-1.5 transition-colors ${
+              estadoFiltro === e.id
+                ? "bg-brand text-white"
+                : "bg-surface text-muted hover:text-foreground"
+            }`}
+          >
+            {e.label}
+          </button>
+        ))}
+      </div>
+
       <FiltrosLista
         consulta={consulta}
         onConsulta={setConsulta}
@@ -196,7 +223,7 @@ export function Tecnicos({
                 <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm">
                   {tecnicos.length === 0
                     ? "Todavía no hay técnicos. Cargalos con “Alta manual” o esperá registros nuevos."
-                    : "Ningún técnico coincide con la búsqueda."}
+                    : "Ningún técnico coincide con los filtros."}
                 </td>
               </tr>
             )}
