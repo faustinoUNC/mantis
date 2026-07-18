@@ -4,7 +4,7 @@
 
 ## v1.2 — orden por calificación (pedido de Fausti)
 
-La lista de técnicos disponibles se ordena por **estrellas de mayor a menor** (los mejor calificados primero; los sin calificación quedan al final, desempate por nombre para orden estable). El orden se hace en `tecnicosDisponibles` (`features/gestiones/service.ts`), así el primero queda además pre-seleccionado. — commit _(ver git)_. (+ comentario de Rami: "las especialidades se ven pero no completamente, ¿es a propósito o está mal?"). Dos problemas: (1) la línea de especialidades del técnico se **trunca** cuando tiene varias, y el "sin horarios" queda flotando; (2) cada candidato es una card con **7 métricas** en grilla de 2 columnas → fea, poco minimalista y **no escala a 40 técnicos**. Fausti eligió la dirección "lista compacta".
+La lista de técnicos disponibles se ordena por **estrellas de mayor a menor** (los mejor calificados primero; los sin calificación quedan al final, desempate por nombre para orden estable). El orden se hace en `tecnicosDisponibles` (`features/gestiones/service.ts`), así el primero queda además pre-seleccionado. — commit `ef099fb`. (+ comentario de Rami: "las especialidades se ven pero no completamente, ¿es a propósito o está mal?"). Dos problemas: (1) la línea de especialidades del técnico se **trunca** cuando tiene varias, y el "sin horarios" queda flotando; (2) cada candidato es una card con **7 métricas** en grilla de 2 columnas → fea, poco minimalista y **no escala a 40 técnicos**. Fausti eligió la dirección "lista compacta".
 
 ## Diagnóstico
 
