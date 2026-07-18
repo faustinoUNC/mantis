@@ -171,3 +171,17 @@ body {
   -webkit-box-shadow: 0 0 0 1000px var(--color-background) inset;
   -webkit-text-fill-color: var(--color-foreground);
 }
+
+/* Piso de accesibilidad vestibular: para quien pidió menos movimiento,
+   se anula la animación del sistema (aparecer, stagger y el latido infinito
+   del wordmark) y las transiciones largas. No cambia ningún estado ni layout. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -36,7 +36,7 @@ export function BotonGoogleMaps({ direccion }: { direccion: string }) {
       className="inline-flex items-center gap-2 min-h-tap px-4 rounded-md font-medium text-[0.9375rem] bg-surface text-foreground border border-border-strong hover:bg-surface-2 transition-colors"
     >
       {/* Pin en SVG propio */}
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand" aria-hidden>
         <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0" />
         <circle cx="12" cy="10" r="3" />
       </svg>

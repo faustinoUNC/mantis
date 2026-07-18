@@ -226,7 +226,7 @@ function TiraDias({ franjas }: { franjas: TecnicoDisponible["franjas"] }) {
         ))}
       </div>
       <div className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-max rounded-md bg-foreground px-3 py-2 opacity-0 shadow-overlay transition-opacity duration-150 group-hover/dias:opacity-100">
-        <p className="text-[10px] uppercase tracking-wide text-background/60 mb-1">
+        <p className="text-[11px] font-medium text-background/70 mb-1">
           Horarios de trabajo
         </p>
         <ul className="flex flex-col gap-0.5">
@@ -815,10 +815,11 @@ function FormAvance({ gestion }: { gestion: GestionDetalle }) {
         if (ok) form.reset();
       }}
     >
-      <Input
+      <Textarea
         label={gestion.etapa === "presupuesto" ? "Nota de inspección" : "Nota de avance"}
         name="nota"
         required
+        rows={3}
         placeholder="Qué hiciste / qué encontraste"
       />
       <InputArchivo label="Foto (opcional)" name="foto" capture="environment" />
@@ -1572,12 +1573,14 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
                   <FechaItem fecha={item.fecha} />
                 </div>
                 {item.foto && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.foto}
-                    alt="Foto del registro"
-                    className="mt-2 rounded-md max-h-44 border border-border"
-                  />
+                  <a href={item.foto} target="_blank" rel="noreferrer" className="mt-2 block w-max">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.foto}
+                      alt="Foto del registro"
+                      className="rounded-md max-h-44 border border-border"
+                    />
+                  </a>
                 )}
               </li>
             );
@@ -1601,12 +1604,14 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
                   <FechaItem fecha={item.fecha} />
                 </div>
                 {item.foto && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.foto}
-                    alt="Conformidad firmada"
-                    className="mt-2 rounded-md max-h-44 border border-border"
-                  />
+                  <a href={item.foto} target="_blank" rel="noreferrer" className="mt-2 block w-max">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.foto}
+                      alt="Conformidad firmada"
+                      className="rounded-md max-h-44 border border-border"
+                    />
+                  </a>
                 )}
               </li>
             );

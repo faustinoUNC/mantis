@@ -64,7 +64,7 @@ export function InicioRol({
             <Card
               className={`p-4 h-full ${
                 t.href
-                  ? "group-hover:border-border-strong group-hover:-translate-y-px transition-all duration-150"
+                  ? "group-hover:border-border-strong group-focus-visible:border-border-strong group-hover:-translate-y-px transition-all duration-150"
                   : ""
               }`}
             >
@@ -96,7 +96,7 @@ export function InicioRol({
             </Card>
           );
           return t.href ? (
-            <Link key={t.label} href={t.href} className="group">
+            <Link key={t.label} href={t.href} className="group rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
               {contenido}
             </Link>
           ) : (

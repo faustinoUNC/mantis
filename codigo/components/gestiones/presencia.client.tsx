@@ -78,11 +78,11 @@ export function PresenciaGestion({
     <>
       {dueno && (
         <div className="animate-aparecer flex items-center gap-2.5 rounded-md border border-urgente-soft-border bg-urgente-soft px-4 py-3 mb-3">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-urgente-fuerte" aria-hidden>
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
-          <p className="text-sm font-medium text-[#B45309]">
+          <p className="text-sm font-medium text-urgente-fuerte">
             <strong>{dueno.nombre}</strong> está trabajando en esta gestión — las
             acciones se desbloquean cuando salga.
           </p>

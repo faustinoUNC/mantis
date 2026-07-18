@@ -51,10 +51,10 @@ function TarjetaGestion({
   activa: boolean;
 }) {
   return (
-    <Link href={`/gestiones/${gestion.id}`} className="block group">
+    <Link href={`/gestiones/${gestion.id}`} className="block group rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
       <Card
         className={cn(
-          "p-3.5 transition-all duration-150 group-hover:border-brand/40 group-hover:-translate-y-px",
+          "p-3.5 transition-all duration-150 group-hover:border-brand/40 group-focus-visible:border-brand/40 group-hover:-translate-y-px",
           gestion.urgencia === "urgente" && "border-l-2 border-l-urgente",
           !activa && "opacity-50"
         )}

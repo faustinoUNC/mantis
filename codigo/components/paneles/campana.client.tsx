@@ -114,7 +114,7 @@ export function Campana({
         type="button"
         onClick={alternar}
         aria-label={`Notificaciones${noLeidas ? ` (${noLeidas} sin leer)` : ""}`}
-        className="relative flex items-center justify-center size-9 rounded-md text-muted hover:text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-2 focus-visible:outline-brand"
+        className="relative flex items-center justify-center size-11 rounded-md text-muted hover:text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
       >
         {/* Campana en SVG propio (sin librerías de íconos — Regla #0) */}
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -157,7 +157,7 @@ export function Campana({
                 </div>
               );
               return n.ruta ? (
-                <Link key={n.id} href={n.ruta} onClick={() => setAbierta(false)}>
+                <Link key={n.id} href={n.ruta} onClick={() => setAbierta(false)} className="block focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand">
                   {contenido}
                 </Link>
               ) : (

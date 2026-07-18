@@ -186,7 +186,7 @@ export function ComboFiltrable({
           {visibles.map((g) => (
             <li key={g.label} className="border-b border-border last:border-0">
               {g.label && (
-                <p className="px-3.5 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                <p className="px-3.5 pt-2 pb-1 text-[13px] font-medium text-muted">
                   {g.label}
                 </p>
               )}

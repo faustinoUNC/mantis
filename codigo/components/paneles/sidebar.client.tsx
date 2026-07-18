@@ -67,7 +67,7 @@ export function SidebarStaff({
           href={item.href}
           aria-label={rail ? item.label : undefined}
           className={cn(
-            "group/nav relative flex items-center rounded-md text-sm font-medium transition-colors shrink-0",
+            "group/nav relative flex items-center rounded-md text-sm font-medium transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
             modo === "mobile" ? "gap-2.5 px-3 min-h-tap" : rail ? "justify-center min-h-tap" : "gap-2.5 px-3 py-2",
             esActivo
               ? "bg-brand-soft text-brand-active"

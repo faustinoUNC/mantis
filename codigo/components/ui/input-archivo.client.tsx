@@ -108,7 +108,7 @@ export function InputArchivo({
         )}
       </div>
       {multiple && archivos.length > 0 && (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-col gap-2">
           {archivos.map((archivo, i) => (
             <li
               key={`${archivo.name}-${i}`}
@@ -119,7 +119,7 @@ export function InputArchivo({
               <button
                 type="button"
                 aria-label={`Quitar ${archivo.name}`}
-                className="ml-auto shrink-0 flex items-center justify-center size-6 rounded-md hover:bg-surface-2 hover:text-foreground transition-colors"
+                className="ml-auto shrink-0 flex items-center justify-center size-11 rounded-md text-lg leading-none hover:bg-surface-2 hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 onClick={(e) => {
                   const input = document.getElementById(id) as HTMLInputElement | null;
                   if (!input) return;

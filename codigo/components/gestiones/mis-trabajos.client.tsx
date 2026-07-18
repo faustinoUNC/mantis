@@ -76,7 +76,7 @@ const urgentesPrimero = (a: GestionResumen, b: GestionResumen) =>
 
 function TarjetaAccion({ g, cta }: { g: GestionResumen; cta: string }) {
   return (
-    <Link href={`/gestiones/${g.id}`} className="block group">
+    <Link href={`/gestiones/${g.id}`} className="block group rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
       <Card
         className={cn(
           "p-4 transition-all duration-150 group-hover:border-border-strong group-active:scale-[0.985]",
@@ -106,7 +106,7 @@ function TarjetaAccion({ g, cta }: { g: GestionResumen; cta: string }) {
 
 function TarjetaSeguimiento({ g, estado }: { g: GestionResumen; estado: string }) {
   return (
-    <Link href={`/gestiones/${g.id}`} className="block group">
+    <Link href={`/gestiones/${g.id}`} className="block group rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
       <Card
         className={cn(
           "p-3.5 flex items-center gap-3 transition-all duration-150 group-hover:border-border-strong group-active:scale-[0.985]",
@@ -153,7 +153,7 @@ function SeccionEtapa({ def, gestiones }: { def: DefEtapa; gestiones: GestionRes
         />
         <h2
           className={cn(
-            "text-[13px] font-semibold tracking-wide uppercase",
+            "text-[13px] font-semibold",
             acento ? "text-foreground" : "text-muted"
           )}
         >
@@ -183,7 +183,7 @@ function SeccionEtapa({ def, gestiones }: { def: DefEtapa; gestiones: GestionRes
         <button
           type="button"
           onClick={() => setVisibles((v) => v + POR_PAGINA)}
-          className="w-full min-h-tap mt-3 rounded-md border border-border-strong bg-surface text-sm font-medium text-muted hover:text-foreground hover:bg-surface-2 transition-colors"
+          className="w-full min-h-tap mt-3 rounded-md border border-border-strong bg-surface text-sm font-medium text-muted hover:text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
           Mostrar más ({restantes})
         </button>
@@ -223,7 +223,7 @@ function SelectorEtapa({
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="w-full min-h-tap flex items-center gap-2 px-3.5 rounded-md border border-border-strong bg-surface text-left transition-colors hover:bg-surface-2"
+        className="w-full min-h-tap flex items-center gap-2 px-3.5 rounded-md border border-border-strong bg-surface text-left transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
       >
         <span className="text-[13px] font-medium text-muted">Etapa</span>
         <span className="font-semibold truncate">{etiqueta}</span>
@@ -241,9 +241,9 @@ function SelectorEtapa({
               type="button"
               aria-label="Cerrar"
               onClick={() => setAbierto(false)}
-              className="absolute inset-0 bg-black/40 animate-aparecer"
+              className="absolute inset-0 bg-foreground/40 animate-aparecer"
             />
-            <div className="relative w-full max-w-lg mx-auto bg-surface rounded-t-xl border-t border-x border-border p-4 pb-6 max-h-[70vh] overflow-y-auto animate-subir">
+            <div className="relative w-full max-w-lg mx-auto bg-surface rounded-t-lg border-t border-x border-border p-4 pb-6 max-h-[70vh] overflow-y-auto animate-subir">
               <div className="mx-auto mb-4 h-1 w-10 rounded-pill bg-border-strong" aria-hidden />
               <p className="text-[13px] font-medium text-muted mb-2">Elegí una etapa</p>
               <ul className="flex flex-col">
@@ -293,7 +293,7 @@ function FilaEtapa({
         onClick={onClick}
         aria-current={activa}
         className={cn(
-          "w-full min-h-tap flex items-center gap-2.5 px-2 rounded-md transition-colors",
+          "w-full min-h-tap flex items-center gap-2.5 px-2 rounded-md transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
           activa ? "bg-brand-soft" : "hover:bg-surface-2"
         )}
       >

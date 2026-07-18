@@ -245,7 +245,7 @@ function LeyendaTendencia({ diag }: { diag: { texto: string; color: string } | n
 function Bloque({ titulo, children, cols = 2 }: { titulo: string; children: ReactNode; cols?: 1 | 2 }) {
   return (
     <section className="mb-8">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted mb-3">{titulo}</h3>
+      <h3 className="text-[13px] font-semibold text-muted mb-3">{titulo}</h3>
       <div className={`grid gap-4 ${cols === 2 ? "lg:grid-cols-2" : "grid-cols-1"}`}>{children}</div>
     </section>
   );
@@ -683,7 +683,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
             <div>
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-sm text-muted">Por cobrar · {pendiente.nCobrar} {pendiente.nCobrar === 1 ? "gestión" : "gestiones"}</span>
-                <span className="text-xl font-semibold tabular-nums">{plata(pendiente.cobrarTotal)}</span>
+                <span className="text-xl font-semibold tabular-nums font-mono">{plata(pendiente.cobrarTotal)}</span>
               </div>
               {pendiente.cobrarTotal > 0 && (
                 <>
@@ -751,9 +751,9 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       )}
 
       {/* ══ Caja "En el período": el filtro de fechas gobierna SOLO lo de adentro ══ */}
-      <div className="rounded-xl border border-border mb-8">
+      <div className="rounded-lg border border-border mb-8">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-border">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted">En el período</h3>
+          <h3 className="text-[13px] font-semibold text-muted">En el período</h3>
           <div className="flex rounded-md border border-border overflow-hidden">
             {PERIODOS.map((p) => (
               <button key={p.id} onClick={() => setPeriodoId(p.id)} className={`text-sm px-2.5 py-1.5 transition-colors ${periodoId === p.id ? "bg-brand text-white" : "bg-surface text-muted hover:text-foreground"}`}>{p.label}</button>
@@ -862,7 +862,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       {/* ══ Histórico — acumulado de todas las gestiones (no sigue el período).
           Calificación a lo ancho; debajo las dos gemelas de cumplimiento. ══ */}
       <section className="mb-8">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted mb-3">Histórico · desempeño de técnicos</h3>
+        <h3 className="text-[13px] font-semibold text-muted mb-3">Histórico · desempeño de técnicos</h3>
         <div className="grid gap-4 grid-cols-1 mb-4">
         <MetricCard titulo="Calificación de técnicos" ayuda="Promedio de estrellas y obras finalizadas por técnico — quién resuelve mejor y cuánto hizo. Si dejó obras a mitad de camino (abandonos), se marca al lado." n={nCalificadas} unidad="calificaciones" alcance="historico">
           {ranking.length === 0 ? (

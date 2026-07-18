@@ -259,7 +259,7 @@ function StatCard({
             </span>
           </span>
         </p>
-        <p className="text-xl font-semibold tabular-nums tracking-tight mt-1">
+        <p className="text-xl font-semibold tabular-nums font-mono tracking-tight mt-1">
           {pesos(monto)}
         </p>
         <p className="text-[12px] text-muted mt-0.5">
@@ -294,7 +294,7 @@ function EncabezadoGrupo({
           · {cantidad} {cantidad === 1 ? "gestión" : "gestiones"}
         </span>
       </h2>
-      <span className="text-sm font-semibold tabular-nums">{pesos(total)}</span>
+      <span className="text-sm font-semibold tabular-nums font-mono">{pesos(total)}</span>
     </div>
   );
 }
@@ -332,10 +332,10 @@ function TarjetaGestion({
   medio?: string; // cerradas
 }) {
   return (
-    <Link href={`/gestiones/${id}`} className="group block">
-      <Card className="p-4 h-full transition-colors hover:border-brand">
+    <Link href={`/gestiones/${id}`} className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+      <Card className="p-4 h-full transition-colors hover:border-brand group-focus-visible:border-brand">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-lg font-semibold tabular-nums tracking-tight">
+          <p className="text-lg font-semibold tabular-nums font-mono tracking-tight">
             {pesos(monto)}
           </p>
           {antiguedad && (
@@ -450,7 +450,7 @@ function HistorialMensual<T extends { fecha: string; monto: number; id: string }
           <span className="text-muted">
             {g.filas.length} {g.filas.length === 1 ? "gestión" : "gestiones"} ·{" "}
           </span>
-          <span className="font-semibold tabular-nums">{pesos(g.total)}</span>
+          <span className="font-semibold tabular-nums font-mono">{pesos(g.total)}</span>
         </span>
       </div>
       <Grilla>{g.filas.map(tarjeta)}</Grilla>

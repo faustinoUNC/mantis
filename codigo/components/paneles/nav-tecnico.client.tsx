@@ -26,7 +26,8 @@ export function NavTecnico({ items }: { items: ItemNav[] }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 min-h-tap transition-colors",
+                "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 min-h-tap transition-[color,transform] active:scale-[0.985]",
+                "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
                 activo ? "text-brand-active" : "text-muted"
               )}
             >

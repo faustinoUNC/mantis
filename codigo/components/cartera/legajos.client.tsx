@@ -93,7 +93,7 @@ export function Legajos({
               onListo={() => setEditandoInquilino(false)}
             />
           ) : (
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <Badge tono="brand">Vigente</Badge>
                 <p className="font-medium mt-2">{vigente.inquilino_nombre}</p>
@@ -115,7 +115,6 @@ export function Legajos({
                     Editar datos
                   </Button>
                 )}
-              </div>
               {cerrando ? (
                 <form onSubmit={onCerrar} className="flex items-end gap-3">
                   <Input label="Fecha de fin" name="fecha_fin" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
@@ -131,6 +130,7 @@ export function Legajos({
                   Cerrar legajo
                 </Button>
               )}
+              </div>
             </div>
           )}
         </Card>
