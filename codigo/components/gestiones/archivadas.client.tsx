@@ -59,7 +59,7 @@ function TarjetaArchivada({ gestion }: { gestion: Archivada }) {
         {gestion.tecnico_nombre && <span>Técnico: {gestion.tecnico_nombre}</span>}
       </div>
       <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-border/70">
-        <span className="font-mono text-[11px] text-muted/80">
+        <span className="font-mono text-[12px] text-muted/80">
           Archivada el {fechaCorta(gestion.archivada_en)}
         </span>
         <Button variante="fantasma" disabled={cargando} onClick={desarchivar}>

@@ -84,7 +84,7 @@ function TarjetaGestion({
               <Badge tono="urgente">Técnico no continúa</Badge>
             )}
           </div>
-          <span className="font-mono text-[11px] text-muted/80 shrink-0">
+          <span className="font-mono text-[12px] text-muted/80 shrink-0">
             {diasEn(gestion.creado_en)}
           </span>
         </div>
@@ -311,7 +311,7 @@ export function Tablero({
                 </h2>
                 <span
                   className={cn(
-                    "ml-auto font-mono text-[11px] rounded-pill px-1.5 py-0.5",
+                    "ml-auto font-mono text-[12px] rounded-pill px-1.5 py-0.5",
                     columna.length > 0
                       ? "bg-surface text-foreground border border-border"
                       : "text-muted/60"

@@ -277,7 +277,7 @@ function MetricCard({
         <div className="flex items-baseline gap-2 min-w-0">
           <h4 className="text-[15px] font-semibold tracking-tight truncate">{titulo}</h4>
           {alcance && (
-            <span className="shrink-0 text-[11px] text-muted border border-border rounded-full px-2 py-px" title={alcance === "ahora" ? "Estado actual — no cambia con el período" : "Histórico — todas las gestiones, no cambia con el período"}>
+            <span className="shrink-0 text-[12px] text-muted border border-border rounded-full px-2 py-px" title={alcance === "ahora" ? "Estado actual — no cambia con el período" : "Histórico — todas las gestiones, no cambia con el período"}>
               {alcance === "ahora" ? "ahora" : "histórico"}
             </span>
           )}

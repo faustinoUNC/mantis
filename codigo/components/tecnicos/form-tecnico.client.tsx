@@ -94,7 +94,7 @@ export function TecnicoForm({
               />
               {esp.nombre}
               {esp.requiere_matricula && (
-                <span className="text-[11px] text-urgente-fuerte">(matríc.)</span>
+                <span className="text-[12px] text-urgente-fuerte">(matríc.)</span>
               )}
             </label>
           ))}

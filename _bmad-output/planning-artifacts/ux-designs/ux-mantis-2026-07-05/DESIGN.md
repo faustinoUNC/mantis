@@ -2,7 +2,7 @@
 name: MANTIS 2
 description: Design contract del sistema de gestión de mantenimiento inmobiliario. Dirección "Esmeralda técnica" — minimalista y moderna. Tailwind 4 CSS-first; los tokens de este archivo SON los del @theme de codigo/app/globals.css.
 status: final
-updated: 2026-07-06 (STORY-907: avatar, input-archivo, stagger — aditivo)
+updated: 2026-07-18 (STORY-992/994/995: section-header, body 14px, caption 12px, visor-foto — aditivo)
 sources:
   - specs/PRD.md (v1.2.0 §12)
 colors:
@@ -37,17 +37,32 @@ typography:
     fontWeight: '600'
     lineHeight: '1.3'
     letterSpacing: '-0.01em'
-  body:
+  section-header:
     fontFamily: 'Archivo'
     fontSize: 15px
+    fontWeight: '600'
+    lineHeight: '1.3'
+    letterSpacing: '-0.01em'
+    color: '{colors.text}'
+    note: 'STORY-992: el título que abre una sección de un panel (Legajos, grupos de Finanzas, secciones de Detalle/Informes). Caja normal, nunca uppercase. Distinto del `label`/overline de 13px (rótulo de grupo chico) y del `title` 17px.'
+  body:
+    fontFamily: 'Archivo'
+    fontSize: 14px
     fontWeight: '400'
     lineHeight: '1.55'
+    note: 'STORY-994: 14px (`text-sm`) es el body oficial — se alinea el contract al código, que ya lo usa masivamente. El viejo 15px queda para `section-header`.'
   label:
     fontFamily: 'Archivo'
     fontSize: 13px
     fontWeight: '500'
     lineHeight: '1.3'
     color: '{colors.text-muted}'
+  caption:
+    fontFamily: 'Archivo'
+    fontSize: 12px
+    fontWeight: '400'
+    color: '{colors.text-muted}'
+    note: 'STORY-994: metadatos chicos — timestamps ("hace 3 h"), contadores, sub-líneas. Piso 12px (el 10px es exclusivo de nav-tecnico). No usar para texto legible principal.'
   data:
     fontFamily: 'Fragment Mono'
     fontSize: 13px
@@ -124,6 +139,12 @@ components:
   mapa:
     estilo: 'iframe Google Maps embed con el tratamiento de card (borde {colors.border}, radio {rounded.lg}); botón "Abrir en Google Maps" = button-secondary con pin esmeralda'
     uso: 'preview al cargar dirección (validación visual), detalle de propiedad, detalle de gestión'
+  visor-foto:
+    estilo: 'STORY-995: tap en una miniatura → overlay a pantalla completa con la foto centrada, fondo {colors.text} al 80%, sombra {shadow-overlay}; cerrar con tap fuera / botón × (≥44px) / Escape. Animación `aparecer`, respeta prefers-reduced-motion.'
+    uso: 'ÚNICO patrón para toda foto ampliable: avance, conformidad y comprobantes del detalle de gestión (reemplaza el <a target=_blank>).'
+  skeleton:
+    estilo: 'STORY-993: placeholder del layout final — Card (surface + borde) con bloques {colors.surface-2} y un pulso muy sutil (respeta prefers-reduced-motion). NO spinner a pantalla completa.'
+    uso: '`loading.tsx` de rutas pesadas (detalle, tablero, informes, finanzas) y vacíos de sincronización (inbox).'
 ---
 
 ## Brand & Style
@@ -158,6 +179,7 @@ Un **acento** (esmeralda/ámbar/rojo) marca un **estado discreto**: activo, urge
 - Labels de formulario: `label` (13px, medium, `text-muted`, caja normal) — **se retiran las etiquetas mono uppercase** de la etapa anterior.
 - **Fragment Mono** queda SOLO para datos: montos, IDs de gestión, fechas técnicas, códigos.
 - Jerarquía por peso y color antes que por tamaño: pocos tamaños, bien usados.
+- **Escala oficial (STORY-994, un solo "chico" por rol):** `display` 24 · `title` 17 · `section-header` 15 · `body` 14 (`text-sm`) · `label` 13 · `caption` 12. El 10px es exclusivo de `nav-tecnico`. Prohibido inventar tamaños fuera de esta escala; nada por debajo de 12px salvo esa excepción.
 
 ## Layout & Spacing
 

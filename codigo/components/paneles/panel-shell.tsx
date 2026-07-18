@@ -100,7 +100,7 @@ export async function PanelShell({
               <Avatar nombre={usuario.nombre} size="md" />
               <div className="min-w-0 group-data-[colapsado=true]/side:hidden">
                 <p className="text-sm font-medium truncate">{usuario.nombre}</p>
-                <p className="text-[11px] text-muted truncate">
+                <p className="text-[12px] text-muted truncate">
                   {NOMBRE_ROL[usuario.rol]}
                 </p>
               </div>

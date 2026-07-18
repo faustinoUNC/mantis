@@ -288,7 +288,7 @@ function EncabezadoGrupo({
 }) {
   return (
     <div className="flex items-baseline justify-between mb-2 mt-6">
-      <h2 className="text-sm font-semibold text-foreground">
+      <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
         {titulo}{" "}
         <span className="text-muted font-normal">
           · {cantidad} {cantidad === 1 ? "gestión" : "gestiones"}
@@ -408,7 +408,7 @@ function HistorialMensual<T extends { fecha: string; monto: number; id: string }
     <div className="mt-8">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2.5">
-          <h2 className="text-sm font-semibold">{titulo}</h2>
+          <h2 className="text-[15px] font-semibold tracking-tight">{titulo}</h2>
           <div className="flex items-center gap-1.5">
             <button
               type="button"

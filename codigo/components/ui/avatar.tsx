@@ -1,7 +1,7 @@
 import { cn } from "@/shared/utils/cn";
 
 const TAMANOS = {
-  sm: "size-7 text-[11px]",
+  sm: "size-7 text-[12px]",
   md: "size-8 text-xs",
   lg: "size-12 text-base",
 } as const;

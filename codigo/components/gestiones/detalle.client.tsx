@@ -17,6 +17,7 @@ import { InputArchivo } from "@/components/ui/input-archivo.client";
 import { urlGoogleMaps } from "@/components/ui/mapa";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { VisorFoto } from "@/components/ui/visor-foto.client";
 import type { UsuarioActual } from "@/features/auth/types";
 import {
   descargarPresupuestoPDF,
@@ -226,12 +227,12 @@ function TiraDias({ franjas }: { franjas: TecnicoDisponible["franjas"] }) {
         ))}
       </div>
       <div className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 w-max rounded-md bg-foreground px-3 py-2 opacity-0 shadow-overlay transition-opacity duration-150 group-hover/dias:opacity-100">
-        <p className="text-[11px] font-medium text-background/70 mb-1">
+        <p className="text-[12px] font-medium text-background/70 mb-1">
           Horarios de trabajo
         </p>
         <ul className="flex flex-col gap-0.5">
           {horarios.map((h) => (
-            <li key={h.dia} className="flex justify-between gap-4 text-[11px] text-background">
+            <li key={h.dia} className="flex justify-between gap-4 text-[12px] text-background">
               <span className="font-semibold">{h.dia}</span>
               <span className="text-background/80 tabular-nums">{h.rangos.join(", ")}</span>
             </li>
@@ -334,18 +335,18 @@ function FilaTecnico({
       </div>
 
       <div className="mt-1.5 pl-6 flex items-center gap-x-2 gap-y-1 flex-wrap">
-        <span className="inline-flex items-center rounded-sm bg-brand-soft px-1.5 py-0.5 text-[11px] font-medium text-brand-active shrink-0">
+        <span className="inline-flex items-center rounded-sm bg-brand-soft px-1.5 py-0.5 text-[12px] font-medium text-brand-active shrink-0">
           {especialidadGestion}
         </span>
         {otrasVisibles.length > 0 && (
-          <span className="text-[11px] text-muted min-w-0">
+          <span className="text-[12px] text-muted min-w-0">
             {otrasVisibles.join(" · ")}
             {restoOtras > 0 && <span className="text-muted/70"> +{restoOtras}</span>}
           </span>
         )}
         <span className="ml-auto flex items-center gap-2 shrink-0">
           <span
-            className={`text-[11px] ${enCurso >= 4 ? "text-urgente-fuerte font-medium" : "text-muted"}`}
+            className={`text-[12px] ${enCurso >= 4 ? "text-urgente-fuerte font-medium" : "text-muted"}`}
             title="Trabajos activos que tiene asignados ahora (su carga actual)."
           >
             {enCurso} en curso
@@ -1463,7 +1464,7 @@ type ItemActividad =
 
 function FechaItem({ fecha }: { fecha: string }) {
   return (
-    <span className="font-mono text-[11px] text-muted shrink-0">
+    <span className="font-mono text-[12px] text-muted shrink-0">
       {fechaHora(fecha)}
     </span>
   );
@@ -1573,14 +1574,12 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
                   <FechaItem fecha={item.fecha} />
                 </div>
                 {item.foto && (
-                  <a href={item.foto} target="_blank" rel="noreferrer" className="mt-2 block w-max">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.foto}
-                      alt="Foto del registro"
-                      className="rounded-md max-h-44 border border-border"
-                    />
-                  </a>
+                  <VisorFoto
+                    src={item.foto}
+                    alt="Foto del registro"
+                    wrapClassName="mt-2"
+                    className="rounded-md max-h-44 border border-border"
+                  />
                 )}
               </li>
             );
@@ -1604,14 +1603,12 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
                   <FechaItem fecha={item.fecha} />
                 </div>
                 {item.foto && (
-                  <a href={item.foto} target="_blank" rel="noreferrer" className="mt-2 block w-max">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.foto}
-                      alt="Conformidad firmada"
-                      className="rounded-md max-h-44 border border-border"
-                    />
-                  </a>
+                  <VisorFoto
+                    src={item.foto}
+                    alt="Conformidad firmada"
+                    wrapClassName="mt-2"
+                    className="rounded-md max-h-44 border border-border"
+                  />
                 )}
               </li>
             );
@@ -1636,14 +1633,13 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
               {item.fotos && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {item.fotos.map((url, j) => (
-                    <a key={url} href={url} target="_blank" rel="noreferrer" className="shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={url}
-                        alt={`Comprobante ${j + 1}`}
-                        className="rounded-md h-24 border border-border object-cover"
-                      />
-                    </a>
+                    <VisorFoto
+                      key={url}
+                      src={url}
+                      alt={`Comprobante ${j + 1}`}
+                      wrapClassName="shrink-0"
+                      className="rounded-md h-24 border border-border object-cover"
+                    />
                   ))}
                 </div>
               )}
@@ -1704,7 +1700,7 @@ export function DetalleGestion({
         <Link href={volver} className="text-sm font-medium text-muted hover:text-foreground">
           ← Volver
         </Link>
-        <span className="font-mono text-[11px] text-muted">
+        <span className="font-mono text-[12px] text-muted">
           N° {gestion.id.slice(0, 8).toUpperCase()}
         </span>
       </div>

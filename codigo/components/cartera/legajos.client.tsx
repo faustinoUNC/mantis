@@ -81,7 +81,7 @@ export function Legajos({
 
   return (
     <section className="mt-8">
-      <h2 className="text-lg font-semibold tracking-tight mb-3">Legajos</h2>
+      <h2 className="text-[15px] font-semibold tracking-tight mb-3">Legajos</h2>
 
       {vigente ? (
         <Card className="p-5 border-brand-soft-border bg-brand-soft/40">

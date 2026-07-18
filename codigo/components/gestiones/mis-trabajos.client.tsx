@@ -86,7 +86,7 @@ function TarjetaAccion({ g, cta }: { g: GestionResumen; cta: string }) {
         <div className="flex items-center gap-2">
           <Badge tono="neutro">{g.especialidad}</Badge>
           {g.urgencia === "urgente" && <Badge tono="urgente">Urgente</Badge>}
-          <span className="ml-auto font-mono text-[11px] text-muted shrink-0">
+          <span className="ml-auto font-mono text-[12px] text-muted shrink-0">
             {hace(g.creado_en)}
           </span>
         </div>
@@ -128,7 +128,7 @@ function TarjetaSeguimiento({ g, estado }: { g: GestionResumen; estado: string }
           {/* El borde izquierdo ya señala la urgencia; el badge queda neutro
               (un acento = un significado: ámbar = urgente, no sub-estado). */}
           <Badge tono="neutro">{estado}</Badge>
-          <span className="font-mono text-[11px] text-muted">
+          <span className="font-mono text-[12px] text-muted">
             {hace(g.creado_en)}
           </span>
         </div>
@@ -161,7 +161,7 @@ function SeccionEtapa({ def, gestiones }: { def: DefEtapa; gestiones: GestionRes
         </h2>
         <span
           className={cn(
-            "font-mono text-[11px] min-w-5 h-5 px-1.5 rounded-pill inline-flex items-center justify-center border",
+            "font-mono text-[12px] min-w-5 h-5 px-1.5 rounded-pill inline-flex items-center justify-center border",
             acento
               ? "bg-brand-soft border-brand-soft-border text-brand-active"
               : "bg-surface-2 border-border text-muted"

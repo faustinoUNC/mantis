@@ -153,7 +153,7 @@ export function Campana({
                   {n.cuerpo && (
                     <p className="text-[13px] text-muted mt-0.5 line-clamp-2">{n.cuerpo}</p>
                   )}
-                  <p className="font-mono text-[11px] text-muted mt-1">{hace(n.creado_en)}</p>
+                  <p className="font-mono text-[12px] text-muted mt-1">{hace(n.creado_en)}</p>
                 </div>
               );
               return n.ruta ? (

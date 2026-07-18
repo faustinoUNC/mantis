@@ -41,7 +41,7 @@ export function EtapaStepper({ etapa }: { etapa: string }) {
           <p className="font-semibold text-brand-active leading-tight">
             {actualLabel}
           </p>
-          <span className="font-mono text-[11px] text-muted shrink-0">
+          <span className="font-mono text-[12px] text-muted shrink-0">
             Paso {indice + 1} de {ETAPAS.length}
           </span>
         </div>
