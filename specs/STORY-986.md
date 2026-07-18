@@ -1,6 +1,6 @@
 # STORY-986 — Liquidación: el PDF automático es un "detalle", y se puede adjuntar un comprobante de pago real (opcional) (v1.0)
 
-**Estado:** 🚧 in-progress · **Origen:** Fausti, sobre la card #46 (reabierta por Rami). STORY-940 agregó la caja "Pago registrado" pero mantuvo el nombre "comprobante" para el PDF que genera MANTIS. Fausti aclara el requisito real: *"el archivo que se le manda al técnico dice comprobante… cuando realmente no es un comprobante, más bien es un detalle de lo que se le liquidó. Deberíamos exigir al momento de liquidar adjuntar un archivo que puede ser un comprobante de transferencia o una foto del recibo firmado. Opcional: si no sube nada solo va el detalle; si sube, se suma a los adjuntos."*
+**Estado:** ✅ done (commit `e86d04b`) · **Origen:** Fausti, sobre la card #46 (reabierta por Rami). STORY-940 agregó la caja "Pago registrado" pero mantuvo el nombre "comprobante" para el PDF que genera MANTIS. Fausti aclara el requisito real: *"el archivo que se le manda al técnico dice comprobante… cuando realmente no es un comprobante, más bien es un detalle de lo que se le liquidó. Deberíamos exigir al momento de liquidar adjuntar un archivo que puede ser un comprobante de transferencia o una foto del recibo firmado. Opcional: si no sube nada solo va el detalle; si sube, se suma a los adjuntos."*
 
 ## Diagnóstico
 
@@ -47,7 +47,7 @@ alter table gestiones add column if not exists liq_comprobante_path text;
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente — a la espera de test/OK de Fausti)_
+- **Commit:** `e86d04b` (pusheado a main 2026-07-18). Falta re-verificar E2E en la app (card #46 en "En prueba").
 - **Archivos:**
   - `codigo/features/finanzas/pdf.tsx` — union `tipo` `"comprobante"`→`"detalle"`, título "Detalle de liquidación".
   - `codigo/features/finanzas/service.ts` — rename `tipo` en `datosDocumento`/`descargarDocumento` (filename `detalle-liquidacion-*`), constantes de storage + validación/subida del comprobante, `registrarLiquidacion(gestionId, FormData)` con adjuntos `[detalle, comprobante?]`, asunto/cuerpo/`tipo` de email actualizados, persiste `liq_comprobante_path`.
