@@ -23,7 +23,7 @@ Estructura común:
 |---|---|---|
 | Tablero | Tablero | Seguí cada mantenimiento por su etapa, del reporte a la liquidación. |
 | Inbox | Inbox | Los correos que llegan pidiendo un mantenimiento, listos para convertir en gestión. |
-| Administración | Administración | Los edificios y las propiedades que administra la inmobiliaria. |
+| Administración | Administración | Las propiedades que administra la inmobiliaria. |
 | Finanzas | Finanzas | Lo que falta cobrar y lo que ya se cerró, en un solo lugar. |
 | Técnicos | Técnicos | La red de técnicos: especialidades, desempeño y solicitudes nuevas. |
 | Archivo | Archivo | Las gestiones cerradas o canceladas, para consultarlas cuando haga falta. |

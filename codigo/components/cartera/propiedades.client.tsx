@@ -35,7 +35,7 @@ export function PropiedadesAbm({ propiedades }: { propiedades: Propiedad[] }) {
           </Link>
         </div>
         <p className="text-sm text-muted mt-1">
-          Los edificios y las propiedades que administra la inmobiliaria.
+          Las propiedades que administra la inmobiliaria.
         </p>
       </div>
 
