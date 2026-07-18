@@ -47,6 +47,6 @@ Notas: se conservan los adornos existentes del título — el contador `· N` de
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de push)_
+- **Commit:** `db07ae5` (pusheado a main 2026-07-18).
 - **Archivos:** los 9 encabezados (`tablero`, `inbox`, `cartera/propiedades`, `finanzas`, `tecnicos`, `gestiones/archivadas`, `auditoria`, `empleados`, `especialidades` .client.tsx) + el back-link "← Administración" en `app/cartera/propiedades/[id]/page.tsx`.
 - **Verificación:** `tsc`/eslint verdes; no quedan rótulos viejos (grep) salvo comentarios. Spot-check en el navegador: Tablero ("Tablero" + botón + "Seguí cada mantenimiento…") y Auditoría ("Auditoría" + "Quién hizo qué y cuándo en todo el sistema").
