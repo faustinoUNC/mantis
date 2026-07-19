@@ -175,7 +175,10 @@ export function crearTools(usuario: UsuarioActual) {
           : null,
         conformidad: g.conformidades.at(-1)?.estado ?? null,
         costo_final: plata(g.costo_final),
-        cargo_admin: plata(g.cargo_admin),
+        // STORY-1013: el fee de la inmobiliaria (cargo_admin) es dato administrativo
+        // — la UI lo muestra solo en FinanzasAcciones (rol administrativo), nunca al
+        // técnico. Walter respeta la misma doctrina: no se lo entrega al técnico.
+        ...(rol !== "tecnico" && { cargo_admin: plata(g.cargo_admin) }),
         adelanto_materiales: plata(g.adelanto_materiales),
         rendicion_materiales: plata(g.materiales_total),
         calificacion_estrellas: g.calificacion?.estrellas ?? null,
