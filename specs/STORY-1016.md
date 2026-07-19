@@ -27,6 +27,6 @@ Solo se toca la tarjeta del tablero. El badge del **detalle** (`detalle.client.t
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente_
+- **Commit:** `29b3933` (2026-07-19, junto con STORY-1015).
 - **Archivos:** `codigo/components/gestiones/tablero.client.tsx` (badge "Técnico no continúa" → "En pausa" con `shrink-0 whitespace-nowrap`), `specs/README.md`, `tasks/PENDIENTES.md`.
 - **Verificación:** `tsc`/eslint verdes. E2E navegador (admin, tablero, gestión #188 "Caseros 10" en Presupuesto con aviso activo): antes se veía "G…" + caja ámbar "Técnico no / continúa" en dos renglones; ahora "Gas" completo + badge "En pausa" ámbar en una sola línea, tarjeta sana.

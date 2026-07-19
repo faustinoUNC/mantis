@@ -33,6 +33,6 @@ La posición de la burbuja **sí** sobrevive porque ya se persiste en `sessionSt
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente_
+- **Commit:** `29b3933` (2026-07-19, junto con STORY-1016).
 - **Archivos:** `codigo/components/asistente/walter.client.tsx` (restaurar + guardar `messages` en `sessionStorage` bajo `walter-chat` con ref `restaurado`; "Nueva" limpia la clave), `specs/README.md`, `tasks/PENDIENTES.md`.
 - **Verificación:** `tsc`/eslint verdes. E2E navegador (admin): Walter → mensaje + respuesta → navegar Tablero→Finanzas → reabrir con la conversación intacta; "Nueva" + navegar → vuelve al saludo inicial (persistencia limpiada); sin mismatch de hidratación en consola.
