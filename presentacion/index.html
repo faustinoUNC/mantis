@@ -40,7 +40,7 @@
     --mantis-deep:  #047857;       /* hover */
     --mantis-soft:  #D1FAE5;       /* fondo suave */
 
-    --violet:       #7C3AED;       /* gestor administrativo (distinto del verde de marca) */
+    --violet:       #7C3AED;       /* gestor financiero (distinto del verde de marca) */
     --violet-deep:  #6D28D9;
     --violet-soft:  #EDE9FE;
 
@@ -105,7 +105,7 @@
     overflow: hidden !important;
   }
   .slide-pad {
-    padding: 56px 88px 70px;
+    padding: 56px 88px 32px;
     height: 100%;
     width: 100%;
     box-sizing: border-box;
@@ -135,8 +135,11 @@
 
   /* Footer minimalista */
   .slide-footer {
-    position: absolute;
-    bottom: 24px; left: 88px; right: 88px;
+    /* En flujo (no absolute): margin-top auto lo manda al fondo cuando sobra
+       lugar y lo deja DESPUÉS del contenido cuando la slide desborda —
+       nunca atraviesa el contenido. */
+    margin-top: auto;
+    flex-shrink: 0;
     display: flex; justify-content: space-between; align-items: center;
     font-family: var(--mono);
     font-size: 10px;
@@ -145,7 +148,13 @@
     text-transform: uppercase;
     border-top: 1px solid var(--ink);
     padding-top: 12px;
+    margin-bottom: 0;
     opacity: 0.6;
+  }
+  .slide-hero .slide-footer {
+    position: absolute;
+    bottom: 24px; left: 88px; right: 88px;
+    margin-top: 0;
   }
 
   /* ─────────── Tipografía ─────────── */
@@ -507,7 +516,7 @@
   .bn {
     background: white;
     border: 2px solid var(--ink);
-    padding: 12px 18px;
+    padding: 10px 18px;
     font-size: 14px;
     font-weight: 500;
     text-align: center;
@@ -556,7 +565,7 @@
   }
   .bn-vbar {
     width: 2px;
-    height: 24px;
+    height: 18px;
     background: var(--ink);
     position: relative;
   }
@@ -1690,8 +1699,8 @@
   .val-anchor {
     border-left: 6px solid var(--mantis);
     background: var(--paper-2);
-    padding: 18px 26px;
-    margin-bottom: 18px;
+    padding: 13px 26px;
+    margin-bottom: 14px;
     font-family: var(--display);
     font-size: 22px;
     font-style: italic;
@@ -1710,7 +1719,7 @@
   .val-card {
     border: 1.5px solid var(--ink);
     background: white;
-    padding: 20px 22px 18px;
+    padding: 15px 22px 13px;
     display: flex; flex-direction: column;
     position: relative;
     overflow: hidden;
@@ -1740,7 +1749,7 @@
     grid-template-columns: 64px 1fr;
     gap: 10px;
     align-items: start;
-    padding: 8px 0;
+    padding: 5px 0;
   }
   .val-ba + .val-ba { border-top: 1px dashed rgba(0,0,0,0.12); }
   .val-ba-tag {
@@ -1765,7 +1774,7 @@
   }
   .val-ba.ahora p { color: var(--ink); font-weight: 500; }
   .val-card-kpi {
-    margin-top: 14px;
+    margin-top: 9px;
     padding: 10px 12px;
     background: var(--mantis-soft);
     border: 1.5px solid var(--mantis);
@@ -2040,7 +2049,7 @@
       <span class="line"></span>
     </div>
 
-    <div style="padding-top: 80px; margin-bottom: 24px;">
+    <div style="padding-top: 64px; margin-bottom: 22px;">
       <div class="eyebrow">El proceso real, antes de Mantis</div>
       <h2 class="display-xl">Así gestionaban<br>el mantenimiento<span class="mark-warm dot-end"></span></h2>
     </div>
@@ -2155,7 +2164,7 @@
 
       <div class="ad-col ad-after">
         <span class="ad-label" style="color: #34D399;">Lo que hicimos</span>
-        <h3>Rediseñar<br>el proceso.</h3>
+        <h3>Ordenar<br>el proceso.</h3>
         <div class="ad-items">
           <div class="ad-item">Una sola puerta de entrada: si no está en el sistema, no existe.</div>
           <div class="ad-item">Un funnel de etapas explícitas que no se pueden saltear: el sistema las hace cumplir.</div>
@@ -2163,14 +2172,14 @@
           <div class="ad-item">Cada rol sabe qué le toca, y el sistema le avisa cuándo.</div>
         </div>
         <div class="ad-conclusion blue">
-          El software no acompaña el proceso: lo garantiza.
+          El proceso deja de depender de la memoria de cada uno.
         </div>
       </div>
     </div>
 
     <div style="background: var(--ink); color: var(--paper); padding: 18px 32px; margin-top: 18px; border-left: 6px solid var(--mantis); display: flex; align-items: center;">
       <p style="font-family: var(--display); font-size: clamp(17px, 1.4vw, 22px); line-height: 1.3; color: white; font-weight: 500; margin: 0; letter-spacing: -0.01em;">
-        Una digitalización copia el proceso que ya existe. <em style="color: #34D399; font-style: normal; font-weight: 700;">MANTIS lo rediseña — y hace que se cumpla solo.</em>
+        Una digitalización copia el proceso que ya existe. <em style="color: #34D399; font-style: normal; font-weight: 700;">MANTIS lo ordena en etapas claras — y el sistema hace que se cumplan.</em>
       </p>
     </div>
 
@@ -2268,7 +2277,7 @@
     <div style="background: var(--ink); color: var(--paper); padding: 34px 40px; margin-bottom: 14px; border-left: 6px solid var(--mantis); flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center;">
       <p style="font-family: var(--mono); font-size: 12px; letter-spacing: 0.3em; color: #34D399; text-transform: uppercase; margin-bottom: 16px; font-weight: 700;">El objetivo</p>
       <p style="font-family: var(--display); font-size: clamp(22px, 1.9vw, 30px); line-height: 1.3; color: white; font-weight: 500; margin: 0; letter-spacing: -0.01em;">
-        Desarrollar un sistema que le permita a ISBA <em style="color: #34D399; font-style: normal; font-weight: 700;">gestionar el mantenimiento de punta a punta</em> — del reclamo al cobro y la liquidación — con un <em style="color: #34D399; font-style: normal; font-weight: 700;">funnel visual simple</em>, <em style="color: #34D399; font-style: normal; font-weight: 700;">trazabilidad total</em> y <em style="color: #34D399; font-style: normal; font-weight: 700;">decisiones basadas en datos</em>.
+        Desarrollar un sistema que le permita a ISBA <em style="color: #34D399; font-style: normal; font-weight: 700;">gestionar el mantenimiento de punta a punta</em> — del reclamo al cobro y la liquidación — con un <em style="color: #34D399; font-style: normal; font-weight: 700;">funnel visual simple</em>, <em style="color: #34D399; font-style: normal; font-weight: 700;">seguimiento total</em> y <em style="color: #34D399; font-style: normal; font-weight: 700;">decisiones basadas en datos</em>.
       </p>
     </div>
 
@@ -2307,11 +2316,11 @@
       </div>
       <div style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--mantis); border-left: 6px solid var(--mantis); padding: 10px 14px; background: white;">
         <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--mantis); color: white; font-family: var(--display); font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">G</div>
-        <div><p style="font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.1;">Gestor de mantenimiento</p><p style="font-size: 11.5px; color: var(--ink-faded); margin: 0; line-height: 1.25;">Inbox, gestiones, técnicos</p></div>
+        <div><p style="font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.1;">Gestor comercial</p><p style="font-size: 11.5px; color: var(--ink-faded); margin: 0; line-height: 1.25;">Inbox, gestiones, técnicos</p></div>
       </div>
       <div style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--violet); border-left: 6px solid var(--violet); padding: 10px 14px; background: white;">
         <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--violet); color: white; font-family: var(--display); font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">$</div>
-        <div><p style="font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.1;">Gestor administrativo</p><p style="font-size: 11.5px; color: var(--ink-faded); margin: 0; line-height: 1.25;">Cobros y liquidaciones</p></div>
+        <div><p style="font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.1;">Gestor financiero</p><p style="font-size: 11.5px; color: var(--ink-faded); margin: 0; line-height: 1.25;">Cobros y liquidaciones</p></div>
       </div>
       <div style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--warm); border-left: 6px solid var(--warm); padding: 10px 14px; background: white;">
         <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--warm); color: white; font-family: var(--display); font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">T</div>
@@ -2355,9 +2364,9 @@
 
     <!-- Leyenda de colores de asociación -->
     <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; padding: 6px 12px; background: var(--paper-2); border: 1px dashed var(--ink-faded); font-family: var(--mono); font-size: 10px; color: var(--ink-soft);">
-      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--mantis);"></span> Gestor de mantenimiento</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--mantis);"></span> Gestor comercial</span>
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--warm);"></span> Técnico</span>
-      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--violet);"></span> Gestor administrativo</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--violet);"></span> Gestor financiero</span>
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--ink);"></span> Administrador</span>
       <span style="margin-left: auto; color: var(--ink);"><strong>Administrador</strong> = todos los casos de ambos gestores + los de gobierno</span>
     </div>
@@ -2448,7 +2457,7 @@
         <text class="uc-phase-label" x="1172" y="84" text-anchor="middle">CIERRE Y FINANZAS</text>
 
         <!-- ════ ASOCIACIONES (líneas actor → UC) ════ -->
-        <!-- Gestor de mantenimiento (origen ~120,220) → sus UCs -->
+        <!-- Gestor comercial (origen ~120,220) → sus UCs -->
         <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="308" y2="150"/>
         <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="308" y2="260"/>
         <line class="uc-assoc uc-assoc-ges" x1="120" y1="220" x2="308" y2="370"/>
@@ -2465,7 +2474,7 @@
         <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="956" y2="260"/>
         <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="956" y2="370"/>
         <line class="uc-assoc uc-assoc-tec" x1="1360" y1="210" x2="740" y2="616"/>
-        <!-- Gestor administrativo (origen ~1360,540) → sus UCs -->
+        <!-- Gestor financiero (origen ~1360,540) → sus UCs -->
         <line class="uc-assoc uc-assoc-fin" x1="1360" y1="540" x2="1172" y2="235"/>
         <line class="uc-assoc uc-assoc-fin" x1="1360" y1="540" x2="1172" y2="330"/>
         <line class="uc-assoc uc-assoc-fin" x1="1360" y1="540" x2="740" y2="616"/>
@@ -2477,7 +2486,7 @@
         <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="740" y2="616"/>
 
         <!-- ════ ACTORES (stick figures CLICKEABLES) ════ -->
-        <!-- GESTOR DE MANTENIMIENTO (izquierda arriba) -->
+        <!-- GESTOR COMERCIAL (izquierda arriba) -->
         <g class="uc-actor-grp actor-ges" data-actor="ges" transform="translate(95,150)">
           <rect class="uc-hit" x="-40" y="-25" width="80" height="170"/>
           <circle class="uc-actor-fill" cx="0" cy="0" r="14"/>
@@ -2516,7 +2525,7 @@
           <text class="uc-actor-role" x="0" y="135">100% desde el celular</text>
         </g>
 
-        <!-- GESTOR ADMINISTRATIVO (derecha abajo) -->
+        <!-- GESTOR FINANCIERO (derecha abajo) -->
         <g class="uc-actor-grp actor-fin" data-actor="fin" transform="translate(1385,470)">
           <rect class="uc-hit" x="-40" y="-25" width="80" height="170"/>
           <circle class="uc-actor-fill" cx="0" cy="0" r="14"/>
@@ -2783,7 +2792,7 @@
       <div class="traza traza-clickable" data-trace="01">
         <div class="cell cell-num">01</div>
         <div class="cell"><strong>Estado fuera de control</strong> — sin visibilidad del avance</div>
-        <div class="cell">Funnel visual con etapa explícita y trazable de cada gestión</div>
+        <div class="cell">Funnel visual con etapa explícita y seguimiento de cada gestión</div>
         <div class="cell">Funnel de 8 etapas · UC Ver Timeline</div>
         <div class="cell">Tablero Kanban + avanzar_etapa() con evento en cada transición</div>
         <div class="cell cell-valor">Cualquiera responde el estado en segundos</div>
@@ -3214,14 +3223,14 @@
       <span class="line"></span>
     </div>
 
-    <div style="padding-top: 90px; margin-bottom: 24px;">
+    <div style="padding-top: 56px; margin-bottom: 18px;">
       <div class="eyebrow">Cuatro roles, cuatro miradas del mismo funnel</div>
       <h2 class="display-lg">Un sistema,<br>cuatro roles conectados<span class="mark-blue dot-end"></span></h2>
     </div>
 
     <div style="display: flex; gap: 8px; margin-bottom: 18px;">
-      <button class="portal-tab active" data-portal="gestor">Gestor de mantenimiento</button>
-      <button class="portal-tab" data-portal="administrativo">Gestor administrativo</button>
+      <button class="portal-tab active" data-portal="gestor">Gestor comercial</button>
+      <button class="portal-tab" data-portal="administrativo">Gestor financiero</button>
       <button class="portal-tab" data-portal="tecnico">Técnico</button>
       <button class="portal-tab" data-portal="admin">Administrador</button>
     </div>
@@ -3234,7 +3243,7 @@
           <div>
             <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 8px;">Rutas</p>
             <p style="font-family: var(--mono); font-size: 18px; color: var(--mantis-deep); margin-bottom: 24px; font-weight: 600;">/gestion · /inbox · /tablero</p>
-            <h3 style="font-family: var(--display); font-size: 32px; font-weight: 700; margin-bottom: 12px;">Gestor de mantenimiento</h3>
+            <h3 style="font-family: var(--display); font-size: 32px; font-weight: 700; margin-bottom: 12px;">Gestor comercial</h3>
             <p style="font-size: 15px; color: var(--ink-soft); line-height: 1.55;">
               El dueño de la operación técnica. Cada gestor ve y acciona <strong>solo sus gestiones</strong>: el ownership se fija al crearla y solo el admin puede reasignarlo.
             </p>
@@ -3259,7 +3268,7 @@
           <div>
             <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 8px;">Rutas</p>
             <p style="font-family: var(--mono); font-size: 18px; color: var(--mantis-deep); margin-bottom: 24px; font-weight: 600;">/administracion · /finanzas</p>
-            <h3 style="font-family: var(--display); font-size: 32px; font-weight: 700; margin-bottom: 12px;">Gestor administrativo</h3>
+            <h3 style="font-family: var(--display); font-size: 32px; font-weight: 700; margin-bottom: 12px;">Gestor financiero</h3>
             <p style="font-size: 15px; color: var(--ink-soft); line-height: 1.55;">
               El circuito económico. Acciona en las etapas de Cobro y Liquidación — el resto del funnel lo ve en modo solo lectura.
             </p>
@@ -3455,7 +3464,7 @@
           <p style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: #34D399; margin-bottom: 10px; font-weight: 700; display: flex; justify-content: space-between;"><span>5 / 5</span><span style="color: rgba(255,255,255,0.4);">Flujo 9</span></p>
           <h3 style="font-family: var(--display); font-size: 18px; color: white; margin-bottom: 6px; line-height: 1.1;">Cobro y liquidación</h3>
           <p style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.4;">Nota de cobro, liquidación al técnico y calificación.</p>
-          <p style="margin-top: 12px; font-family: var(--mono); font-size: 10.5px; color: rgba(255,255,255,0.5); letter-spacing: 0.12em; text-transform: uppercase;">Administrativo</p>
+          <p style="margin-top: 12px; font-family: var(--mono); font-size: 10.5px; color: rgba(255,255,255,0.5); letter-spacing: 0.12em; text-transform: uppercase;">Financiero</p>
         </div>
       </div>
     </div>
@@ -3475,9 +3484,9 @@
       <span class="line"></span>
     </div>
 
-    <div style="padding-top: 80px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: end;">
+    <div style="padding-top: 56px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: end;">
       <div>
-        <div class="eyebrow">Demo 1 de 5 · Gestor de mantenimiento</div>
+        <div class="eyebrow">Demo 1 de 5 · Gestor comercial</div>
         <h2 class="display-lg">Del mail a la gestión<span class="mark-blue dot-end"></span></h2>
       </div>
       <div class="pill pill-blue" data-bpmn-ref="alta">Flujos 4 + 5 · Inbox</div>
@@ -3517,7 +3526,7 @@
           <div class="demo-step"><span class="num">04</span><p>Vincular <strong>propiedad</strong>, clasificar <strong>especialidad</strong> y marcar <strong>urgencia</strong>. Crear.</p></div>
           <div class="demo-step"><span class="num">05</span><p>Mostrar la tarjeta en <strong>Ingresado</strong> y el <strong>descarte con motivo</strong> con otro reporte.</p></div>
         </div>
-        <div class="demo-panel-foot">Rol activo · <span class="role">Gestor de mantenimiento</span></div>
+        <div class="demo-panel-foot">Rol activo · <span class="role">Gestor comercial</span></div>
       </div>
     </div>
 
@@ -3536,7 +3545,7 @@
       <span class="line"></span>
     </div>
 
-    <div style="padding-top: 80px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: end;">
+    <div style="padding-top: 56px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: end;">
       <div>
         <div class="eyebrow">Demo 2 de 5 · Gestor + Técnico</div>
         <h2 class="display-lg">Asignación del técnico<span class="mark-blue dot-end"></span></h2>
@@ -3603,7 +3612,7 @@
       <span class="line"></span>
     </div>
 
-    <div style="padding-top: 80px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: end;">
+    <div style="padding-top: 56px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: end;">
       <div>
         <div class="eyebrow">Demo 3 de 5 · Técnico + Gestor</div>
         <h2 class="display-lg">Inspección y presupuesto<span class="mark-blue dot-end"></span></h2>
@@ -3670,7 +3679,7 @@
       <span class="line"></span>
     </div>
 
-    <div style="padding-top: 80px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: end;">
+    <div style="padding-top: 56px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: end;">
       <div>
         <div class="eyebrow">Demo 4 de 5 · Técnico desde el celular</div>
         <h2 class="display-lg">Ejecución y conformidad<span class="mark-blue dot-end"></span></h2>
@@ -3737,9 +3746,9 @@
       <span class="line"></span>
     </div>
 
-    <div style="padding-top: 80px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: end;">
+    <div style="padding-top: 56px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: end;">
       <div>
-        <div class="eyebrow">Demo 5 de 5 · Gestor administrativo</div>
+        <div class="eyebrow">Demo 5 de 5 · Gestor financiero</div>
         <h2 class="display-lg">Cobro y liquidación<span class="mark-success dot-end"></span></h2>
       </div>
       <div class="pill pill-blue" data-bpmn-ref="cierre">Flujo 9 · Finanzas</div>
@@ -3769,13 +3778,13 @@
         </div>
         <h3>El circuito económico documentado</h3>
         <div class="demo-steps">
-          <div class="demo-step"><span class="num">01</span><p>Como <strong>gestor administrativo</strong>, abrir <strong>Finanzas</strong>: la gestión aparece pendiente de cobro.</p></div>
+          <div class="demo-step"><span class="num">01</span><p>Como <strong>gestor financiero</strong>, abrir <strong>Finanzas</strong>: la gestión aparece pendiente de cobro.</p></div>
           <div class="demo-step"><span class="num">02</span><p>Emitir la <strong>nota de cobro en PDF</strong> y enviarla por email al pagador definido en Presupuesto.</p></div>
           <div class="demo-step"><span class="num">03</span><p>Registrar el <strong>cobro</strong> con su medio de pago. La tarjeta pasa a <strong>Liquidación</strong>.</p></div>
           <div class="demo-step"><span class="num">04</span><p>Registrar la <strong>liquidación al técnico</strong> y mostrar el <strong>comprobante PDF</strong> que le llega por email.</p></div>
           <div class="demo-step"><span class="num">05</span><p>Como <strong>gestor</strong>: la gestión en <strong>Finalizado</strong> — calificar al técnico y mostrar la obra asentada en el <strong>legajo</strong>.</p></div>
         </div>
-        <div class="demo-panel-foot">Roles · <span class="role">Gestor administrativo → Gestor</span></div>
+        <div class="demo-panel-foot">Roles · <span class="role">Gestor financiero → Gestor</span></div>
       </div>
     </div>
 
@@ -3794,9 +3803,9 @@
       <span class="line"></span>
     </div>
 
-    <div style="padding-top: 90px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: end;">
+    <div style="padding-top: 56px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: end;">
       <div>
-        <div class="eyebrow">Informes · cada gestor ve su cartera — admin y administrativo, todo el negocio</div>
+        <div class="eyebrow">Informes · cada gestor ve su cartera — admin y financiero, todo el negocio</div>
         <h2 class="display-lg">Un proceso que<br>se mide solo<span class="mark-blue dot-end"></span></h2>
       </div>
       <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--ink-faded); text-transform: uppercase; text-align: right;">
@@ -3856,7 +3865,7 @@
       <span class="line"></span>
     </div>
 
-    <div style="padding-top: 80px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: end;">
+    <div style="padding-top: 56px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: end;">
       <div>
         <div class="eyebrow">Resultado para el cliente</div>
         <h2 class="display-lg">Valor agregado<br>aportado a ISBA<span class="mark-blue dot-end"></span></h2>
@@ -3879,9 +3888,9 @@
         <div class="val-card-kpi"><span class="kpi-label">KPI</span> tiempo de ciclo + gestiones estancadas por etapa</div>
       </div>
 
-      <!-- 2. Trazabilidad -->
+      <!-- 2. Seguimiento -->
       <div class="val-card">
-        <div class="val-card-cat">Trazabilidad</div>
+        <div class="val-card-cat">Seguimiento</div>
         <h3 class="val-card-title">Historial inmutable por gestión</h3>
         <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Cada transición deja su evento con fecha cierta: evidencia ante conflictos por plazos de reparación.</p></div>
         <div class="val-card-kpi"><span class="kpi-label">KPI</span> 100% de gestiones con timeline completo</div>
@@ -4152,7 +4161,7 @@
     'supabase-storage': { layer: 'ARCHIVOS', name: 'Supabase Storage', desc: 'Almacenamiento en la nube para los archivos del sistema: fotos de inspección y avances, conformidades firmadas, comprobantes de materiales y documentación del enrolamiento de técnicos, con acceso restringido por rol.' },
     'supabase-realtime': { layer: 'TIEMPO REAL', name: 'Supabase Realtime', desc: 'El canal de tiempo real del sistema. Cada evento del funnel notifica al instante al rol que debe accionar (badge + centro de notificaciones), el inbox muestra los reclamos apenas llegan, y si el admin inhabilita a un usuario, su sesión se corta en segundos.' },
     'gmail':    { layer: 'INGESTA DE RECLAMOS', name: 'Gmail API', desc: 'La puerta de entrada de los reclamos. Una casilla exclusiva de mantenimiento se sincroniza automáticamente cada 1 minuto: cada mail entrante aparece en el Inbox del sistema, sin duplicados, listo para convertirse en gestión o descartarse con motivo.' },
-    'resend':   { layer: 'EMAIL SALIENTE', name: 'Resend', desc: 'El servicio de envío de mails del sistema. Por acá salen los emails de estado al inquilino (reporte recibido, técnico asignado, resuelto), las credenciales del técnico y los documentos PDF: nota de cobro, comprobante de liquidación y resumen de obras. Cada envío queda logueado para trazabilidad.' },
+    'resend':   { layer: 'EMAIL SALIENTE', name: 'Resend', desc: 'El servicio de envío de mails del sistema. Por acá salen los emails de estado al inquilino (reporte recibido, técnico asignado, resuelto), las credenciales del técnico y los documentos PDF: nota de cobro, comprobante de liquidación y resumen de obras. Cada envío queda logueado para su seguimiento.' },
     'vercel':   { layer: 'DEPLOY + CDN', name: 'Vercel', desc: 'Plataforma donde vive la aplicación en internet. Cada cambio en el código se despliega automáticamente y se sirve desde servidores globales, cerca del usuario.' },
   };
 
@@ -4187,11 +4196,11 @@
     'service-actions': { layer: 'CAPA 02 · SERVIDOR', name: 'features/*/service.ts', desc: 'Donde vive la lógica del negocio, un módulo por feature: gestiones, inbox, cartera, técnicos, finanzas, métricas, notificaciones, auditoría, email. Cada uno expone Server Actions que el navegador invoca como funciones locales, sin armar pedidos HTTP a mano. Cada acción arranca verificando al usuario y su rol antes de ejecutar cualquier operación.' },
     'avanzar-etapa':   { layer: 'CAPA 02 · REGLA DE ORO', name: 'avanzar_etapa()', desc: 'La única puerta para mover una gestión de etapa. Es una función dentro de PostgreSQL: valida que el rol tenga permiso sobre esa columna del funnel, cambia la etapa y registra el evento de auditoría — todo en una misma transacción. Es imposible que una gestión avance sin dejar rastro, y el permiso se chequea en la base, no solo en la interfaz.' },
     'postgresql':      { layer: 'CAPA 03 · DATOS', name: 'PostgreSQL', desc: 'La base de datos del sistema (~20 tablas): gestiones, eventos, presupuestos, conformidades, cobros, liquidaciones, propiedades, legajos, técnicos, notificaciones. Integridad estricta: un cobro no puede existir sin su gestión, un legajo sin su propiedad.' },
-    'auth-rls':        { layer: 'CAPA 03 · DATOS', name: 'Auth + Row Level Security', desc: 'El control de acceso a nivel de base de datos, activo en todas las tablas desde la primera migración. Cada usuario ve sólo lo que le corresponde: el técnico sus trabajos, cada gestor de mantenimiento sus gestiones. La regla se aplica en la base misma — la app no puede saltearla.' },
+    'auth-rls':        { layer: 'CAPA 03 · DATOS', name: 'Auth + Row Level Security', desc: 'El control de acceso a nivel de base de datos, activo en todas las tablas desde la primera migración. Cada usuario ve sólo lo que le corresponde: el técnico sus trabajos, cada gestor comercial sus gestiones. La regla se aplica en la base misma — la app no puede saltearla.' },
     'storage':         { layer: 'CAPA 03 · DATOS', name: 'Storage', desc: 'El repositorio en la nube para los archivos: fotos de inspección y avances, conformidades firmadas, comprobantes de materiales y documentación del enrolamiento (DNI, matrículas). Acceso restringido según el rol.' },
     'realtime':        { layer: 'CAPA 03 · TIEMPO REAL', name: 'Supabase Realtime', desc: 'El canal en vivo del sistema. Un trigger sobre el event log inserta las notificaciones en la misma transacción que cada evento (cero eventos perdidos) y Realtime las entrega al instante al rol que debe accionar. También corta la sesión en segundos si el admin inhabilita a un usuario.' },
     'gmail-api':       { layer: 'CAPA 03 · INGESTA', name: 'Gmail API', desc: 'La fuente de los reclamos. Un cron sincroniza cada 1 minuto la casilla exclusiva de mantenimiento: cada mail nuevo se inserta en el Inbox sin duplicados y aparece al instante en la pantalla del gestor.' },
-    'smtp':            { layer: 'CAPA 03 · EMAIL', name: 'Resend', desc: 'La infraestructura de mails salientes. Emails de estado al inquilino, credenciales del técnico y documentos PDF (nota de cobro, comprobante de liquidación, resumen de obras). Cada envío queda registrado en la base para trazabilidad.' },
+    'smtp':            { layer: 'CAPA 03 · EMAIL', name: 'Resend', desc: 'La infraestructura de mails salientes. Emails de estado al inquilino, credenciales del técnico y documentos PDF (nota de cobro, comprobante de liquidación, resumen de obras). Cada envío queda registrado en la base para su seguimiento.' },
   };
 
   document.querySelectorAll('.arch-comp').forEach(comp => {
@@ -4213,23 +4222,23 @@
   // ═══════════════════════════════════════════════════════════════
   const UC_ICON = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="16" cy="16" rx="13" ry="8"/></svg>';
   const UC_INFO = {
-    'procesar-inbox': { layer: 'ACTOR · GESTOR DE MANTENIMIENTO  ·  ETAPA INGRESO', name: 'Procesar inbox de reclamos', desc: 'Los mails que llegan a la casilla exclusiva de mantenimiento se sincronizan solos cada 1 minuto y aparecen en el Inbox. El gestor los procesa uno a uno: cada reporte termina convertido en gestión o descartado con motivo — nunca queda flotando.' },
-    'crear-gestion': { layer: 'ACTOR · GESTOR DE MANTENIMIENTO  ·  ETAPA INGRESO', name: 'Crear gestión', desc: 'Desde un reporte del inbox (formulario precargado con los datos del mail) o desde cero en el tablero. El gestor vincula la propiedad y su legajo vigente, clasifica la especialidad y define la urgencia (lo urgente tiene plazo legal de 24 hs). La tarjeta nace en la columna Ingresado y el gestor que la crea queda como responsable.' },
-    'descartar-reporte': { layer: 'ACTOR · GESTOR DE MANTENIMIENTO  ·  ETAPA INGRESO', name: 'Descartar reporte con motivo', desc: 'Si el mail no corresponde a un mantenimiento (consulta de expensas, duplicado, resuelto por teléfono), el gestor lo descarta con un motivo obligatorio. Queda registrado quién, cuándo y por qué — la regla es cero mails sin destino.' },
-    'asignar-tecnico': { layer: 'ACTOR · GESTOR DE MANTENIMIENTO  ·  ETAPA ASIGNACIÓN', name: 'Asignar técnico', desc: 'El gestor elige al técnico filtrando por especialidad y viendo su agenda de disponibilidad ANTES de enviarle la solicitud. El técnico recibe la notificación al instante en su celular.' },
+    'procesar-inbox': { layer: 'ACTOR · GESTOR COMERCIAL  ·  ETAPA INGRESO', name: 'Procesar inbox de reclamos', desc: 'Los mails que llegan a la casilla exclusiva de mantenimiento se sincronizan solos cada 1 minuto y aparecen en el Inbox. El gestor los procesa uno a uno: cada reporte termina convertido en gestión o descartado con motivo — nunca queda flotando.' },
+    'crear-gestion': { layer: 'ACTOR · GESTOR COMERCIAL  ·  ETAPA INGRESO', name: 'Crear gestión', desc: 'Desde un reporte del inbox (formulario precargado con los datos del mail) o desde cero en el tablero. El gestor vincula la propiedad y su legajo vigente, clasifica la especialidad y define la urgencia (lo urgente tiene plazo legal de 24 hs). La tarjeta nace en la columna Ingresado y el gestor que la crea queda como responsable.' },
+    'descartar-reporte': { layer: 'ACTOR · GESTOR COMERCIAL  ·  ETAPA INGRESO', name: 'Descartar reporte con motivo', desc: 'Si el mail no corresponde a un mantenimiento (consulta de expensas, duplicado, resuelto por teléfono), el gestor lo descarta con un motivo obligatorio. Queda registrado quién, cuándo y por qué — la regla es cero mails sin destino.' },
+    'asignar-tecnico': { layer: 'ACTOR · GESTOR COMERCIAL  ·  ETAPA ASIGNACIÓN', name: 'Asignar técnico', desc: 'El gestor elige al técnico filtrando por especialidad y viendo su agenda de disponibilidad ANTES de enviarle la solicitud. El técnico recibe la notificación al instante en su celular.' },
     'responder-asignacion': { layer: 'ACTOR · TÉCNICO  ·  ETAPA ASIGNACIÓN', name: 'Aceptar / rechazar asignación', desc: 'El técnico revisa el trabajo propuesto desde su celular y acepta o rechaza. Si acepta, la gestión avanza a Presupuesto; si rechaza, vuelve a Asignación y el gestor reasigna. Todo queda notificado y registrado.' },
     'registrar-inspeccion': { layer: 'ACTOR · TÉCNICO  ·  ETAPA PRESUPUESTO', name: 'Registrar inspección', desc: 'Antes de presupuestar, el técnico visita la propiedad y registra la inspección: diagnóstico y foto. Es obligatoria — sin inspección no se puede cargar presupuesto.' },
     'cargar-presupuesto': { layer: 'ACTOR · TÉCNICO  ·  ETAPA PRESUPUESTO', name: 'Cargar presupuesto', desc: 'El técnico arma el presupuesto desde su celular: materiales, mano de obra, plazo en días y descripción del trabajo. Al enviarlo queda esperando la evaluación del gestor.' },
-    'evaluar-presupuesto': { layer: 'ACTOR · GESTOR DE MANTENIMIENTO  ·  ETAPA PRESUPUESTO', name: 'Evaluar presupuesto y definir quién paga', desc: 'El gestor aprueba o rechaza el presupuesto. Al aprobar define el pagador — inquilino o propietario, según la causa del deterioro — y el cargo administrativo de la inmobiliaria. Ese fee queda congelado: los informes históricos no cambian aunque después cambien las reglas.' },
+    'evaluar-presupuesto': { layer: 'ACTOR · GESTOR COMERCIAL  ·  ETAPA PRESUPUESTO', name: 'Evaluar presupuesto y definir quién paga', desc: 'El gestor aprueba o rechaza el presupuesto. Al aprobar define el pagador — inquilino o propietario, según la causa del deterioro — y el cargo administrativo de la inmobiliaria. Ese fee queda congelado: los informes históricos no cambian aunque después cambien las reglas.' },
     'registrar-avance': { layer: 'ACTOR · TÉCNICO  ·  ETAPA EJECUCIÓN', name: 'Registrar avances con fotos', desc: 'Durante la obra, el técnico registra avances con notas y fotos desde el celular (las fotos se comprimen en el dispositivo antes de subir). Cada avance queda en el timeline, visible para el gestor.' },
     'rendir-materiales': { layer: 'ACTOR · TÉCNICO  ·  ETAPA EJECUCIÓN', name: 'Rendir materiales', desc: 'Al terminar la obra, el técnico rinde los materiales realmente gastados con las fotos de los comprobantes. La rendición se compara contra lo presupuestado — alimenta la métrica de cumplimiento de presupuesto del técnico.' },
     'subir-conformidad': { layer: 'ACTOR · TÉCNICO  ·  ETAPA CONFORMIDAD', name: 'Subir conformidad', desc: 'El técnico sube la foto de la conformidad firmada. Es la evidencia de que el trabajo se hizo y fue recibido — la gestión queda esperando la validación del gestor.' },
-    'validar-conformidad': { layer: 'ACTOR · GESTOR DE MANTENIMIENTO  ·  ETAPA CONFORMIDAD', name: 'Validar conformidad', desc: 'El gestor revisa la foto de la conformidad firmada. Si la aprueba, la gestión avanza al circuito financiero; si la rechaza, el técnico debe resubirla. Doble control antes de cobrar.' },
-    'registrar-cobro': { layer: 'ACTOR · GESTOR ADMINISTRATIVO  ·  ETAPA COBRO', name: 'Emitir nota de cobro y registrar el cobro', desc: 'El gestor administrativo emite la nota de cobro en PDF con el detalle de la obra, la envía por email al pagador (inquilino o propietario, definido en Presupuesto) y registra el cobro con su medio de pago. El monto y el fee quedan congelados como hechos históricos.' },
-    'liquidar-tecnico': { layer: 'ACTOR · GESTOR ADMINISTRATIVO  ·  ETAPA LIQUIDACIÓN', name: 'Liquidar al técnico', desc: 'Registra el pago al técnico por su trabajo (descontando adelantos de materiales si los hubo) y genera el comprobante de liquidación en PDF, que se le envía por email. Con esto la gestión llega a Finalizado.' },
-    'calificar-tecnico': { layer: 'ACTOR · GESTOR DE MANTENIMIENTO  ·  FINALIZADO', name: 'Calificar al técnico', desc: 'Con la gestión finalizada, el gestor califica el trabajo del técnico de 1 a 5 estrellas con comentario. La calificación alimenta su historial de desempeño, junto con el cumplimiento de plazo y de presupuesto.' },
+    'validar-conformidad': { layer: 'ACTOR · GESTOR COMERCIAL  ·  ETAPA CONFORMIDAD', name: 'Validar conformidad', desc: 'El gestor revisa la foto de la conformidad firmada. Si la aprueba, la gestión avanza al circuito financiero; si la rechaza, el técnico debe resubirla. Doble control antes de cobrar.' },
+    'registrar-cobro': { layer: 'ACTOR · GESTOR FINANCIERO  ·  ETAPA COBRO', name: 'Emitir nota de cobro y registrar el cobro', desc: 'El gestor financiero emite la nota de cobro en PDF con el detalle de la obra, la envía por email al pagador (inquilino o propietario, definido en Presupuesto) y registra el cobro con su medio de pago. El monto y el fee quedan congelados como hechos históricos.' },
+    'liquidar-tecnico': { layer: 'ACTOR · GESTOR FINANCIERO  ·  ETAPA LIQUIDACIÓN', name: 'Liquidar al técnico', desc: 'Registra el pago al técnico por su trabajo (descontando adelantos de materiales si los hubo) y genera el comprobante de liquidación en PDF, que se le envía por email. Con esto la gestión llega a Finalizado.' },
+    'calificar-tecnico': { layer: 'ACTOR · GESTOR COMERCIAL  ·  FINALIZADO', name: 'Calificar al técnico', desc: 'Con la gestión finalizada, el gestor califica el trabajo del técnico de 1 a 5 estrellas con comentario. La calificación alimenta su historial de desempeño, junto con el cumplimiento de plazo y de presupuesto.' },
     'reasignar-gestion': { layer: 'ACTOR · ADMINISTRADOR  ·  GOBIERNO', name: 'Reasignar gestiones entre gestores', desc: 'Cada gestión tiene un gestor responsable (ownership) que se fija al crearla. Solo el administrador puede transferirla a otro gestor — por licencias, redistribución de carga o reorganización del equipo — y el cambio queda registrado en la auditoría.' },
-    'administrar-empleados': { layer: 'ACTOR · ADMINISTRADOR  ·  GOBIERNO', name: 'Administrar empleados y accesos', desc: 'Alta de empleados con su rol (gestor de mantenimiento o gestor administrativo), edición y baja. Además habilita o bloquea usuarios en tiempo real: si bloquea a alguien, su sesión se corta en segundos vía Realtime.' },
+    'administrar-empleados': { layer: 'ACTOR · ADMINISTRADOR  ·  GOBIERNO', name: 'Administrar empleados y accesos', desc: 'Alta de empleados con su rol (gestor comercial o gestor financiero), edición y baja. Además habilita o bloquea usuarios en tiempo real: si bloquea a alguien, su sesión se corta en segundos vía Realtime.' },
     'mantener-especialidades': { layer: 'ACTOR · ADMINISTRADOR  ·  GOBIERNO', name: 'Mantener especialidades', desc: 'El catálogo de especialidades técnicas del sistema (plomería, gas, electricidad…), con el flag "requiere matrícula" que exige documentación extra en el enrolamiento del técnico.' },
     'consultar-auditoria': { layer: 'ACTOR · ADMINISTRADOR  ·  GOBIERNO', name: 'Consultar auditoría completa', desc: 'Dos registros en un solo lugar: los eventos de negocio (cada transición de cada gestión, con quién y cuándo) y los eventos de sistema (altas de usuarios, bloqueos, aprobaciones de técnicos). Filtrable por usuario y tipo de evento.' },
     'ver-timeline': { layer: 'TRANSVERSAL  ·  LOS 4 ACTORES', name: 'Ver timeline de la gestión', desc: 'Toda gestión muestra su línea de tiempo completa: ingreso, asignación, presupuesto, avances, conformidad, cobro y liquidación — con quién hizo qué y cuándo. Se genera sola: cada transición inserta su evento en la misma transacción, es imposible que falte un paso.' },
@@ -4326,7 +4335,7 @@
         {type:'proc',  text:'El inquilino se va →<br>se cierra el legajo'},
         {type:'end',   text:'Historial de obras por período,<br>exportable como PDF "Resumen de obras"'},
       ],
-      actores: ['Gestor de mantenimiento', 'Gestor administrativo', 'Administrador'],
+      actores: ['Gestor comercial', 'Gestor financiero', 'Administrador'],
       estados: ['propiedad activa', 'legajo abierto', 'legajo cerrado'],
       footer: 'features/cartera · el legajo es la memoria documental de cada propiedad',
     },
@@ -4347,7 +4356,7 @@
           ],
         },
       ],
-      actores: ['Técnico', 'Gestor de mantenimiento', 'Administrador'],
+      actores: ['Técnico', 'Gestor comercial', 'Administrador'],
       estados: ['pendiente', 'aprobado', 'rechazado'],
       footer: 'features/tecnicos · especialidades con matrícula obligatoria (Gas, Electricidad) exigen el documento',
     },
@@ -4357,7 +4366,7 @@
       bpmn: [
         {type:'start', text:'Admin en su panel'},
         {type:'proc',  text:'Mantiene especialidades<br>(12 · con flag "requiere matrícula")'},
-        {type:'proc',  text:'Alta de empleados con rol:<br>gestor de mantenimiento / administrativo'},
+        {type:'proc',  text:'Alta de empleados con rol:<br>gestor comercial / financiero'},
         {type:'dec',   text:'¿Necesita bloquear a alguien?',
           yesText:'SÍ', yesNodes:[
             {type:'sys', text:'esta_activo = false →<br>la sesión se corta en segundos (Realtime)'},
@@ -4382,7 +4391,7 @@
         {type:'sys',   text:'Aparece al instante en pantalla<br>(Realtime) + notificación al gestor'},
         {type:'end',   text:'Reporte pendiente,<br>listo para procesarse'},
       ],
-      actores: ['Sistema', 'Gestor de mantenimiento'],
+      actores: ['Sistema', 'Gestor comercial'],
       estados: ['pendiente', 'gestionado', 'descartado'],
       footer: 'features/inbox · regla: cero mails sin destino',
     },
@@ -4397,7 +4406,7 @@
         {type:'sys',   text:'Email automático al inquilino:<br>"recibimos tu reporte"'},
         {type:'end',   text:'Gestión lista para asignar técnico'},
       ],
-      actores: ['Gestor de mantenimiento'],
+      actores: ['Gestor comercial'],
       estados: ['ingresado'],
       footer: 'También se puede crear desde cero en el tablero, sin mail de origen',
     },
@@ -4419,7 +4428,7 @@
           ],
         },
       ],
-      actores: ['Gestor de mantenimiento', 'Técnico'],
+      actores: ['Gestor comercial', 'Técnico'],
       estados: ['ingresado', 'asignacion', 'presupuesto'],
       footer: 'La desasignación posterior también existe: retroceso total con motivo e imputación',
     },
@@ -4440,7 +4449,7 @@
           ],
         },
       ],
-      actores: ['Técnico', 'Gestor de mantenimiento'],
+      actores: ['Técnico', 'Gestor comercial'],
       estados: ['presupuesto', 'en_ejecucion'],
       footer: 'La causa del deterioro orienta quién paga: desgaste → propietario · daño por uso → inquilino',
     },
@@ -4461,13 +4470,13 @@
           ],
         },
       ],
-      actores: ['Técnico', 'Gestor de mantenimiento'],
+      actores: ['Técnico', 'Gestor comercial'],
       estados: ['en_ejecucion', 'conformidad', 'facturacion_cobro'],
       footer: 'Si el técnico no puede continuar, avisa con motivo y la obra queda pausada para él',
     },
     'flow-09': {
       eyebrow: 'Flujo 9 de 9 · CORE · Demo 5 de 5', title: 'Cobro y liquidación',
-      sub: 'El gestor administrativo cierra el circuito económico con documentos que salen del sistema. Al finalizar, el gestor califica al técnico.',
+      sub: 'El gestor financiero cierra el circuito económico con documentos que salen del sistema. Al finalizar, el gestor califica al técnico.',
       bpmn: [
         {type:'start', text:'Gestión en Cobro'},
         {type:'proc',  text:'Emite la nota de cobro (PDF)<br>y la envía por email al pagador'},
@@ -4477,7 +4486,7 @@
         {type:'sys',   text:'Email "resuelto" al inquilino ·<br>la obra queda en el legajo'},
         {type:'end',   text:'Finalizado ·<br>el gestor califica al técnico (1-5★)'},
       ],
-      actores: ['Gestor administrativo', 'Gestor de mantenimiento'],
+      actores: ['Gestor financiero', 'Gestor comercial'],
       estados: ['facturacion_cobro', 'liquidacion_tecnico', 'finalizado'],
       footer: 'Cancelación con cargo: pasa por Cobro con el monto del cargo, no del trabajo anulado',
     },
@@ -4964,7 +4973,7 @@
           entregable:'Padrón de técnicos con documentación verificada' },
         { num:'F4', name:'Motor de gestiones',                   dur:'El corazón',
           actividades:['Funnel con etapa explícita en la base de datos','Transiciones atómicas con event log (quién, qué, cuándo)','Tablero Kanban con permisos por columna y rol'],
-          entregable:'El tablero visual con trazabilidad total' },
+          entregable:'El tablero visual con seguimiento total' },
         { num:'F5', name:'Inbox Gmail',        dur:'La entrada',
           actividades:['Sincronización automática con la casilla exclusiva de mantenimiento (cada 1 minuto)','Creación de la gestión con formulario precargado desde el mail','Descarte con motivo: cero mails sin destino'],
           entregable:'Del mail a la gestión clasificada en segundos' },
