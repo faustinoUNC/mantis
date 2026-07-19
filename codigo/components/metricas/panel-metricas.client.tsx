@@ -383,8 +383,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     [filasEsp]
   );
 
-  // ── Flujo (ahora): Embudo en tiempo real — cuántas gestiones ACTIVAS hay hoy
-  // en cada etapa (STORY-1004). Snapshot sobre la etapa actual, no el período:
+  // ── Flujo (ahora): Carga por etapa — cuántas gestiones ACTIVAS hay hoy en
+  // cada etapa (STORY-1004). Snapshot sobre la etapa actual, no el período:
   // la barra más alta es el cuello de botella del momento. Activas = todo lo que
   // no está finalizado ni cancelado. Complementa a "Cuellos de botella" (días
   // promedio por etapa): el embudo cuenta cuántas, cuellos mide cuánto tardan. ──
@@ -751,10 +751,11 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       </Bloque>
       )}
 
-      {/* ══ Embudo en tiempo real (STORY-1004): reparto ACTUAL de las gestiones
-          activas por etapa. Snapshot "ahora", no sigue el período — la barra más
-          alta es el cuello de botella de hoy. ══ */}
-      <Bloque titulo="Embudo en tiempo real" cols={1}>
+      {/* ══ Carga por etapa (STORY-1004): reparto ACTUAL de las gestiones activas
+          por etapa. Snapshot "ahora", no sigue el período — la barra más alta es
+          el cuello de botella de hoy. (No es un embudo: no hay conversión que se
+          angoste, es la foto de dónde se amontona el trabajo.) ══ */}
+      <Bloque titulo="Carga por etapa" cols={1}>
         <MetricCard titulo="Gestiones activas por etapa" ayuda="Dónde están HOY las gestiones abiertas. La barra más alta es el cuello de botella." n={funnel.total} alcance="ahora" humildad={false}>
           {funnel.data.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">No hay gestiones activas.</p>
