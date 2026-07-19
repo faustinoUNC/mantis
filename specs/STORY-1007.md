@@ -1,6 +1,6 @@
 # STORY-1007 — Walter: asistente IA con burbuja flotante y tools por rol (v1.0)
 
-**Estado:** 🚧 en desarrollo · **Origen:** pedido de Fausti (2026-07-19) + resolución de party mode (12ª sesión). Evolución del "Walter" de la tesis original, rediseñado desde cero sobre los estándares vigentes (Vercel AI SDK, OWASP LLM Top 10 2025, Anthropic tool design) y con la seguridad como requisito innegociable.
+**Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-19) + resolución de party mode (12ª sesión). Evolución del "Walter" de la tesis original, rediseñado desde cero sobre los estándares vigentes (Vercel AI SDK, OWASP LLM Top 10 2025, Anthropic tool design) y con la seguridad como requisito innegociable.
 
 ## Problema
 
@@ -79,7 +79,7 @@ Reglas de diseño de tools: descripciones prescriptivas (cuándo usarla), schema
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de OK de Fausti)_
+- **Commit:** `1e2265f` (2026-07-19).
 - **Archivos:** `features/asistente/config.ts` (modelo, límites, whitelist de rutas por rol, chips), `features/asistente/tools.ts` (las 16 tools), `features/asistente/prompt.ts` (system prompt + guía por rol), `app/api/asistente/route.ts` (endpoint con guardrails), `components/asistente/walter.client.tsx` (burbuja + panel), `components/paneles/panel-shell.tsx` (montaje staff + técnico), `features/gestiones/service.ts` (se exporta `estadisticasTecnicos` con guard propio de rol), `specs/ARQUITECTURA.md` (excepción documentada). Deps nuevas: `ai@7`, `@ai-sdk/react`, `@ai-sdk/anthropic`, `zod`.
 - **Verificación (E2E navegador, 3 roles):**
   - Sin sesión: `POST /api/asistente` → **401** (curl).
