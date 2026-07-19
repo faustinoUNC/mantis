@@ -96,6 +96,13 @@ function Dato({ label, children }: { label: string; children: React.ReactNode })
 }
 
 function DatosGestion({ gestion }: { gestion: GestionDetalle }) {
+  // STORY-1014: adelantos entregados a técnicos que salieron de la gestión —
+  // constancia permanente (se lee del historial congelado; la columna viva se
+  // resetea al desasignar). La recuperación es un arreglo humano; acá solo se
+  // asegura que la plata no se olvide.
+  const adelantosSalientes = gestion.eventos.filter(
+    (e) => e.detalle?.adelanto_saliente != null
+  );
   return (
     <Card className="p-5 mt-5">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
@@ -175,6 +182,33 @@ function DatosGestion({ gestion }: { gestion: GestionDetalle }) {
           </Dato>
         )}
       </div>
+      {adelantosSalientes.length > 0 && (
+        <div className="mt-4 rounded-md border border-urgente-fuerte/30 bg-urgente-fuerte/5 px-4 py-3 flex flex-col gap-1">
+          {adelantosSalientes.map((e) => {
+            const monto = Number(e.detalle?.adelanto_saliente);
+            const devuelto = Number(e.detalle?.devolucion_adelanto ?? 0);
+            const pendiente = Math.max(monto - devuelto, 0);
+            // nombrarSalientes() ya tradujo el UUID a nombre; si quedó sin
+            // resolver, el id crudo no aporta (mismo criterio que eventos.ts).
+            const saliente = e.detalle?.tecnico_saliente;
+            const nombre =
+              typeof saliente === "string" && !/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(saliente)
+                ? saliente
+                : "El técnico saliente";
+            return (
+              <p key={e.id} className="text-sm text-urgente-fuerte">
+                {nombre} recibió{" "}
+                <span className="font-mono font-semibold">{plata(monto)}</span>{" "}
+                en adelantos antes de ser desasignado ({fechaHora(e.creado_en)})
+                {devuelto > 0 && <> — devolvió/ajustó <span className="font-mono">{plata(devuelto)}</span></>}
+                {pendiente > 0
+                  ? <> — quedan <span className="font-mono font-semibold">{plata(pendiente)}</span> a resolver con el técnico, fuera del sistema.</>
+                  : <> — saldado en el acto.</>}
+              </p>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 }
@@ -1276,10 +1310,13 @@ function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
 // ── Desasignar técnico (STORY-966) — retroceso total a Asignación ──
 // Un solo camino para reasignar/abandono: motivo obligatorio; si fue el
 // técnico el que dejó el trabajo, queda imputado a él (métricas).
+// STORY-1014: si recibió adelanto, se avisa (queda congelado en el evento y
+// la columna se resetea) y se puede asentar una devolución/ajuste en el acto.
 
 function DesasignarTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const [abierto, setAbierto] = useState(false);
+  const adelanto = Number(gestion.adelanto_materiales ?? 0);
 
   if (!abierto) {
     return (
@@ -1307,7 +1344,8 @@ function DesasignarTecnico({ gestion }: { gestion: GestionDetalle }) {
             desasignarTecnico(
               gestion.id,
               String(form.get("motivo")),
-              form.get("abandono") === "on"
+              form.get("abandono") === "on",
+              Number(String(form.get("devolucion") ?? "").replace(/[^\d.]/g, "")) || undefined
             )
           );
         }}
@@ -1317,6 +1355,29 @@ function DesasignarTecnico({ gestion }: { gestion: GestionDetalle }) {
           evaluación, presupuesto y rendición. El historial y las fotos de{" "}
           {gestion.tecnico_nombre ?? "el técnico saliente"} se conservan.
         </p>
+        {adelanto > 0 && (
+          <div className="rounded-md border border-urgente-fuerte/30 bg-urgente-fuerte/5 px-4 py-3 flex flex-col gap-2">
+            <p className="text-sm text-urgente-fuerte">
+              {gestion.tecnico_nombre ?? "Este técnico"} recibió{" "}
+              <span className="font-semibold font-mono">{plata(adelanto)}</span>{" "}
+              en adelantos de materiales. Queda registrado en el historial — la
+              devolución o el ajuste se arregla con el técnico por fuera del
+              sistema. Al nuevo técnico no se le descuenta nada de esto.
+            </p>
+            <div className="w-52">
+              <Input
+                label="Devolución / ajuste en el acto (opcional)"
+                name="devolucion"
+                inputMode="decimal"
+                placeholder="0"
+              />
+            </div>
+            <p className="text-[12px] text-muted">
+              Efectivo que devuelve ahora, o el valor acordado de materiales
+              que ya compró y quedan en la obra.
+            </p>
+          </div>
+        )}
         <Input label="Motivo de la desasignación" name="motivo" required placeholder="Por qué no sigue este técnico" />
         <label className="flex items-start gap-2 text-sm cursor-pointer">
           <input type="checkbox" name="abandono" className="mt-0.5 accent-[var(--color-brand)]" />

@@ -513,10 +513,14 @@ export async function cancelarGestion(
 // rehace su evaluación). El historial y los avances del saliente se conservan.
 // Postgres congela {motivo, imputado, tecnico_saliente} en el evento; si fue
 // abandono, el contador del picker lo lee de ahí (el tecnico_id se pisa).
+// STORY-1014: si el saliente recibió adelanto, Postgres lo congela como
+// adelanto_saliente y resetea la columna; acá viaja la devolución opcional
+// (efectivo devuelto en el acto o valor acordado de materiales que quedan).
 export async function desasignarTecnico(
   gestionId: string,
   motivo: string,
-  abandonoTecnico: boolean
+  abandonoTecnico: boolean,
+  devolucionAdelanto?: number
 ): Promise<ActionResult> {
   if (!motivo?.trim()) {
     return { ok: false, error: "Indicá el motivo de la desasignación." };
@@ -524,11 +528,25 @@ export async function desasignarTecnico(
   const supabase = await createClient();
   const { data: g } = await supabase
     .from("gestiones")
-    .select("tecnico_id, descripcion")
+    .select("tecnico_id, descripcion, adelanto_materiales")
     .eq("id", gestionId)
     .single();
   if (!g?.tecnico_id) {
     return { ok: false, error: "La gestión no tiene técnico asignado." };
+  }
+
+  const adelanto = Number(g.adelanto_materiales ?? 0);
+  const devolucion = Number(devolucionAdelanto) || 0;
+  if (devolucion > 0) {
+    if (adelanto <= 0) {
+      return { ok: false, error: "Esta gestión no tiene adelanto para devolver." };
+    }
+    if (!Number.isFinite(devolucion) || devolucion > adelanto) {
+      return {
+        ok: false,
+        error: "La devolución no puede superar el adelanto entregado.",
+      };
+    }
   }
 
   const { error } = await supabase.rpc("avanzar_etapa", {
@@ -537,6 +555,7 @@ export async function desasignarTecnico(
     p_detalle: {
       motivo: motivo.trim(),
       imputado: abandonoTecnico ? "tecnico" : "gestor",
+      ...(devolucion > 0 ? { devolucion_adelanto: devolucion } : {}),
     },
   });
   if (error) {

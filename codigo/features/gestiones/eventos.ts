@@ -81,6 +81,12 @@ export function detalleLegible(detalle: Record<string, unknown> | null): string 
   if (detalle.imputado === "tecnico") partes.push("Abandonada por el técnico");
   if (detalle.tecnico_saliente && !/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(String(detalle.tecnico_saliente)))
     partes.push(`Saliente: ${detalle.tecnico_saliente}`);
+  // STORY-1014: la plata en la mano del saliente queda dicha con todas las
+  // letras (congelada al desasignar; la columna viva se resetea).
+  if (detalle.adelanto_saliente != null)
+    partes.push(`Adelanto al saliente: ${plataD(detalle.adelanto_saliente)}`);
+  if (detalle.devolucion_adelanto != null)
+    partes.push(`Devuelto/ajustado en el acto: ${plataD(detalle.devolucion_adelanto)}`);
   if (detalle.motivo && detalle.motivo !== "reasignar") partes.push(String(detalle.motivo));
   return partes.length ? partes.join(" · ") : null;
 }
