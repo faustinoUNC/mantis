@@ -17,13 +17,17 @@ Convertir el gráfico en una **foto en tiempo real**: cuántas gestiones **activ
 3. **Presentación**: barras horizontales coloreadas con `rampaMagnitud(value / max)` — igual criterio que "Cuellos de botella", así el cuello se lee por color e intensidad. Título de card "Gestiones activas por etapa", `ayuda` "Dónde están HOY las gestiones abiertas. La barra más alta es el cuello de botella.". Tooltip "N gestiones". Vacío → "No hay gestiones activas.".
 4. El bloque "Flujo del trabajo" dentro del período queda con "Tiempo de ciclo" y "Cuellos de botella" (ambas métricas SÍ del período).
 
-## v1.1 — Refresco genuinamente en vivo (feedback de Fausti: "¿es realmente en tiempo real?")
+## v1.1 — Audit de "¿es realmente en tiempo real?" (feedback de Fausti)
 
-**Hallazgo del audit:** el panel de Informes solo estaba suscripto a `RefrescoVivo tabla="calificaciones"`. Todas sus cards "ahora" (Carga por etapa, Gestiones estancadas, Pendientes de cobro, Ordenadas por fee, Presión por especialidad) se derivan de `gestiones`, así que **no** se actualizaban cuando una gestión cambiaba de etapa/cobro con el panel abierto — solo al recargar, ante un cambio de `calificaciones` o al reconectar. Era el ÚNICO outlier: todas las demás vistas en vivo de la app (Tablero, Mis trabajos, Archivadas, Inicio, Detalle) ya se suscriben a `gestiones`.
+**Duda de Fausti:** ¿el gráfico es realmente en vivo? **Sí.** El audit lo confirmó — y de paso corrigió un error mío.
 
-**Fix:** agregar `<RefrescoVivo tabla="gestiones" />` al panel. Como `router.refresh()` re-fetchea todo el payload de métricas, esa única suscripción vuelve en vivo (~400ms, debounce) a las 5 cards "ahora" de una. `gestiones` está en la publicación `supabase_realtime` (verificado). RLS limita qué filas disparan por suscriptor.
+**Hallazgo:** `PanelMetricas` se renderiza SIEMPRE dentro de `InicioRol` (`app/admin/page.tsx` y `app/gestion/page.tsx`), y `InicioRol` **ya** tiene `<RefrescoVivo tabla="gestiones" />`. Como `router.refresh()` re-fetchea el payload completo de métricas (`obtenerMetricas`), el panel entero — y por lo tanto las 5 cards "ahora" (Carga por etapa, estancadas, cobro, fee, presión) — **ya se actualizaba en vivo** ante cualquier cambio de `gestiones`. No era el outlier que se creyó en un primer momento.
 
-**Residual conocido (no crítico):** "Presión por especialidad" depende también de la capacidad (técnicos activos por especialidad, tablas `tecnicos`/`tecnico_especialidades`). El lado del TRABAJO (gestiones abiertas) queda en vivo; un cambio de plantel de técnicos todavía necesita recargar Informes. Se decidió no sumar más suscripciones (REGLA #0): el cambio de plantel es administrativo e infrecuente y se hace en la vista de Técnicos.
+**Error corregido:** en un primer intento se agregó un `<RefrescoVivo tabla="gestiones" />` DENTRO del panel. Fue un duplicado: el cliente Supabase reusa el canal por topic, y como `InicioRol` ya tenía `vivo-gestiones` suscripto, el segundo `.on()` tiraba `cannot add postgres_changes callbacks for realtime:vivo-gestiones after subscribe()` (error de consola en Inicio, para todo rol que la abra). **Se revirtió.** Neto en código: solo un comentario que documenta por qué el panel NO debe re-suscribirse a `gestiones` (lo hace el contenedor) y que sí conserva su propia suscripción a `calificaciones` (que `InicioRol` no cubre, para la card de Calificación).
+
+**Verificación en vivo (SIN mi línea, solo con la suscripción de `InicioRol`):** base "78 gestiones" → `UPDATE gestiones SET etapa='finalizado'` de una gestión `[DEMO]` en conformidad → el total del gráfico bajó a **"77 gestiones"** solo en ~1s → revert a `conformidad` → volvió a **"78 gestiones"** solo. Dato restaurado. Consola: 0 errores tras el revert.
+
+**Nota sobre "Presión por especialidad":** su lado del TRABAJO (gestiones) queda en vivo por lo anterior; un cambio de PLANTEL de técnicos (tablas `tecnicos`/`tecnico_especialidades`) todavía necesita recargar Informes. No se agregó suscripción (REGLA #0): es administrativo, infrecuente y se hace desde la vista de Técnicos.
 
 ## Fuera de alcance
 
@@ -37,11 +41,11 @@ Convertir el gráfico en una **foto en tiempo real**: cuántas gestiones **activ
 3. La barra más alta queda con el color más intenso de la rampa (cuello de botella evidente); las más bajas, verde-azuladas.
 4. Sin gestiones activas → mensaje "No hay gestiones activas." (no dibuja gráfico vacío).
 5. `tsc`/eslint verdes; "Cuellos de botella" y "Tiempo de ciclo" siguen funcionando dentro de la caja del período (regresión).
-6. (v1.1) Con Informes abierto, un cambio de etapa de una gestión se refleja en el gráfico **sin recargar** en ~1s.
+6. (v1.1) Con Informes abierto, un cambio de etapa de una gestión se refleja en el gráfico **sin recargar** en ~1s (lo provee la suscripción de `InicioRol`), y la consola de Inicio queda **sin errores**.
 
 ## Dev Agent Record
 
-- **Commits:** `737c81a` (v1.0, código+specs, junto con STORY-1005); `03d4918` (rename del bloque "Embudo en tiempo real" → "Carga por etapa"); `<v1.1 real-time>` (2026-07-19).
-- **Archivos:** `codigo/components/metricas/panel-metricas.client.tsx` (rewrite del `useMemo` `funnel` a snapshot por etapa actual desde `filasEsp`; card movida a un `Bloque titulo="Carga por etapa"` con `alcance="ahora"` fuera de la caja "En el período"; `BRAND_D` eliminado por quedar sin uso; v1.1: `<RefrescoVivo tabla="gestiones" />` agregado).
+- **Commits:** `737c81a` (v1.0, código+specs, junto con STORY-1005); `03d4918` (rename del bloque "Embudo en tiempo real" → "Carga por etapa"); `<v1.1 audit>` (2026-07-19).
+- **Archivos:** `codigo/components/metricas/panel-metricas.client.tsx` (rewrite del `useMemo` `funnel` a snapshot por etapa actual desde `filasEsp`; card movida a un `Bloque titulo="Carga por etapa"` con `alcance="ahora"` fuera de la caja "En el período"; `BRAND_D` eliminado por quedar sin uso; v1.1: comentario documentando por qué NO se re-suscribe a `gestiones` — lo hace `InicioRol` — conservando solo `calificaciones`).
 - **Verificación v1.0:** `tsc`/eslint verdes. E2E navegador (Admin): el gráfico muestra una barra por etapa con total = `count(*) group by etapa` de la DB excluyendo finalizado/cancelada; **Asignación** es la barra más larga y la más intensa (terracota) = cuello de botella; las chicas quedan verde-azuladas. Badge "ahora". "Cuellos de botella"/"Tiempo de ciclo" siguen dentro de la caja del período. Captura: `story-1004-embudo-tiempo-real.png`.
-- **Verificación v1.1 (real-time, en vivo):** `gestiones` confirmada en la publicación `supabase_realtime`. E2E navegador SIN recargar: base "76 gestiones" → `UPDATE gestiones SET etapa='finalizado'` de una gestión `[DEMO]` en conformidad → el total del gráfico bajó a **"75 gestiones"** solo en ~1s → `UPDATE ... SET etapa='conformidad'` (revert) → volvió a **"76 gestiones"** solo. Dato de prueba restaurado. `tsc`/eslint verdes.
+- **Verificación v1.1 (en vivo, ya vía `InicioRol`):** E2E navegador SIN recargar: base "78 gestiones" → `UPDATE gestiones SET etapa='finalizado'` de una gestión `[DEMO]` en conformidad → total del gráfico → **"77"** solo en ~1s → revert a `conformidad` → **"78"** solo. Consola sin errores tras revertir el duplicado. Dato de prueba restaurado. `tsc` del proyecto: los únicos 2 errores están en `features/asistente/tools.ts` (archivo local sin trackear, ajeno a esta story); `panel-metricas.client.tsx` compila limpio. eslint verde.

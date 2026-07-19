@@ -662,12 +662,12 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
 
   return (
     <section>
-      {/* STORY-1004 v1.1: las cards "ahora" (Carga por etapa, estancadas, cobro,
-          fee, presión) se derivan de `gestiones`; sin esta suscripción solo se
-          refrescaban al recargar o ante un cambio de `calificaciones`. Con ella,
-          cualquier cambio de etapa/cobro refresca el panel en vivo (~400ms),
-          igual que el Tablero. RLS limita qué filas disparan por suscriptor. */}
-      <RefrescoVivo tabla="gestiones" />
+      {/* El panel ya se refresca en vivo ante cambios de `gestiones` gracias a la
+          suscripción de su contenedor `InicioRol` (router.refresh re-fetchea el
+          payload de métricas). Acá solo hace falta escuchar `calificaciones`,
+          que `InicioRol` no cubre — así se actualiza la card de Calificación al
+          entrar una nueva. (No repetir `gestiones`: mismo canal `vivo-gestiones`
+          → "cannot add postgres_changes callbacks after subscribe()".) */}
       <RefrescoVivo tabla="calificaciones" />
       <div className="mb-5">
         <h2 className="text-[15px] font-semibold tracking-tight">Informes</h2>
