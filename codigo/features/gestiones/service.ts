@@ -59,6 +59,7 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
   )[0];
   return {
     id: g.id as string,
+    numero: g.numero as number,
     descripcion: g.descripcion as string,
     etapa: g.etapa as Etapa,
     urgencia: g.urgencia as Urgencia,
@@ -90,13 +91,13 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
 // STORY-1001: origen (to-one por la columna) y vinculadas (to-many) son
 // self-embeds de gestiones — chip + hover del tablero y "Surgió de".
 const SELECT_RESUMEN =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestor_id, propiedad_id, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, numero, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestor_id, propiedad_id, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // STORY-938: igual que SELECT_RESUMEN pero con el contacto de propietario/
 // inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
 // (gestor_id no va acá: obtenerGestion ya lo suma junto a tecnico_id y demás.)
 const SELECT_DETALLE =
-  "id, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, tipo, unidad, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, numero, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, tipo, unidad, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // Inquilino si la gestión tiene legajo vigente; si no, el propietario.
 function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_cliente"] {

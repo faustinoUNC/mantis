@@ -37,6 +37,9 @@ export const ETAPAS: { id: Etapa; label: string }[] = [
 
 export interface GestionResumen {
   id: string;
+  // STORY-1009: número identificador corto (#1, #2, …) — lo asigna la DB al
+  // crear, visible en tarjeta/detalle para distinguir gestiones parecidas.
+  numero: number;
   descripcion: string;
   etapa: Etapa;
   urgencia: Urgencia;

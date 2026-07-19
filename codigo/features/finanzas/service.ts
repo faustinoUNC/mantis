@@ -76,7 +76,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, adelanto_materiales, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, numero, descripcion, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, adelanto_materiales, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -171,7 +171,8 @@ async function datosDocumento(
     emailDestinatario,
     datos: {
       tipo,
-      numero: g.id.slice(0, 8).toUpperCase(),
+      // STORY-1009: el documento lleva el mismo número visible de la gestión
+      numero: String(g.numero),
       // Detalle: la fecha del documento es la del pago real (no la de
       // regeneración/descarga), para que valga como constancia del pago.
       fecha:

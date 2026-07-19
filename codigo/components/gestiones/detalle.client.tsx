@@ -1783,8 +1783,9 @@ export function DetalleGestion({
         <Link href={volver} className="text-sm font-medium text-muted hover:text-foreground">
           ← Volver
         </Link>
+        {/* STORY-1009: número secuencial legible (antes: prefijo del UUID) */}
         <span className="font-mono text-[12px] text-muted">
-          N° {gestion.id.slice(0, 8).toUpperCase()}
+          Gestión #{gestion.numero}
         </span>
       </div>
 

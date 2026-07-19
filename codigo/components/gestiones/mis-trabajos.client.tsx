@@ -87,7 +87,7 @@ function TarjetaAccion({ g, cta }: { g: GestionResumen; cta: string }) {
           <Badge tono="neutro">{g.especialidad}</Badge>
           {g.urgencia === "urgente" && <Badge tono="urgente">Urgente</Badge>}
           <span className="ml-auto font-mono text-[12px] text-muted shrink-0">
-            {hace(g.creado_en)}
+            #{g.numero} · {hace(g.creado_en)}
           </span>
         </div>
         <p className="font-semibold leading-snug mt-2.5">{g.descripcion}</p>
@@ -129,7 +129,7 @@ function TarjetaSeguimiento({ g, estado }: { g: GestionResumen; estado: string }
               (un acento = un significado: ámbar = urgente, no sub-estado). */}
           <Badge tono="neutro">{estado}</Badge>
           <span className="font-mono text-[12px] text-muted">
-            {hace(g.creado_en)}
+            #{g.numero} · {hace(g.creado_en)}
           </span>
         </div>
       </Card>
@@ -318,6 +318,8 @@ function FilaEtapa({
 // ── Home ──────────────────────────────────────────────────────────────
 
 const CAMPOS_BUSQUEDA: CampoBusqueda<GestionResumen>[] = [
+  // STORY-1009: buscable por número, con o sin "#"
+  { id: "numero", label: "N°", de: (g) => [`#${g.numero}`, String(g.numero)] },
   { id: "descripcion", label: "Descripción", de: (g) => [g.descripcion] },
   { id: "direccion", label: "Dirección", de: (g) => [g.direccion] },
   { id: "especialidad", label: "Especialidad", de: (g) => [g.especialidad] },

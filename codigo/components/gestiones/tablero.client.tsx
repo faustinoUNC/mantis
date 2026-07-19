@@ -87,9 +87,16 @@ function TarjetaGestion({
           resaltada && "border-brand ring-2 ring-brand/30"
         )}
       >
-        <p className="text-sm font-medium leading-snug truncate group-hover:text-brand-active transition-colors">
-          {gestion.direccion}
-        </p>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-sm font-medium leading-snug truncate group-hover:text-brand-active transition-colors">
+            {gestion.direccion}
+          </p>
+          {/* STORY-1009: identificador corto — dos gestiones parecidas en la
+              misma propiedad se distinguen por el número. */}
+          <span className="font-mono text-[11px] text-muted/80 shrink-0">
+            #{gestion.numero}
+          </span>
+        </div>
         <p className="text-[12px] text-muted mt-1.5 line-clamp-2">
           {gestion.descripcion}
         </p>
@@ -231,6 +238,8 @@ function FormNueva({
 }
 
 const CAMPOS_BUSQUEDA: CampoBusqueda<GestionResumen>[] = [
+  // STORY-1009: buscable por número, con o sin "#"
+  { id: "numero", label: "N°", de: (g) => [`#${g.numero}`, String(g.numero)] },
   { id: "descripcion", label: "Descripción", de: (g) => [g.descripcion] },
   { id: "direccion", label: "Dirección", de: (g) => [g.direccion] },
   { id: "propietario", label: "Propietario", de: (g) => [g.propietario_nombre] },
@@ -287,7 +296,7 @@ export function Tablero({
           id: g.id,
           propiedad_id: g.propiedad_id,
           direccion: g.direccion,
-          label: `${g.direccion} — ${g.descripcion}`,
+          label: `#${g.numero} · ${g.direccion} — ${g.descripcion}`,
         })),
     [gestiones]
   );

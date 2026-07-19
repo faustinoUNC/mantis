@@ -18,6 +18,8 @@ import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 type Archivada = GestionResumen & { archivada_en: string };
 
 const CAMPOS_BUSQUEDA: CampoBusqueda<Archivada>[] = [
+  // STORY-1009: buscable por número, con o sin "#"
+  { id: "numero", label: "N°", de: (g) => [`#${g.numero}`, String(g.numero)] },
   { id: "descripcion", label: "Descripción", de: (g) => [g.descripcion] },
   { id: "direccion", label: "Dirección", de: (g) => [g.direccion] },
   { id: "propietario", label: "Propietario", de: (g) => [g.propietario_nombre] },
@@ -46,9 +48,15 @@ function TarjetaArchivada({ gestion }: { gestion: Archivada }) {
   return (
     <Card className="p-4 flex flex-col gap-3">
       <Link href={`/gestiones/${gestion.id}`} className="group min-w-0">
-        <p className="text-sm font-medium leading-snug truncate group-hover:text-brand-active transition-colors">
-          {gestion.direccion}
-        </p>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-sm font-medium leading-snug truncate group-hover:text-brand-active transition-colors">
+            {gestion.direccion}
+          </p>
+          {/* STORY-1009: identificador corto de la gestión */}
+          <span className="font-mono text-[11px] text-muted/80 shrink-0">
+            #{gestion.numero}
+          </span>
+        </div>
         <p className="text-[12px] text-muted mt-1 line-clamp-2">
           {gestion.descripcion}
         </p>
