@@ -662,6 +662,12 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
 
   return (
     <section>
+      {/* STORY-1004 v1.1: las cards "ahora" (Carga por etapa, estancadas, cobro,
+          fee, presión) se derivan de `gestiones`; sin esta suscripción solo se
+          refrescaban al recargar o ante un cambio de `calificaciones`. Con ella,
+          cualquier cambio de etapa/cobro refresca el panel en vivo (~400ms),
+          igual que el Tablero. RLS limita qué filas disparan por suscriptor. */}
+      <RefrescoVivo tabla="gestiones" />
       <RefrescoVivo tabla="calificaciones" />
       <div className="mb-5">
         <h2 className="text-[15px] font-semibold tracking-tight">Informes</h2>
