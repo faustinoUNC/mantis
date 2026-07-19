@@ -26,6 +26,6 @@
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de OK de Fausti)_
-- **Archivos:** `codigo/features/asistente/tools.ts`
-- **Verificación:** _(pendiente)_
+- **Commit:** `5c8eb65` (2026-07-19), rebaseado sobre STORY-1010/1011/1012 de Giuliano (conflicto de índice en `PENDIENTES.md` resuelto conservando ambas entradas).
+- **Archivos:** `codigo/features/asistente/tools.ts` (fix) + `specs/STORY-1013.md`, `specs/README.md`, `tasks/PENDIENTES.md`.
+- **Verificación:** `tsc --noEmit` + eslint verdes, y `tsc` verde de nuevo tras el rebase. Corte confirmado leyendo el árbol de `detalle.client.tsx`: el fee (`cargo_admin`) lo ven en la UI el gestor de mantenimiento (lo define en `EvaluacionPresupuesto`), el gestor administrativo (`FinanzasAcciones`) y el admin; el técnico no lo ve en ningún lado → Walter alineado (`rol !== "tecnico"`). Pendiente E2E navegador: loguearse como técnico y confirmar que Walter no devuelve el fee en `detalle_gestion`.
