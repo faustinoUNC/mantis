@@ -27,6 +27,6 @@ Solo copy, en `panel-metricas.client.tsx`:
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente_.
-- **Archivos:** `codigo/components/metricas/panel-metricas.client.tsx` (dos títulos + comentarios).
-- **Verificación:** _pendiente_.
+- **Commit:** `737c81a` (2026-07-19, junto con STORY-1004).
+- **Archivos:** `codigo/components/metricas/panel-metricas.client.tsx` (dos títulos de `MetricCard` + tres comentarios internos).
+- **Verificación:** `tsc`/eslint verdes. E2E navegador (Admin, `/metricas` → "Histórico · desempeño de técnicos"): los títulos leen **"Desvíos de presupuesto"** y **"Desvío de plazo"**; ya no aparece "Cumplimiento de presupuesto/plazo" en el DOM. Los gráficos muestran los mismos datos.

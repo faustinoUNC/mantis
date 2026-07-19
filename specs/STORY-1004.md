@@ -32,6 +32,6 @@ Convertir el gráfico en una **foto en tiempo real**: cuántas gestiones **activ
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente_.
-- **Archivos:** `codigo/components/metricas/panel-metricas.client.tsx` (rewrite del `useMemo` `funnel` + reubicación de la card fuera de la caja "En el período").
-- **Verificación:** _pendiente_.
+- **Commit:** `737c81a` (2026-07-19, junto con STORY-1005).
+- **Archivos:** `codigo/components/metricas/panel-metricas.client.tsx` (rewrite del `useMemo` `funnel` a snapshot por etapa actual desde `filasEsp`; card movida a un `Bloque titulo="Embudo en tiempo real"` con `alcance="ahora"` fuera de la caja "En el período"; `BRAND_D` eliminado por quedar sin uso).
+- **Verificación:** `tsc`/eslint verdes. E2E navegador (Admin, `/metricas`): el embudo muestra 7 barras con total **75 gestiones** — idéntico al `count(*) group by etapa` de la DB excluyendo finalizado/cancelada (Ingresado 5, Asignación 28, Presupuesto 9, En ejecución 10, Conformidad 4, Cobro 13, Liquidación 6). **Asignación (28)** es la barra más larga y la más intensa (terracota) = cuello de botella; las chicas quedan verde-azuladas. Badge "ahora" con tooltip "Estado actual — no cambia con el período". "Cuellos de botella"/"Tiempo de ciclo" siguen dentro de la caja del período. Captura: `story-1004-embudo-tiempo-real.png`.
