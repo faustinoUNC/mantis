@@ -12,19 +12,17 @@ import { actualizarEspecialidadesTecnico } from "@/features/tecnicos/service";
 
 // Edición de especialidades de un técnico ya creado (staff mantenimiento).
 // Si se agrega una especialidad que exige matrícula y el técnico todavía no
-// tiene ninguna cargada, el mismo form deja subirla (STORY-948).
+// la tenía, el mismo form deja subir su matrícula (STORY-948, STORY-1012).
 export function EspecialidadesTecnico({
   tecnicoId,
   actuales,
   nombresActuales,
   catalogo,
-  tieneMatricula,
 }: {
   tecnicoId: string;
   actuales: string[];
   nombresActuales: string[];
   catalogo: Especialidad[];
-  tieneMatricula: boolean;
 }) {
   const router = useRouter();
   const [editando, setEditando] = useState(false);
@@ -35,10 +33,12 @@ export function EspecialidadesTecnico({
   const exigeMatricula = catalogo.some(
     (e) => seleccionadas.has(e.id) && e.requiere_matricula
   );
-  // Si ya tiene una matrícula cargada el archivo es opcional (puede sumar
-  // una nueva para la especialidad que se está agregando); si no tiene
-  // ninguna, es obligatorio.
-  const faltaMatricula = exigeMatricula && !tieneMatricula;
+  // STORY-1012: obligatorio cuando se agrega una especialidad exigente que
+  // el técnico NO tenía antes de abrir este formulario — sin importar que ya
+  // tenga matrícula cargada de otra especialidad (esa no sirve para la nueva).
+  const faltaMatricula = catalogo.some(
+    (e) => seleccionadas.has(e.id) && e.requiere_matricula && !actuales.includes(e.id)
+  );
 
   async function guardar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

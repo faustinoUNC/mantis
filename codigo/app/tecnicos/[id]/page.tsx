@@ -66,7 +66,6 @@ export default async function TecnicoDetallePage({
         actuales={tecnico.especialidad_ids}
         nombresActuales={tecnico.especialidades}
         catalogo={catalogo}
-        tieneMatricula={tecnico.tieneMatricula}
       />
 
       <Card className="mt-6 p-5">

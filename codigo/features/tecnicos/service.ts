@@ -568,7 +568,6 @@ export async function obtenerTecnico(
     especialidades: tes.map((te) => te.especialidades?.nombre).filter(Boolean) as string[],
     especialidad_ids: tes.map((te) => te.especialidad_id),
     esta_activo: null,
-    tieneMatricula: paths.length > 0,
     docs,
   };
 }
@@ -647,6 +646,10 @@ export async function rechazarTecnico(
 // Si se agrega una que exige matrícula y el técnico no tiene ninguna
 // cargada, el mismo form deja subir el archivo ahí mismo (STORY-948) — antes
 // esto bloqueaba sin salida, y el gestor no tenía forma de resolverlo.
+// STORY-1012: el bloqueo mira solo las especialidades EXIGENTES NUEVAS (que
+// el técnico no tenía antes de este submit) — antes alcanzaba con que el
+// técnico tuviera matrícula de CUALQUIER especialidad para dejar pasar una
+// nueva sin pedir nada, porque `doc_matricula_paths` no distingue de cuál es.
 export async function actualizarEspecialidadesTecnico(
   tecnicoId: string,
   form: FormData
@@ -666,21 +669,23 @@ export async function actualizarEspecialidadesTecnico(
   }
 
   const admin = createAdminClient();
-  const [{ data: tecnico }, { data: exigentes }] = await Promise.all([
+  const [{ data: tecnico }, { data: exigentes }, { data: previas }] = await Promise.all([
     admin.from("tecnicos").select("doc_matricula_paths").eq("id", tecnicoId).single(),
     admin
       .from("especialidades")
       .select("id, nombre")
       .in("id", especialidadIds)
       .eq("requiere_matricula", true),
+    admin.from("tecnico_especialidades").select("especialidad_id").eq("tecnico_id", tecnicoId),
   ]);
   if (!tecnico) return { ok: false, error: "Técnico no encontrado." };
   const existentes = tecnico.doc_matricula_paths ?? [];
-  const tendraMatricula = existentes.length > 0 || nuevasMatriculas.length > 0;
-  if ((exigentes?.length ?? 0) > 0 && !tendraMatricula) {
+  const idsPrevios = new Set((previas ?? []).map((p) => p.especialidad_id));
+  const exigentesNuevas = (exigentes ?? []).filter((e) => !idsPrevios.has(e.id));
+  if (exigentesNuevas.length > 0 && nuevasMatriculas.length === 0) {
     return {
       ok: false,
-      error: `${exigentes!.map((e) => e.nombre).join(", ")} exige matrícula: subí el archivo o sacá esa especialidad.`,
+      error: `${exigentesNuevas.map((e) => e.nombre).join(", ")} exige matrícula: subí el archivo nuevo o sacá esa especialidad.`,
     };
   }
 
