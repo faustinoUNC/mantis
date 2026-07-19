@@ -1942,21 +1942,18 @@ export function DetalleGestion({
             </div>
           </div>
         )}
-        {gestion.etapa === "en_ejecucion" && esGestorOwner && (
-          <p className="text-sm text-muted">
-            El técnico está trabajando — los avances aparecen abajo apenas los registra.
-          </p>
-        )}
         {gestion.etapa === "conformidad" && esGestorOwner && (
           <AccionConformidadGestor gestion={gestion} />
         )}
         {gestion.etapa === "conformidad" && esTecnicoAsignado && !tecnicoEnPausa && (
           <AccionConformidadTecnico gestion={gestion} />
         )}
-        {/* STORY-977 v1.1: única acción del administrativo en ejecución —
-            cargar el adelanto de materiales (presupuesto ya aprobado en esta
-            altura). Ya no aplica en conformidad. */}
-        {gestion.etapa === "en_ejecucion" && esAdministrativo && (
+        {/* STORY-977/1011: la acción en ejecución es cargar el adelanto de
+            materiales (presupuesto ya aprobado en esta altura) — la ven el
+            administrativo/admin Y el gestor de mantenimiento dueño de la
+            gestión (antes solo veía el texto "el técnico está trabajando").
+            Ya no aplica en conformidad. */}
+        {gestion.etapa === "en_ejecucion" && (esAdministrativo || esGestorOwner) && (
           <div className="border-t border-border pt-5">
             <FinanzasAcciones gestion={gestion} />
           </div>

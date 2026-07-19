@@ -61,6 +61,28 @@ async function exigirMantenimiento(gestionId: string) {
   return actual;
 }
 
+// El adelanto lo carga el administrativo/admin (dinero es su rol, ver
+// exigirAdministrativo) O el gestor de mantenimiento dueño de la gestión —
+// pedido de Fausti: el gestor comercial ya está ahí en ejecución y no
+// siempre está la administración a mano para adelantarle al técnico.
+async function exigirAdelanto(gestionId: string) {
+  const actual = await obtenerUsuarioActual();
+  if (!actual) return null;
+  if (actual.rol === "administrador" || actual.rol === "gestor_administrativo") {
+    return actual;
+  }
+  if (actual.rol === "gestor_mantenimiento") {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("gestiones")
+      .select("gestor_id")
+      .eq("id", gestionId)
+      .single();
+    if (data?.gestor_id === actual.id) return actual;
+  }
+  return null;
+}
+
 // Arma los datos del documento. Admin client tras verificar rol: cruza
 // legajo/inquilino/propietario que el rol administrativo no siempre lee.
 // Los overrides permiten previsualizar con lo tipeado SIN escribir en la DB.
@@ -589,7 +611,7 @@ export async function registrarAdelantoMateriales(
   gestionId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const actual = await exigirAdministrativo();
+  const actual = await exigirAdelanto(gestionId);
   if (!actual) return { ok: false, error: "No tenés permiso." };
   const monto = Number(formData.get("monto"));
   if (!Number.isFinite(monto) || monto <= 0) {
@@ -632,7 +654,10 @@ export async function registrarAdelantoMateriales(
     });
   if (upErr) return { ok: false, error: "No se pudo subir el comprobante. Probá de nuevo." };
 
-  const { error } = await supabase
+  // Admin client: exigirAdelanto() ya validó rol + ownership; el trigger de
+  // columnas de finanzas en gestiones está pensado para el rol administrativo
+  // y no contempla al gestor de mantenimiento (patrón "rendición").
+  const { error } = await admin
     .from("gestiones")
     .update({ adelanto_materiales: total })
     .eq("id", gestionId);
