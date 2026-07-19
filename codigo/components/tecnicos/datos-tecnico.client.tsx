@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { editarDatosTecnico } from "@/features/tecnicos/service";
 import { errorCuil } from "@/shared/utils/cuil";
+import { errorNombre } from "@/shared/utils/nombre";
 
 // Edición de identidad de un técnico ya creado (staff mantenimiento,
 // STORY-948, recortada por STORY-959): nombre y CUIL. El contacto
@@ -42,6 +43,8 @@ export function DatosTecnico({
     if (!valores.nombre.trim()) {
       return setError("Completá el nombre.");
     }
+    const errNombre = errorNombre(valores.nombre);
+    if (errNombre) return setError(errNombre);
     const errCuil = errorCuil(valores.cuil, "CUIL/CUIT");
     if (errCuil) return setError(errCuil);
     setGuardando(true);
@@ -86,7 +89,7 @@ export function DatosTecnico({
             label="Nombre"
             required
             value={valores.nombre}
-            onChange={(e) => setValores({ ...valores, nombre: e.target.value })}
+            onChange={(e) => setValores({ ...valores, nombre: e.target.value.replace(/\d/g, "") })}
           />
           <Input
             label="CUIL"

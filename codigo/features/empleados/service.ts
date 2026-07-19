@@ -8,6 +8,7 @@ import type { Rol } from "@/features/auth/types";
 import { emailRecuperarContrasena } from "@/features/email/service";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
+import { errorNombre } from "@/shared/utils/nombre";
 import type { ActionResult, Empleado, NuevoEmpleado } from "./types";
 
 // Los services que tocan la Admin API bypasean RLS: SIEMPRE verificar
@@ -38,6 +39,8 @@ export async function crearEmpleado(
   if (nuevo.rol === "tecnico") {
     return { ok: false, error: "Los técnicos se gestionan desde la sección Técnicos." };
   }
+  const errNombre = errorNombre(nuevo.nombre);
+  if (errNombre) return { ok: false, error: errNombre };
 
   const admin = createAdminClient();
   const { data: creado, error: errorAuth } = await admin.auth.admin.createUser({
@@ -56,7 +59,7 @@ export async function crearEmpleado(
 
   const { error: errorFila } = await admin.from("usuarios").insert({
     id: creado.user.id,
-    nombre: nuevo.nombre,
+    nombre: nuevo.nombre.trim(),
     email: nuevo.email,
     rol: nuevo.rol,
   });
@@ -142,6 +145,8 @@ export async function editarEmpleado(
   if (!cambios.nombre.trim() || !email) {
     return { ok: false, error: "Completá nombre y correo." };
   }
+  const errNombre = errorNombre(cambios.nombre);
+  if (errNombre) return { ok: false, error: errNombre };
 
   // El email vive en auth.users: se actualiza ahí primero y, si después
   // falla la fila de usuarios, se revierte — mismo patrón de compensación
@@ -173,7 +178,7 @@ export async function editarEmpleado(
   const supabase = await createClient();
   const { error } = await supabase
     .from("usuarios")
-    .update({ nombre: cambios.nombre, rol: cambios.rol, email })
+    .update({ nombre: cambios.nombre.trim(), rol: cambios.rol, email })
     .eq("id", id);
   if (error) {
     if (cambiaEmail) {

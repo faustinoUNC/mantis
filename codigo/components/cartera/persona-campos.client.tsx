@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { guardarPersona } from "@/features/cartera/service";
 import type { Persona, RefPersona, TipoPersona } from "@/features/cartera/types";
 import { errorCuil } from "@/shared/utils/cuil";
+import { errorNombre } from "@/shared/utils/nombre";
 import { errorTelefono } from "@/shared/utils/telefono";
 import { cn } from "@/shared/utils/cn";
 
@@ -30,6 +31,10 @@ export function validarPersona(
   }
   if (!nueva.nombre.trim() || !nueva.email.trim() || !nueva.telefono.trim()) {
     return `Completá nombre, email y teléfono del ${quien}.`;
+  }
+  const errNombre = errorNombre(nueva.nombre);
+  if (errNombre) {
+    return errNombre;
   }
   const errTelefono = errorTelefono(nueva.telefono);
   if (errTelefono) {
@@ -87,7 +92,7 @@ export function CamposPersona({
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 animate-aparecer">
-      <Input label="Nombre" required value={valores.nombre} onChange={(e) => onCambio({ ...valores, nombre: e.target.value })} placeholder="Nombre y apellido" />
+      <Input label="Nombre" required value={valores.nombre} onChange={(e) => onCambio({ ...valores, nombre: e.target.value.replace(/\d/g, "") })} placeholder="Nombre y apellido" />
       <Input label="Correo electrónico" type="email" required value={valores.email} onChange={(e) => onCambio({ ...valores, email: e.target.value })} placeholder="correo@ejemplo.com" />
       <Input label="Teléfono" required inputMode="numeric" value={valores.telefono} onChange={(e) => onCambio({ ...valores, telefono: e.target.value.replace(/\D/g, "") })} placeholder="Solo números" />
       <Input label={docLabel} required inputMode="numeric" value={valores.cuil} onChange={(e) => onCambio({ ...valores, cuil: e.target.value })} placeholder="Ej. 20301234563" />
@@ -172,6 +177,8 @@ export function FormEditarPersona({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    const errNombre = errorNombre(valores.nombre);
+    if (errNombre) return setError(errNombre);
     const errCuil = errorCuil(valores.cuil, "CUIL/CUIT");
     if (errCuil) return setError(errCuil);
     setEnviando(true);

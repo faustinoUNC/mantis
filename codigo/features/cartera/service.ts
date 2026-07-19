@@ -9,6 +9,7 @@ import {
   duplicadoPersona,
   ERROR_DUPLICADO_DB,
 } from "@/shared/utils/duplicados";
+import { errorNombre } from "@/shared/utils/nombre";
 import { errorTelefono, normalizarTelefono } from "@/shared/utils/telefono";
 import { TIPOS_INMUEBLE } from "./types";
 import type { Legajo, Persona, Propiedad, RefPersona, TipoPersona } from "./types";
@@ -50,6 +51,10 @@ export async function guardarPersona(
   datos: { nombre: string; email: string; telefono: string; documento: string },
   id?: string
 ): Promise<ActionResult> {
+  const errNombre = errorNombre(datos.nombre);
+  if (errNombre) {
+    return { ok: false, error: errNombre };
+  }
   const telefono = normalizarTelefono(datos.telefono);
   if (!telefono) {
     return { ok: false, error: "El teléfono es obligatorio." };
@@ -64,7 +69,7 @@ export async function guardarPersona(
   }
   const supabase = await createClient();
   const fila = {
-    nombre: datos.nombre,
+    nombre: datos.nombre.trim(),
     email: datos.email.trim().toLowerCase(),
     telefono,
     cuil: normalizarCuil(datos.documento),
@@ -199,6 +204,10 @@ async function resolverPersona(
   if (!ref.nueva.nombre || !ref.nueva.email) {
     return { error: "Completá nombre y email." };
   }
+  const errNombre = errorNombre(ref.nueva.nombre);
+  if (errNombre) {
+    return { error: errNombre };
+  }
   const telefono = normalizarTelefono(ref.nueva.telefono);
   if (!telefono) {
     return { error: "El teléfono es obligatorio." };
@@ -213,7 +222,7 @@ async function resolverPersona(
   }
   const supabase = await createClient();
   const fila = {
-    nombre: ref.nueva.nombre,
+    nombre: ref.nueva.nombre.trim(),
     email: ref.nueva.email.trim().toLowerCase(),
     telefono,
     cuil: normalizarCuil(ref.nueva.cuil),

@@ -21,6 +21,7 @@ import {
 import type { Empleado } from "@/features/empleados/types";
 import { usePaginado } from "@/shared/hooks/use-paginado";
 import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
+import { errorNombre } from "@/shared/utils/nombre";
 
 // Los técnicos se gestionan SOLO en la sección Técnicos (STORY-901).
 const ROLES = (Object.keys(NOMBRE_ROL) as Rol[]).filter((r) => r !== "tecnico");
@@ -40,10 +41,16 @@ function FormNuevo({ onListo }: { onListo: () => void }) {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setEnviando(true);
     const form = new FormData(e.currentTarget);
+    const nombre = String(form.get("nombre"));
+    const errNombre = errorNombre(nombre);
+    if (errNombre) {
+      setError(errNombre);
+      return;
+    }
+    setEnviando(true);
     const resultado = await crearEmpleado({
-      nombre: String(form.get("nombre")),
+      nombre,
       email: String(form.get("email")),
       password: String(form.get("password")),
       rol: String(form.get("rol")) as Rol,
@@ -92,10 +99,16 @@ function Fila({ empleado }: { empleado: Empleado }) {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setGuardando(true);
     const form = new FormData(e.currentTarget);
+    const nombre = String(form.get("nombre"));
+    const errNombre = errorNombre(nombre);
+    if (errNombre) {
+      setError(errNombre);
+      return;
+    }
+    setGuardando(true);
     const resultado = await editarEmpleado(empleado.id, {
-      nombre: String(form.get("nombre")),
+      nombre,
       rol: String(form.get("rol")) as Rol,
       email: String(form.get("email")),
     });

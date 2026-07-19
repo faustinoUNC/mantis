@@ -14,6 +14,7 @@ import { createClient } from "@/shared/lib/supabase/server";
 import { baseUrl } from "@/shared/utils/base-url";
 import { errorCuil, normalizarCuil } from "@/shared/utils/cuil";
 import { duplicadoPersona, ERROR_DUPLICADO_DB } from "@/shared/utils/duplicados";
+import { errorNombre } from "@/shared/utils/nombre";
 import { errorTelefono, normalizarTelefono } from "@/shared/utils/telefono";
 import type {
   EstadoTecnico,
@@ -101,6 +102,10 @@ async function altaTecnico(
   // dígitos), así "abc" o espacios no lo bypasean.
   if (!datos.nombre || !datos.email || !datos.telefono) {
     return { ok: false, error: "Completá nombre, email y teléfono." };
+  }
+  const errNombre = errorNombre(datos.nombre);
+  if (errNombre) {
+    return { ok: false, error: errNombre };
   }
   const errTelefono = errorTelefono(datos.telefono);
   if (errTelefono) {
@@ -765,6 +770,10 @@ export async function editarDatosTecnico(
   const nombre = datos.nombre.trim();
   if (!nombre) {
     return { ok: false, error: "Completá el nombre." };
+  }
+  const errNombre = errorNombre(nombre);
+  if (errNombre) {
+    return { ok: false, error: errNombre };
   }
   if (!datos.cuil.trim()) {
     return { ok: false, error: "El CUIL es obligatorio." };

@@ -9,6 +9,7 @@ import {
   crearTecnicoManual,
   enrolarTecnico,
 } from "@/features/tecnicos/service";
+import { errorNombre } from "@/shared/utils/nombre";
 
 // Los PDFs no se comprimen y el body del request tiene techo (~4.5 MB en Vercel).
 export const MAX_ARCHIVO_BYTES = 4 * 1024 * 1024;
@@ -39,6 +40,10 @@ export function TecnicoForm({
       return setError("Elegí al menos una especialidad.");
     }
     const form = new FormData(e.currentTarget);
+    const errNombre = errorNombre(String(form.get("nombre") ?? ""));
+    if (errNombre) {
+      return setError(errNombre);
+    }
     for (const valor of form.values()) {
       if (valor instanceof File && valor.size > MAX_ARCHIVO_BYTES) {
         return setError(
@@ -64,7 +69,7 @@ export function TecnicoForm({
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Nombre" name="nombre" required placeholder="Nombre y apellido" />
+        <Input label="Nombre" name="nombre" required placeholder="Nombre y apellido" onChange={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\d/g, ""); }} />
         <Input label="Correo electrónico" name="email" type="email" required placeholder="tu@correo.com" />
         <Input label="Teléfono" name="telefono" required inputMode="numeric" placeholder="Solo números" onChange={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ""); }} />
         <Input label="CUIL" name="cuil" required inputMode="numeric" placeholder="Sin guiones, ej. 20301234563" />
