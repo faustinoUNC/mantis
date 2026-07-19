@@ -26,7 +26,7 @@
 - **TODA lectura y escritura de datos → Server Actions** (`features/{modulo}/service.ts` con `'use server'`). Ventajas: un solo lugar por módulo, tipado end-to-end, lógica de negocio (transiciones del funnel, notificaciones, emails) corre en servidor, testeable, y las keys nunca viajan al browser.
 - **Cliente Supabase de browser SOLO para dos cosas**: `supabase.auth.*` (login/logout) y **suscripciones Realtime** (notificaciones, tablero en vivo).
 - **RLS activo en TODAS las tablas igual** — defensa en profundidad: aunque todo pase por server actions, ninguna tabla queda sin políticas. El server action usa el client con sesión del usuario (respeta RLS); `createAdminClient()` (service role) solo para operaciones administrativas puntuales (crear usuarios, revocar sesiones).
-- **NO crear rutas API** (`app/api/`) salvo los webhooks entrantes que lo exigen (Gmail push §5, cron jobs).
+- **NO crear rutas API** (`app/api/`) salvo los webhooks entrantes que lo exigen (Gmail push §5, cron jobs) y **el chat del asistente IA** (`app/api/asistente`, STORY-1007): el streaming SSE que consume `useChat` no es expresable como server action. Es la ÚNICA excepción de UI; sus tools reusan los services con el cliente de sesión (RLS) y el rol se deriva de la sesión, jamás del request.
 
 > Por qué no "cliente directo + RLS": obligaría a duplicar lógica de negocio en el browser, complica las transacciones multi-tabla (transición de etapa + evento + notificación) y hace imposible centralizar side-effects (emails). RLS solo autoriza, no orquesta.
 

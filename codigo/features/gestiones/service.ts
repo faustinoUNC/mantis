@@ -668,10 +668,19 @@ export async function tecnicosDisponibles(
 // Usa admin client a propósito: las stats deben mirar TODAS las gestiones del
 // técnico (no solo las del gestor actual, que es lo que ve por RLS). Devuelve
 // solo números agregados — nunca gestiones de otros gestores.
-async function estadisticasTecnicos(
+// STORY-1007: exportada para el ranking del asistente — al ser server action
+// pública valida el rol adentro (mismos roles que la pantalla /tecnicos).
+export async function estadisticasTecnicos(
   ids: string[]
 ): Promise<Map<string, StatsTecnico>> {
   const salida = new Map<string, StatsTecnico>();
+  const actual = await obtenerUsuarioActual();
+  if (
+    actual?.rol !== "administrador" &&
+    actual?.rol !== "gestor_mantenimiento"
+  ) {
+    return salida;
+  }
   if (ids.length === 0) return salida;
 
   const admin = createAdminClient();
