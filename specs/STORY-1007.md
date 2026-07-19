@@ -1,4 +1,4 @@
-# STORY-1007 — Walter: asistente IA con burbuja flotante y tools por rol (v1.0)
+# STORY-1007 — Walter: asistente IA con burbuja flotante y tools por rol (v1.1)
 
 **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-19) + resolución de party mode (12ª sesión). Evolución del "Walter" de la tesis original, rediseñado desde cero sobre los estándares vigentes (Vercel AI SDK, OWASP LLM Top 10 2025, Anthropic tool design) y con la seguridad como requisito innegociable.
 
@@ -53,7 +53,7 @@ Reglas de diseño de tools: descripciones prescriptivas (cuándo usarla), schema
 
 ### 3. UI `components/asistente/` (client)
 
-- **Burbuja (FAB)**: pill esmeralda flotante abajo a la derecha, montada en `PanelShell` (solo autenticados). En técnico convive con la bottom-nav (posicionada encima, `safe-area`).
+- **Burbuja (FAB)**: pill esmeralda flotante abajo a la derecha, montada en `PanelShell` (solo autenticados). En técnico convive con la bottom-nav (posicionada encima, `safe-area`). **v1.1 (pedido Fausti)**: arrastrable con Pointer Events (en el técnico mobile podía tapar botones) y con **imán al borde** — al soltarla se pega animada al borde izquierdo o derecho más cercano; umbral de 6px distingue tap de arrastre (el drag nunca abre el panel) y la posición persiste en `sessionStorage`.
 - **Panel**: overlay ~400px desktop / full-screen mobile, `rounded-lg`, `--shadow-overlay` (único caso legítimo de sombra), header con nombre + subtítulo + disclaimer sutil de IA, animación `aparecer`, cierre con Esc y tap afuera, targets ≥44px, `aria-live` en mensajes.
 - **Chat**: `useChat` con streaming palabra a palabra; indicador diferenciado "Consultando datos…" mientras corre una tool (por `message.parts`); chips de arranque por rol (p. ej. gestor: "¿Qué tengo estancado?"; financiero: "¿Cuánto hay por cobrar?"; técnico: "¿Qué me toca hoy?"); botones de navegación renderizados desde el output de `sugerir_navegacion`; botón "nueva conversación". Sin persistencia.
 - Texto del asistente en texto plano (negritas simples), render escapado — nunca HTML del modelo al DOM.
@@ -89,3 +89,4 @@ Reglas de diseño de tools: descripciones prescriptivas (cuándo usarla), schema
   - **Gestor comercial**: conteo por etapa **scoped por ownership** (54 activas suyas vs 78 del admin); how-to de asignación → pasos + botones a `/tablero` y `/tecnicos`.
   - Burbuja ausente en el login (monta solo en `PanelShell`). `tsc` y eslint verdes.
   - v1.0 fixes durante la verificación: "activas" alineada a la definición de Informes (excluye terminales) y prompt sin narración de proceso.
+  - **v1.1** (burbuja arrastrable): verificado en viewport 390×760 como técnico — drag de (344,638) a (120,400) → imán al borde izquierdo (x=8, y conservada), el click posterior al drag NO abre el panel, el tap sí abre, y tras recargar la posición persiste (8,374). `tsc`/eslint verdes.

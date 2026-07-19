@@ -52,11 +52,101 @@ function Texto({ contenido }: { contenido: string }) {
 
 type BotonNav = { label: string; ruta: string };
 
+// Tamaño de la burbuja (size-13) y margen al que se "imanta" contra el borde.
+const TAM_BURBUJA = 52;
+const MARGEN = 8;
+
+function dentroDeViewport(x: number, y: number) {
+  return {
+    x: Math.min(Math.max(MARGEN, x), window.innerWidth - TAM_BURBUJA - MARGEN),
+    y: Math.min(Math.max(MARGEN, y), window.innerHeight - TAM_BURBUJA - MARGEN),
+  };
+}
+
 export function Walter({ rol, nombre }: { rol: Rol; nombre: string }) {
   const [abierto, setAbierto] = useState(false);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const finRef = useRef<HTMLDivElement>(null);
+
+  // STORY-1007 v1.1: la burbuja se puede arrastrar (en el técnico mobile puede
+  // tapar botones) y al soltarla se imanta al borde izquierdo o derecho.
+  // pos = null → posición por defecto (clases); la elegida vive en session.
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [imantando, setImantando] = useState(false);
+  const arrastre = useRef<{
+    startX: number;
+    startY: number;
+    origX: number;
+    origY: number;
+    movida: boolean;
+  } | null>(null);
+  // El click del navegador dispara DESPUÉS del pointerup: esta marca evita
+  // que un arrastre termine abriendo el panel.
+  const fueArrastre = useRef(false);
+
+  useEffect(() => {
+    // En el frame siguiente al montaje (evita el setState síncrono en efecto
+    // y el mismatch de hidratación: el server no conoce sessionStorage).
+    const frame = requestAnimationFrame(() => {
+      try {
+        const guardada = sessionStorage.getItem("walter-burbuja");
+        if (guardada) {
+          const { x, y } = JSON.parse(guardada) as { x: number; y: number };
+          setPos(dentroDeViewport(x, y));
+        }
+      } catch {
+        // sin posición guardada, queda la default
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  function alPresionar(e: React.PointerEvent<HTMLButtonElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    arrastre.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: r.left,
+      origY: r.top,
+      movida: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setImantando(false);
+  }
+
+  function alMover(e: React.PointerEvent<HTMLButtonElement>) {
+    const a = arrastre.current;
+    if (!a) return;
+    const dx = e.clientX - a.startX;
+    const dy = e.clientY - a.startY;
+    // Umbral para distinguir tap de arrastre.
+    if (!a.movida && Math.hypot(dx, dy) < 6) return;
+    a.movida = true;
+    setPos(dentroDeViewport(a.origX + dx, a.origY + dy));
+  }
+
+  function alSoltar() {
+    const a = arrastre.current;
+    arrastre.current = null;
+    fueArrastre.current = !!a?.movida;
+    if (!a?.movida) return; // fue un tap: lo maneja onClick
+    setImantando(true);
+    setPos((prev) => {
+      if (!prev) return prev;
+      const izquierda = prev.x + TAM_BURBUJA / 2 < window.innerWidth / 2;
+      const destino = dentroDeViewport(
+        izquierda ? MARGEN : window.innerWidth - TAM_BURBUJA - MARGEN,
+        prev.y
+      );
+      try {
+        sessionStorage.setItem("walter-burbuja", JSON.stringify(destino));
+      } catch {
+        // sin persistencia no pasa nada
+      }
+      return destino;
+    });
+  }
 
   const { messages, sendMessage, status, error, setMessages, clearError, regenerate } =
     useChat({
@@ -93,17 +183,34 @@ export function Walter({ rol, nombre }: { rol: Rol; nombre: string }) {
 
   return (
     <>
-      {/* Burbuja (FAB). En técnico flota sobre la bottom-nav. */}
+      {/* Burbuja (FAB). Arrastrable, con imán al borde al soltar; el tap abre.
+          En técnico la posición default flota sobre la bottom-nav. */}
       {!abierto && (
         <button
           type="button"
-          onClick={() => setAbierto(true)}
-          aria-label="Abrir Walter, el asistente de MANTIS"
+          onClick={() => {
+            // Si el gesto fue arrastre, el click posterior no debe abrir.
+            if (fueArrastre.current) {
+              fueArrastre.current = false;
+              return;
+            }
+            setAbierto(true);
+          }}
+          onPointerDown={alPresionar}
+          onPointerMove={alMover}
+          onPointerUp={alSoltar}
+          onPointerCancel={() => {
+            arrastre.current = null;
+          }}
+          aria-label="Abrir Walter, el asistente de MANTIS (arrastrable)"
+          style={pos ? { left: pos.x, top: pos.y } : undefined}
           className={cn(
-            "fixed right-5 z-50 size-13 rounded-pill bg-brand text-white shadow-overlay",
-            "flex items-center justify-center transition-transform hover:bg-brand-hover active:scale-95",
+            "fixed z-50 size-13 rounded-pill bg-brand text-white shadow-overlay",
+            "flex items-center justify-center hover:bg-brand-hover",
+            "touch-none select-none cursor-grab active:cursor-grabbing",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand animate-aparecer",
-            esTecnico ? "bottom-24" : "bottom-5"
+            !pos && (esTecnico ? "bottom-24 right-5" : "bottom-5 right-5"),
+            imantando && "transition-[left,top] duration-200 ease-out"
           )}
         >
           <span className="font-black text-lg leading-none" style={{ fontStretch: "125%" }}>
