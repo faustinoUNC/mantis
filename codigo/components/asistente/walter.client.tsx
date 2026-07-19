@@ -153,6 +153,36 @@ export function Walter({ rol, nombre }: { rol: Rol; nombre: string }) {
       transport: new DefaultChatTransport({ api: "/api/asistente" }),
     });
 
+  // STORY-1015: PanelShell (y con él Walter) se re-monta al navegar entre
+  // secciones — cada una es un layout hermano del App Router —, así que el chat,
+  // que vive solo en el estado de useChat, se perdía. Lo persistimos en
+  // sessionStorage (por pestaña, efímero: el alcance de una sesión de chat),
+  // igual que ya se hace con la posición de la burbuja. `restaurado` evita que
+  // el primer render con messages=[] pise lo guardado antes de restaurar.
+  const restaurado = useRef(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      try {
+        const guardado = sessionStorage.getItem("walter-chat");
+        if (guardado) setMessages(JSON.parse(guardado));
+      } catch {
+        // sin conversación guardada, arranca vacío
+      }
+      restaurado.current = true;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [setMessages]);
+
+  useEffect(() => {
+    if (!restaurado.current) return;
+    try {
+      if (messages.length) sessionStorage.setItem("walter-chat", JSON.stringify(messages));
+      else sessionStorage.removeItem("walter-chat");
+    } catch {
+      // sin persistencia no pasa nada
+    }
+  }, [messages]);
+
   const ocupado = status === "submitted" || status === "streaming";
 
   // Autoscroll al fondo con cada novedad del stream.
@@ -246,6 +276,12 @@ export function Walter({ rol, nombre }: { rol: Rol; nombre: string }) {
                 onClick={() => {
                   setMessages([]);
                   clearError();
+                  // STORY-1015: empezar de cero es explícito y persistente.
+                  try {
+                    sessionStorage.removeItem("walter-chat");
+                  } catch {
+                    // sin persistencia no pasa nada
+                  }
                   inputRef.current?.focus();
                 }}
                 className="text-[13px] text-muted hover:text-foreground px-2 py-2 rounded-md hover:bg-surface-2 transition-colors"

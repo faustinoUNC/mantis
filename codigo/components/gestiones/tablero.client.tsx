@@ -114,9 +114,13 @@ function TarjetaGestion({
               <Badge tono="urgente">Reasignar</Badge>
             )}
             {/* STORY-976: el técnico avisó que no puede continuar — la obra
-                está en pausa hasta que el gestor decida. */}
+                está en pausa hasta que el gestor decida. STORY-1016: badge corto
+                ("En pausa", como en la vista del técnico) que no se parte ni
+                aplasta la especialidad en la columna angosta del tablero. */}
             {gestion.aviso_no_continua_en && (
-              <Badge tono="urgente">Técnico no continúa</Badge>
+              <Badge tono="urgente" className="shrink-0 whitespace-nowrap">
+                En pausa
+              </Badge>
             )}
             {/* STORY-1001: vinculada a otra gestión — el hover resalta la
                 contraparte; el title cuenta el vínculo aunque la otra ya no
