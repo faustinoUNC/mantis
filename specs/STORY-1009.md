@@ -34,6 +34,6 @@
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente_
+- **Commit:** `fc4907d` (2026-07-19).
 - **Archivos:** migración `story_1009_gestiones_numero` + `codigo/features/gestiones/types.ts`, `codigo/features/gestiones/service.ts`, `codigo/features/finanzas/service.ts`, `codigo/components/gestiones/tablero.client.tsx`, `codigo/components/gestiones/detalle.client.tsx`, `codigo/components/gestiones/mis-trabajos.client.tsx`, `codigo/components/gestiones/archivadas.client.tsx`
 - **Verificación:** `tsc`/eslint verdes. Migración aplicada: 192 gestiones numeradas 1–192 por `creado_en`; INSERT de prueba con ROLLBACK confirmó que la DB asigna el siguiente número sola. E2E navegador: técnico (mis-trabajos con `#N · hace X` en cards mobile y filas, búsqueda `#145` → 1 resultado, detalle "Gestión #145"), admin (tablero con `#N` junto a la dirección en todas las cards, búsqueda `#103` → 1 card, combo "¿Surgió de otra gestión?" con labels `#N · dirección — descripción`, archivadas con `#N` y opción de búsqueda "N°").
