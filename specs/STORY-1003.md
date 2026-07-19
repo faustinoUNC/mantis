@@ -1,6 +1,6 @@
 # STORY-1003 — Bug: el desvío de la rendición compara materiales contra el presupuesto total (v1.0)
 
-**Estado:** 🧪 implementada y verificada E2E, sin commitear · **Origen:** detectado en vivo en la reunión con Andres Garcia (Fathom 2026-07-18, min 05:12: "esto está mal, la puta madre... debería ser un desvío de 10.000") y reportado por Fausti con la gestión "Prueba Desvio" (9 de Julio 2450): presupuesto $50.000 de materiales + $39.999,94 de mano de obra, rendición de $60.000 en materiales → la caja de Conformidad mostró **−$29.999,94 (−33%)** cuando el desvío real es **+$10.000 (+20%)**.
+**Estado:** ✅ done · **Origen:** detectado en vivo en la reunión con Andres Garcia (Fathom 2026-07-18, min 05:12: "esto está mal, la puta madre... debería ser un desvío de 10.000") y reportado por Fausti con la gestión "Prueba Desvio" (9 de Julio 2450): presupuesto $50.000 de materiales + $39.999,94 de mano de obra, rendición de $60.000 en materiales → la caja de Conformidad mostró **−$29.999,94 (−33%)** cuando el desvío real es **+$10.000 (+20%)**.
 
 ## Causa raíz
 
@@ -28,6 +28,6 @@ El mismo equívoco vive en los **labels**: el input del técnico dice "Total gas
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente (espera OK de Fausti)_
+- **Commit:** `5daceb3` (2026-07-18, junto con STORY-1002).
 - **Archivos:** `codigo/components/gestiones/detalle.client.tsx` (fórmula del desvío + caja de rendición + label del input del técnico + label de la caja de costo final; se eliminó `presupuestoTotal` y el comentario falso), `codigo/components/gestiones/finanzas.client.tsx` (label en Cobro/Liquidación).
 - **Verificación:** `tsc`/eslint verdes. E2E navegador (Admin, gestión "Prueba Desvio" — 9 de Julio 2450, en Conformidad): la caja pasó de mostrar −$ 29.999,94 (−33%) a **Materiales presupuestados $ 50.000 · Gastado real en materiales $ 60.000 · Desvío +$ 10.000 (+20%)** (el desvío de 10 mil exacto del ejemplo de la reunión); la caja de costo final sigue correcta ($ 60.000 + $ 39.999,94 = $ 99.999,94). Captura: `story-1003-desvio-corregido.png`.

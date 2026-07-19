@@ -1,6 +1,6 @@
 # STORY-1002 — Adelanto de materiales: mostrar lo presupuestado y exigir comprobante (v1.0)
 
-**Estado:** 🧪 implementada y verificada E2E, sin commitear · **Origen:** reunión de revisión con Andres Garcia (Fathom 2026-07-18, https://fathom.video/calls/752154451). Al cargar el adelanto de materiales en la demo, Fausti tuvo que acordarse de memoria cuánto había presupuestado el técnico en materiales ("me acuerdo que habíamos dicho 50 mil… debería estar acá", min 00:00) y Andres pidió dejar constancia del dinero entregado ("vamos a pedir un comprobante acá", min 00:52).
+**Estado:** ✅ done · **Origen:** reunión de revisión con Andres Garcia (Fathom 2026-07-18, https://fathom.video/calls/752154451). Al cargar el adelanto de materiales en la demo, Fausti tuvo que acordarse de memoria cuánto había presupuestado el técnico en materiales ("me acuerdo que habíamos dicho 50 mil… debería estar acá", min 00:00) y Andres pidió dejar constancia del dinero entregado ("vamos a pedir un comprobante acá", min 00:52).
 
 ## Problema
 
@@ -36,6 +36,6 @@ En la etapa **En ejecución**, la caja "Adelanto de materiales" (`AdelantoMateri
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente (espera OK de Fausti)_
+- **Commit:** `5daceb3` (2026-07-18, junto con STORY-1003).
 - **Archivos:** `codigo/features/finanzas/service.ts` (`registrarAdelantoMateriales` → FormData + validación y subida del comprobante antes de tocar la fila + `comprobante_path` en el evento), `codigo/features/gestiones/types.ts` (`Evento.comprobante_url`), `codigo/features/gestiones/service.ts` (URL firmada al armar los eventos del detalle), `codigo/components/gestiones/finanzas.client.tsx` (línea "El técnico presupuestó $X en materiales", `InputArchivo` obligatorio, File capturado en estado para el paso de confirmación). Sin migración.
 - **Verificación:** `tsc`/eslint verdes. E2E navegador (Admin, gestión "Inodoro pierde agua" en ejecución): caja muestra "El técnico presupuestó $ 1.000 en materiales"; submit sin archivo bloquea con "Adjuntá el comprobante…"; con PNG adjunto la confirmación muestra monto + nombre del archivo; tras confirmar, "ya adelantado $ 800" y evento "Adelanto de materiales registrado — Total: $ 800 · Monto: $ 800" con link "Ver comprobante" (URL firmada verificada por curl: 200 image/png). Dato de prueba revertido (adelanto, evento y archivo del bucket borrados).
