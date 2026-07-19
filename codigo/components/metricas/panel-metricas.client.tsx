@@ -29,7 +29,6 @@ import { ejecucionParaPlazoDias, ultimaEjecucionDias } from "@/features/gestione
 // para "empeora", que NO usa el rojo de error.
 
 const BRAND = "#059669";
-const BRAND_D = "#065f46";
 const AMBAR = "#d97706";
 const GRID = "#e4e4e7";
 const INK_MUTED = "#71717a";
@@ -384,23 +383,25 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     [filasEsp]
   );
 
-  // ── Flujo: Embudo de conversión + cancelación ──
+  // ── Flujo (ahora): Embudo en tiempo real — cuántas gestiones ACTIVAS hay hoy
+  // en cada etapa (STORY-1004). Snapshot sobre la etapa actual, no el período:
+  // la barra más alta es el cuello de botella del momento. Activas = todo lo que
+  // no está finalizado ni cancelado. Complementa a "Cuellos de botella" (días
+  // promedio por etapa): el embudo cuenta cuántas, cuellos mide cuánto tardan. ──
   const funnel = useMemo(() => {
-    const maxPorGestion = new Map<string, number>();
-    for (const f of filas) maxPorGestion.set(f.id, 0);
-    for (const e of metricas.eventos) {
-      if (!idsPeriodo.has(e.gestionId) || !e.aEtapa) continue;
-      const i = ORDEN_ETAPAS.indexOf(e.aEtapa);
-      if (i < 0) continue;
-      maxPorGestion.set(e.gestionId, Math.max(maxPorGestion.get(e.gestionId) ?? 0, i));
+    const porEtapa = new Map<string, number>();
+    for (const f of filasEsp) {
+      if (f.etapa === "finalizado" || f.etapa === "cancelada") continue;
+      porEtapa.set(f.etapa, (porEtapa.get(f.etapa) ?? 0) + 1);
     }
-    const alcanzado = ORDEN_ETAPAS.map((etapa, i) => ({
+    const data = ORDEN_ETAPAS.filter((e) => e !== "finalizado" && porEtapa.has(e)).map((etapa) => ({
       name: ETAPA_LABEL[etapa],
-      value: [...maxPorGestion.values()].filter((mx) => mx >= i).length,
-    })).filter((d) => d.value > 0);
-    const canceladas = filas.filter((f) => f.etapa === "cancelada").length;
-    return { alcanzado, canceladas, total: filas.length };
-  }, [filas, idsPeriodo, metricas.eventos]);
+      value: porEtapa.get(etapa)!,
+    }));
+    const max = Math.max(1, ...data.map((d) => d.value));
+    const total = data.reduce((s, d) => s + d.value, 0);
+    return { data, max, total };
+  }, [filasEsp]);
 
   // ── Flujo: Cuellos de botella — tiempo promedio por etapa (días) ──
   const cuellos = useMemo(() => {
@@ -524,7 +525,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   }, [filasEsp, metricas.abandonos]);
   const nCalificadas = ranking.reduce((s, r) => s + r.n, 0);
 
-  // ── Técnicos: Cumplimiento de presupuesto (desvío) por técnico ──
+  // ── Técnicos: Desvíos de presupuesto por técnico ──
   // STORY-937: SOLO materiales (la mano de obra es fija por diseño) y
   // ponderado por plata: Σ reales / Σ presupuestados − 1. Reales = rendición;
   // fallback para gestiones sin rendición: costo_final − mano de obra.
@@ -557,8 +558,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
   const nDesvio = desvio.reduce((s, d) => s + d.n, 0);
   const maxDesvio = Math.max(1, ...desvio.map((d) => Math.abs(d.pct)));
 
-  // ── Técnicos: Cumplimiento de plazo (desvío de la obra vs plazo comprometido)
-  // por técnico. Gemelo del de presupuesto pero en tiempo: días reales de
+  // ── Técnicos: Desvío de plazo (obra vs plazo comprometido) por técnico.
+  // Gemelo del de presupuesto pero en tiempo: días reales de
   // ejecución vs plazo_dias del presupuesto aprobado. Positivo = se pasó. ──
   const desvioPlazo = useMemo(() => {
     const acum = new Map<string, { total: number; n: number }>();
@@ -750,6 +751,29 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       </Bloque>
       )}
 
+      {/* ══ Embudo en tiempo real (STORY-1004): reparto ACTUAL de las gestiones
+          activas por etapa. Snapshot "ahora", no sigue el período — la barra más
+          alta es el cuello de botella de hoy. ══ */}
+      <Bloque titulo="Embudo en tiempo real" cols={1}>
+        <MetricCard titulo="Gestiones activas por etapa" ayuda="Dónde están HOY las gestiones abiertas. La barra más alta es el cuello de botella." n={funnel.total} alcance="ahora" humildad={false}>
+          {funnel.data.length === 0 ? (
+            <p className="text-sm text-muted py-16 text-center">No hay gestiones activas.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={248}>
+              <BarChart data={funnel.data} layout="vertical" margin={{ left: 12, right: 28 }}>
+                <CartesianGrid stroke={GRID} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" width={92} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => <p className="text-muted">{p[0].value} {Number(p[0].value) === 1 ? "gestión" : "gestiones"}</p>} />} />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                  {funnel.data.map((d) => (<Cell key={d.name} fill={rampaMagnitud(d.value / funnel.max)} />))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </MetricCard>
+      </Bloque>
+
       {/* ══ Caja "En el período": el filtro de fechas gobierna SOLO lo de adentro ══ */}
       <div className="rounded-lg border border-border mb-8">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3 border-b border-border">
@@ -762,20 +786,6 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         </div>
         <div className="p-5 pb-0">
       <Bloque titulo="Flujo del trabajo">
-        <MetricCard titulo="Embudo de gestiones" ayuda={funnel.canceladas > 0 ? `Cuántas gestiones alcanzaron cada etapa. ${funnel.canceladas} cancelada${funnel.canceladas > 1 ? "s" : ""} (${Math.round((funnel.canceladas / funnel.total) * 100)}% del total).` : "Cuántas gestiones alcanzaron cada etapa."} n={funnel.total}>
-          <ResponsiveContainer width="100%" height={248}>
-            <BarChart data={funnel.alcanzado} layout="vertical" margin={{ left: 12, right: 28 }}>
-              <CartesianGrid stroke={GRID} horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} allowDecimals={false} />
-              <YAxis type="category" dataKey="name" width={92} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => <p className="text-muted">{p[0].value} gestiones</p>} />} />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={20}>
-                {funnel.alcanzado.map((d, i) => (<Cell key={d.name} fill={i === funnel.alcanzado.length - 1 ? BRAND_D : BRAND} />))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </MetricCard>
-
         <MetricCard titulo="Tiempo de ciclo" ayuda="Días de principio a fin, sin contar el tiempo de obra." n={ciclo.n}>
           {ciclo.pocos ? (
             <p className="text-sm text-muted py-16 text-center">Pocos datos en este período para ver la evolución. Probá un período más amplio.</p>
@@ -860,7 +870,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       </div>
 
       {/* ══ Histórico — acumulado de todas las gestiones (no sigue el período).
-          Calificación a lo ancho; debajo las dos gemelas de cumplimiento. ══ */}
+          Calificación a lo ancho; debajo las dos gemelas de desvío. ══ */}
       <section className="mb-8">
         <h3 className="text-[13px] font-semibold text-muted mb-3">Histórico · desempeño de técnicos</h3>
         <div className="grid gap-4 grid-cols-1 mb-4">
@@ -889,7 +899,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         </MetricCard>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-        <MetricCard titulo="Cumplimiento de presupuesto" ayuda="Por técnico: cuánto se pasó de lo presupuestado en materiales. +20% = gastó $120 por cada $100." n={nDesvio} alcance="historico">
+        <MetricCard titulo="Desvíos de presupuesto" ayuda="Por técnico: cuánto se pasó de lo presupuestado en materiales. +20% = gastó $120 por cada $100." n={nDesvio} alcance="historico">
           {desvio.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Faltan gestiones cerradas con presupuesto para medir.</p>
           ) : (
@@ -910,7 +920,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           )}
         </MetricCard>
 
-        <MetricCard titulo="Cumplimiento de plazo" ayuda="Técnicos que tardaron más de lo que prometieron, y cuánto." n={nDesvioPlazo} alcance="historico">
+        <MetricCard titulo="Desvío de plazo" ayuda="Técnicos que tardaron más de lo que prometieron, y cuánto." n={nDesvioPlazo} alcance="historico">
           {desvioPlazo.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Ningún técnico se pasó del plazo que comprometió.</p>
           ) : (
