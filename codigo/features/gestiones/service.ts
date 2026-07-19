@@ -1242,14 +1242,31 @@ export async function subirConformidad(
   const ctx = await exigirTecnicoAsignado(gestionId);
   if (!ctx) return { ok: false, error: "No tenés permiso." };
   if (ctx.gestion.aviso_no_continua_en) return { ok: false, error: ERROR_EN_PAUSA };
+
+  const supabaseCheck = await createClient();
+  const { data: ultimaConf } = await supabaseCheck
+    .from("conformidades")
+    .select("estado")
+    .eq("gestion_id", gestionId)
+    .eq("tecnico_id", ctx.actual.id)
+    .order("creado_en", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // La transición de etapa ("terminando" la obra) solo ocurre UNA vez, desde
+  // en_ejecucion — el rechazo de una conformidad no mueve el funnel (Regla #0),
+  // así que la resubida NO vuelve a llamar avanzar_etapa.
   const terminando = ctx.gestion.etapa === "en_ejecucion";
 
-  // STORY-934/964/965: para TERMINAR la obra el técnico rinde UN solo número —
-  // el total real gastado en la obra — más las fotos de los comprobantes (una
-  // por ticket, al menos una). La resubida de una conformidad rechazada no la
-  // vuelve a pedir.
+  // STORY-934/964/965/1006: para TERMINAR la obra el técnico rinde UN solo
+  // número — el total real gastado en la obra — más las fotos de los
+  // comprobantes (una por ticket, al menos una). La resubida de una
+  // conformidad rechazada TAMBIÉN la vuelve a pedir: el rechazo puede deberse
+  // justamente a la rendición (monto o comprobantes mal cargados).
+  const requiereRendicion = terminando || ultimaConf?.estado === "rechazada";
+
   let rendicion: { total: number; fotos: string[] } | null = null;
-  if (terminando) {
+  if (requiereRendicion) {
     const total = Number(form.get("materiales_total"));
     if (!Number.isFinite(total) || total <= 0) {
       return { ok: false, error: "Indicá el total gastado en la obra." };
@@ -1258,7 +1275,6 @@ export async function subirConformidad(
     // STORY-936: sin al menos una nota de avance el gestor estuvo ciego
     // toda la obra — no se termina sin contar qué se hizo. STORY-983: el
     // avance tiene que ser DE ESTE técnico, no de un saliente desasignado.
-    const supabaseCheck = await createClient();
     const { data: avances } = await supabaseCheck
       .from("avances")
       .select("id")

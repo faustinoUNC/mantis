@@ -878,15 +878,17 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
     (c) => c.tecnico_id === gestion.tecnico_id
   );
   const esperando = ultima?.estado === "subida";
-  // STORY-934/964/965: al TERMINAR la obra se rinde el total real gastado +
-  // las fotos de los comprobantes (una por ticket). La resubida de una
-  // rechazada no lo vuelve a pedir.
   const terminando = gestion.etapa === "en_ejecucion";
+  // STORY-934/964/965/1006: al TERMINAR la obra se rinde el total real
+  // gastado + las fotos de los comprobantes (una por ticket). La resubida de
+  // una conformidad rechazada TAMBIÉN lo vuelve a pedir — el rechazo puede
+  // ser justamente por la rendición.
+  const requiereRendicion = terminando || ultima?.estado === "rechazada";
 
   // STORY-936: para terminar hace falta al menos una nota de avance —
   // STORY-983: propia, no de un saliente desasignado.
   const sinAvance =
-    terminando &&
+    requiereRendicion &&
     !gestion.avances.some(
       (a) => a.tipo === "avance" && a.tecnico_id === gestion.tecnico_id
     );
@@ -908,7 +910,7 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
           Rechazada{ultima.motivo_rechazo ? `: ${ultima.motivo_rechazo}` : ""} — subí una nueva.
         </p>
       )}
-      {terminando && (
+      {requiereRendicion && (
         <>
           <p className="text-[13px] font-medium text-muted">
             Rendición de la obra{" "}
@@ -944,7 +946,11 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
         </p>
       )}
       <Button type="submit" disabled={cargando || sinAvance} className="self-start">
-        {terminando ? "Terminar y subir conformidad →" : "Resubir conformidad"}
+        {ultima?.estado === "rechazada"
+          ? "Volver a enviar →"
+          : terminando
+            ? "Terminar y subir conformidad →"
+            : "Resubir conformidad"}
       </Button>
       {error && <p className="text-sm font-medium text-error">{error}</p>}
     </form>
