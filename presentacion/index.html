@@ -1413,7 +1413,7 @@
       repeating-linear-gradient(135deg, rgba(234,88,12,0.04) 0 14px, transparent 14px 28px);
   }
   .ad-after { background: var(--ink); color: var(--paper); }
-  .ad-after h3, .ad-after .ad-label { color: var(--paper); }
+  .ad-col.ad-after h3, .ad-after .ad-label { color: var(--paper); }
   .ad-after .ad-item { color: rgba(255,255,255,0.92); }
   .ad-after .ad-item::before { background: #34D399; }
 
@@ -1960,7 +1960,7 @@
       <div class="stagger" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 32px;">
         <div class="process-step"><div class="ps-num">02</div><div><div class="ps-title">El caso · ISBA</div><div class="ps-desc">Quién es y por qué la elegimos</div></div></div>
         <div class="process-step"><div class="ps-num">08</div><div><div class="ps-title">Seguimiento</div><div class="ps-desc">Problema → mandato → modelación → sistema → valor</div></div></div>
-        <div class="process-step"><div class="ps-num">03</div><div><div class="ps-title">Diagnóstico</div><div class="ps-desc">El proceso real antes de Mantis</div></div></div>
+        <div class="process-step"><div class="ps-num">03</div><div><div class="ps-title">Diagnóstico</div><div class="ps-desc">Los problemas, lo que estaba en juego y por qué digitalizar no alcanzaba</div></div></div>
         <div class="process-step"><div class="ps-num">09</div><div><div class="ps-title">Metodología</div><div class="ps-desc">Cascada para definir, Scrum para construir</div></div></div>
         <div class="process-step"><div class="ps-num">04</div><div><div class="ps-title">FODA</div><div class="ps-desc">Análisis interno · fortalezas, debilidades, oportunidades y amenazas</div></div></div>
         <div class="process-step"><div class="ps-num">10</div><div><div class="ps-title">Conocé a Mantis</div><div class="ps-desc">Estructura + demo guiada del funnel completo</div></div></div>
@@ -2030,7 +2030,7 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     04 — DIAGNÓSTICO · ANTES / DESPUÉS
+     04 — DIAGNÓSTICO · EL PROCESO REAL + 6 PROBLEMAS
      ═══════════════════════════════════════════════════════════════ -->
 <section>
   <div class="slide-pad">
@@ -2045,10 +2045,10 @@
       <h2 class="display-xl">Así gestionaban<br>el mantenimiento<span class="mark-warm dot-end"></span></h2>
     </div>
 
-    <!-- Comparativa antes / después -->
-    <div class="ad-grid">
+    <!-- Izquierda: el proceso caótico · Derecha: los 6 problemas que generaba -->
+    <div style="display: grid; grid-template-columns: 1fr 1.1fr; gap: 44px; flex: 1; align-items: stretch;">
       <div class="ad-col ad-before">
-        <span class="ad-label">Hasta hoy</span>
+        <span class="ad-label">Cómo trabajaban</span>
         <h3>Caos disperso<br>en múltiples canales.</h3>
         <div class="ad-items">
           <div class="ad-item">El reclamo llega por WhatsApp, llamada o mail.</div>
@@ -2062,30 +2062,25 @@
         </div>
       </div>
 
-      <div class="ad-arrow">→</div>
-
-      <div class="ad-col ad-after">
-        <span class="ad-label" style="color: #34D399;">Con MANTIS</span>
-        <h3>Un solo lugar<br>de la verdad.</h3>
-        <div class="ad-items">
-          <div class="ad-item">El reclamo entra por una casilla de mail exclusiva y cae solo en el Inbox.</div>
-          <div class="ad-item">El gestor lo convierte en gestión clasificada en un par de clicks.</div>
-          <div class="ad-item">El gestor asigna técnico viendo su agenda de disponibilidad.</div>
-          <div class="ad-item">El técnico opera todo desde el celular: presupuesto, avances con fotos, conformidad.</div>
-          <div class="ad-item">Cobro y liquidación al técnico con documento enviado por email.</div>
-        </div>
-        <div class="ad-conclusion blue">
-          Un funnel visual · historial vivo · indicadores automáticos.
+      <div>
+        <span class="ad-label" style="color: var(--warm);">Los 6 problemas estructurales</span>
+        <div class="stagger" style="margin-top: 4px;">
+          <div class="process-step"><div class="ps-num" style="color: var(--warm);">01</div><div><div class="ps-title">Estado fuera de control</div><div class="ps-desc">El seguimiento dependía de quien atendió; nadie tenía la vista global del avance.</div></div></div>
+          <div class="process-step"><div class="ps-num" style="color: var(--warm);">02</div><div><div class="ps-title">Sin registro formal</div><div class="ps-desc">No se sabía en qué etapa estaba cada reclamo ni quién debía actuar.</div></div></div>
+          <div class="process-step"><div class="ps-num" style="color: var(--warm);">03</div><div><div class="ps-title">Comunicación sin rastro</div><div class="ps-desc">Acuerdos con técnicos, inquilinos y propietarios imposibles de reconstruir.</div></div></div>
+          <div class="process-step"><div class="ps-num" style="color: var(--warm);">04</div><div><div class="ps-title">Sin base de técnicos</div><div class="ps-desc">Búsqueda improvisada por teléfono, sin criterio de especialidad ni desempeño.</div></div></div>
+          <div class="process-step"><div class="ps-num" style="color: var(--warm);">05</div><div><div class="ps-title">Información dispersa</div><div class="ps-desc">La info del caso repartida entre llamadas, WhatsApp, mails y papel.</div></div></div>
+          <div class="process-step"><div class="ps-num" style="color: var(--warm);">06</div><div><div class="ps-title">Cero estadísticas</div><div class="ps-desc">Decisiones basadas en la memoria y la experiencia, no en datos.</div></div></div>
         </div>
       </div>
     </div>
 
-    <div class="slide-footer"><span>03 · DIAGNÓSTICO</span><span>ANTES / DESPUÉS</span></div>
+    <div class="slide-footer"><span>03 · DIAGNÓSTICO</span><span>EL PROCESO REAL · 6 PROBLEMAS</span></div>
   </div>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     05 — PROBLEMAS DETECTADOS (6 cards)
+     03b — LO QUE ESTABA EN JUEGO · el costo para el negocio
      ═══════════════════════════════════════════════════════════════ -->
 <section>
   <div class="slide-pad">
@@ -2096,61 +2091,8 @@
     </div>
 
     <div style="padding-top: 80px; margin-bottom: 28px;">
-      <div class="eyebrow">Síntesis de las entrevistas</div>
-      <h2 class="display-xl">Los 6 problemas<br>estructurales<span class="mark-warm dot-end"></span></h2>
-    </div>
-
-    <div class="stagger" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; flex: 1;">
-      <div class="ed-card card-lg with-shadow" style="border-left: 6px solid var(--warm);">
-        <div class="ed-card-num">01</div>
-        <h3>Estado fuera de control</h3>
-        <p>El seguimiento dependía de quien atendió cada caso, sin una vista global del avance.</p>
-      </div>
-      <div class="ed-card card-lg with-shadow" style="border-left: 6px solid var(--warm);">
-        <div class="ed-card-num">02</div>
-        <h3>Sin registro formal</h3>
-        <p>No se sabía en qué etapa estaba cada reclamo ni quién debía actuar.</p>
-      </div>
-      <div class="ed-card card-lg with-shadow" style="border-left: 6px solid var(--warm);">
-        <div class="ed-card-num">03</div>
-        <h3>Comunicación sin rastro</h3>
-        <p>Acuerdos con técnicos, inquilinos y propietarios difíciles de reconstruir después.</p>
-      </div>
-      <div class="ed-card card-lg with-shadow" style="border-left: 6px solid var(--warm);">
-        <div class="ed-card-num">04</div>
-        <h3>Sin base de técnicos</h3>
-        <p>Búsqueda improvisada por teléfono. Sin criterio de especialidad ni desempeño.</p>
-      </div>
-      <div class="ed-card card-lg with-shadow" style="border-left: 6px solid var(--warm);">
-        <div class="ed-card-num">05</div>
-        <h3>Información dispersa</h3>
-        <p>La info del caso se repartía entre llamadas, WhatsApp, mails y papel.</p>
-      </div>
-      <div class="ed-card card-lg with-shadow" style="border-left: 6px solid var(--warm);">
-        <div class="ed-card-num">06</div>
-        <h3>Cero estadísticas</h3>
-        <p>Decisiones basadas en la memoria y la experiencia, no en datos.</p>
-      </div>
-    </div>
-
-    <div class="slide-footer"><span>03 · DIAGNÓSTICO</span><span>6 PROBLEMAS DETECTADOS</span></div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════
-     03b — EL DOLOR REAL · consecuencia de fondo
-     ═══════════════════════════════════════════════════════════════ -->
-<section>
-  <div class="slide-pad">
-    <div class="slide-corner">
-      <span class="dot"></span>
-      <span>03 · Diagnóstico</span>
-      <span class="line"></span>
-    </div>
-
-    <div style="padding-top: 80px; margin-bottom: 28px;">
-      <div class="eyebrow">El riesgo de fondo</div>
-      <h2 class="display-xl">Los riesgos de<br>seguir así<span class="mark-warm dot-end"></span></h2>
+      <div class="eyebrow">Lo que este caos le costaba al negocio</div>
+      <h2 class="display-xl">Lo que estaba<br>en juego<span class="mark-warm dot-end"></span></h2>
     </div>
 
     <div class="stagger" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; flex: 1;">
@@ -2174,7 +2116,65 @@
       </p>
     </div>
 
-    <div class="slide-footer"><span>03 · DIAGNÓSTICO</span><span>LOS RIESGOS DE SEGUIR ASÍ</span></div>
+    <div class="slide-footer"><span>03 · DIAGNÓSTICO</span><span>LO QUE ESTABA EN JUEGO</span></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     03c — DIGITALIZAR NO ALCANZABA (la tesis del proyecto)
+     ═══════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="slide-pad">
+    <div class="slide-corner">
+      <span class="dot"></span>
+      <span>03 · Diagnóstico</span>
+      <span class="line"></span>
+    </div>
+
+    <div style="padding-top: 70px; margin-bottom: 22px;">
+      <div class="eyebrow">La conclusión del diagnóstico</div>
+      <h2 class="display-xl">Digitalizar no alcanzaba<span class="mark-blue dot-end"></span></h2>
+    </div>
+
+    <div class="ad-grid">
+      <div class="ad-col ad-before">
+        <span class="ad-label">La salida obvia</span>
+        <h3>Digitalizar<br>el caos.</h3>
+        <div class="ad-items">
+          <div class="ad-item">Pasar el papel y el Excel a una app: el mismo proceso, en otra pantalla.</div>
+          <div class="ad-item">El reclamo se seguiría perdiendo entre canales, solo que más rápido.</div>
+          <div class="ad-item">El estado seguiría viviendo en la memoria de quien atendió.</div>
+          <div class="ad-item">Las métricas seguirían sin existir: nadie carga datos a mano.</div>
+        </div>
+        <div class="ad-conclusion warm">
+          Lo mismo de siempre, más rápido.
+        </div>
+      </div>
+
+      <div class="ad-arrow">→</div>
+
+      <div class="ad-col ad-after">
+        <span class="ad-label" style="color: #34D399;">Lo que hicimos</span>
+        <h3>Rediseñar<br>el proceso.</h3>
+        <div class="ad-items">
+          <div class="ad-item">Una sola puerta de entrada: si no está en el sistema, no existe.</div>
+          <div class="ad-item">Un funnel de etapas explícitas que no se pueden saltear: el sistema las hace cumplir.</div>
+          <div class="ad-item">Cada acción deja evidencia sola: historial y métricas sin carga manual.</div>
+          <div class="ad-item">Cada rol sabe qué le toca, y el sistema le avisa cuándo.</div>
+        </div>
+        <div class="ad-conclusion blue">
+          El software no acompaña el proceso: lo garantiza.
+        </div>
+      </div>
+    </div>
+
+    <div style="background: var(--ink); color: var(--paper); padding: 18px 32px; margin-top: 18px; border-left: 6px solid var(--mantis); display: flex; align-items: center;">
+      <p style="font-family: var(--display); font-size: clamp(17px, 1.4vw, 22px); line-height: 1.3; color: white; font-weight: 500; margin: 0; letter-spacing: -0.01em;">
+        Una digitalización copia el proceso que ya existe. <em style="color: #34D399; font-style: normal; font-weight: 700;">MANTIS lo rediseña — y hace que se cumpla solo.</em>
+      </p>
+    </div>
+
+    <div class="slide-footer"><span>03 · DIAGNÓSTICO</span><span>MÁS QUE UNA DIGITALIZACIÓN</span></div>
   </div>
 </section>
 
