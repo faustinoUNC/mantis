@@ -82,6 +82,9 @@ export interface Evento {
   detalle: Record<string, unknown> | null;
   creado_en: string;
   actor: { nombre: string } | null;
+  // STORY-1002: URL firmada del comprobante del adelanto de materiales —
+  // presente solo en eventos cuyo detalle guardó un comprobante_path.
+  comprobante_url?: string | null;
 }
 
 export interface Presupuesto {

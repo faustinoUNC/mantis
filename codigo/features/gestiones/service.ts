@@ -381,10 +381,18 @@ export async function obtenerGestion(
     propiedad_unidad: fila.propiedades?.unidad ?? null,
     especialidad_id: fila.especialidad_id,
     // STORY-974: el tecnico_saliente congelado es un UUID — se nombra acá.
-    eventos: (await nombrarSalientes(eventos ?? [], supabase)).map((e) => ({
-      ...e,
-      actor: Array.isArray(e.actor) ? (e.actor[0] ?? null) : e.actor,
-    })) as GestionDetalle["eventos"],
+    // STORY-1002: los eventos con comprobante (adelanto de materiales)
+    // ganan su URL firmada para el link del timeline.
+    eventos: (await Promise.all(
+      (await nombrarSalientes(eventos ?? [], supabase)).map(async (e) => ({
+        ...e,
+        actor: Array.isArray(e.actor) ? (e.actor[0] ?? null) : e.actor,
+        comprobante_url:
+          typeof e.detalle?.comprobante_path === "string"
+            ? await fotoConUrl(e.detalle.comprobante_path)
+            : null,
+      }))
+    )) as GestionDetalle["eventos"],
     presupuestos: (presupuestos ?? []) as GestionDetalle["presupuestos"],
     avances: await Promise.all(
       (avances ?? []).map(async (a) => ({

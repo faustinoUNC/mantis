@@ -915,7 +915,7 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
             <span className="text-muted/50 font-normal">· con esto se calcula tu liquidación</span>
           </p>
           <Input
-            label="Total gastado en la obra ($) — todo lo que gastaste"
+            label="Total final gastado en materiales ($) — sin contar tu mano de obra"
             name="materiales_total"
             type="number"
             min="0.01"
@@ -971,11 +971,10 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   // obra + mano de obra. El server recomputa lo mismo al aprobar.
   const baseMateriales = rendido != null ? rendido : matPresupuestados;
   const costoFinal = baseMateriales + manoObra;
-  // "rendido" es todo lo gastado en la obra (materiales + mano de obra, lo
-  // rinde el técnico como un solo total) — el desvío se compara contra el
-  // presupuesto completo, no solo la parte de materiales.
-  const presupuestoTotal = matPresupuestados + manoObra;
-  const desvioMat = rendido != null ? rendido - presupuestoTotal : null;
+  // STORY-1003: "rendido" es SOLO materiales (la mano de obra presupuestada
+  // se suma aparte en costo final y liquidación) — el desvío se mide contra
+  // los materiales presupuestados, igual que la métrica de Informes.
+  const desvioMat = rendido != null ? rendido - matPresupuestados : null;
 
   if (!subida) {
     return <p className="text-sm text-muted">Esperando que el técnico suba la conformidad.</p>;
@@ -1030,16 +1029,16 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
           )}
           <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
             <div className="flex justify-between">
-              <span className="text-muted">Presupuesto total (materiales + mano de obra)</span>
-              <span className="font-mono">{plata(presupuestoTotal)}</span>
+              <span className="text-muted">Materiales presupuestados</span>
+              <span className="font-mono">{plata(matPresupuestados)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted">Gastado real en la obra</span>
+              <span className="text-muted">Gastado real en materiales</span>
               <span className="font-mono font-semibold">{plata(rendido)}</span>
             </div>
-            {desvioMat != null && presupuestoTotal > 0 && (
+            {desvioMat != null && matPresupuestados > 0 && (
               <div className="flex justify-between pt-1 border-t border-border">
-                <span className="text-muted">Desvío sobre presupuesto</span>
+                <span className="text-muted">Desvío sobre materiales</span>
                 <span
                   className={`font-mono font-semibold ${
                     desvioMat > 0 ? "text-urgente-fuerte" : "text-brand"
@@ -1047,7 +1046,7 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
                 >
                   {desvioMat >= 0 ? "+" : "−"}{plata(Math.abs(desvioMat))} (
                   {desvioMat >= 0 ? "+" : "−"}
-                  {Math.abs(Math.round((desvioMat / presupuestoTotal) * 100))}%)
+                  {Math.abs(Math.round((desvioMat / matPresupuestados) * 100))}%)
                 </span>
               </div>
             )}
@@ -1067,7 +1066,7 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
       <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
         <div className="flex justify-between">
           <span className="text-muted">
-            {rendido != null ? "Total gastado en la obra (rendido)" : "Materiales presupuestados"}
+            {rendido != null ? "Gastado en materiales (rendido)" : "Materiales presupuestados"}
           </span>
           <span className="font-mono">{plata(baseMateriales)}</span>
         </div>
@@ -1524,7 +1523,7 @@ const SELLO_NOTA: Record<string, string> = {
 
 type ItemActividad =
   | { clase: "etapa"; etapa: string; fecha: string }
-  | { clase: "evento"; texto: string; detalle: string | null; actor: string | null; fecha: string; fotos?: string[] }
+  | { clase: "evento"; texto: string; detalle: string | null; actor: string | null; fecha: string; fotos?: string[]; comprobante?: string | null }
   | { clase: "nota"; sello: string; nota: string; foto: string | null; fecha: string }
   | { clase: "conformidad"; estado: string; motivo: string | null; foto: string | null; fecha: string };
 
@@ -1584,6 +1583,8 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
             detalle: detalleLegible(e.detalle),
             actor: e.actor?.nombre ?? null,
             fecha: e.creado_en,
+            // STORY-1002: el adelanto de materiales lleva su comprobante.
+            comprobante: e.comprobante_url ?? null,
             ...(e === ultimaRendicion &&
               gestion.materiales_fotos_urls.length > 0 && {
                 fotos: gestion.materiales_fotos_urls,
@@ -1692,6 +1693,16 @@ function Actividad({ gestion }: { gestion: GestionDetalle }) {
                   </p>
                   {item.detalle && (
                     <p className="text-[13px] text-muted mt-0.5">{item.detalle}</p>
+                  )}
+                  {item.comprobante && (
+                    <a
+                      href={item.comprobante}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[13px] font-medium text-brand-active underline underline-offset-2 mt-0.5 inline-block"
+                    >
+                      Ver comprobante
+                    </a>
                   )}
                 </div>
                 <FechaItem fecha={item.fecha} />

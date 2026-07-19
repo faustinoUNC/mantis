@@ -581,14 +581,29 @@ export async function registrarCobro(
 // v1.2: solo se puede adelantar en ejecución (antes de rendir la obra) — ya
 // no en conformidad ni en liquidación técnico, guard server-side además de
 // sacarlo de esas pantallas.
+// STORY-1002: cada adelanto exige su comprobante (recibo firmado por el
+// técnico o constancia de transferencia) — se valida y sube ANTES de tocar
+// la fila, y el path queda en el detalle del evento del adelanto.
 export async function registrarAdelantoMateriales(
   gestionId: string,
-  monto: number
+  formData: FormData
 ): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
+  const monto = Number(formData.get("monto"));
   if (!Number.isFinite(monto) || monto <= 0) {
     return { ok: false, error: "Ingresá un monto válido." };
+  }
+  const comprobante = formData.get("comprobante");
+  if (!(comprobante instanceof File) || comprobante.size === 0) {
+    return { ok: false, error: "Adjuntá el comprobante del adelanto (recibo firmado o transferencia)." };
+  }
+  const ext = MIME_COMPROBANTE[comprobante.type];
+  if (!ext) {
+    return { ok: false, error: "El comprobante tiene que ser un PDF o una imagen (JPG, PNG o WEBP)." };
+  }
+  if (comprobante.size > MAX_COMPROBANTE_BYTES) {
+    return { ok: false, error: "El comprobante no puede superar los 8 MB." };
   }
 
   const supabase = await createClient();
@@ -607,13 +622,22 @@ export async function registrarAdelantoMateriales(
   }
   const total = Number(fila.adelanto_materiales ?? 0) + monto;
 
+  const path = `${gestionId}/adelanto-comprobante-${Date.now()}.${ext}`;
+  const admin = createAdminClient();
+  const { error: upErr } = await admin.storage
+    .from(BUCKET)
+    .upload(path, Buffer.from(await comprobante.arrayBuffer()), {
+      contentType: comprobante.type,
+    });
+  if (upErr) return { ok: false, error: "No se pudo subir el comprobante. Probá de nuevo." };
+
   const { error } = await supabase
     .from("gestiones")
     .update({ adelanto_materiales: total })
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo guardar el adelanto." };
 
-  await registrarEvento(gestionId, "adelanto_materiales_registrado", actual.id, { monto, total });
+  await registrarEvento(gestionId, "adelanto_materiales_registrado", actual.id, { monto, total, comprobante_path: path });
   revalidatePath(`/gestiones/${gestionId}`);
   return { ok: true };
 }

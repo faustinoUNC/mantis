@@ -200,19 +200,31 @@ function FormCobro({
 // STORY-977 v1.1: cada carga suma al total ya adelantado (permite más de un
 // adelanto) y ya no hay tope contra el presupuesto. Antes de guardar, pide
 // confirmación explícita del monto (mismo patrón de 2 pasos que "Rechazar").
+// STORY-1002: muestra lo que el técnico presupuestó en materiales (la
+// referencia para decidir cuánto adelantar) y exige el comprobante de la
+// entrega (recibo firmado o transferencia) — el archivo se captura en estado
+// al pasar al paso de confirmación porque el form se desmonta.
 function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
   const [monto, setMonto] = useState("");
+  const [comprobante, setComprobante] = useState<File | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
   const yaAdelantado = Number(gestion.adelanto_materiales ?? 0);
   const montoNum = Number(monto) || 0;
+  const aprobado = [...gestion.presupuestos]
+    .filter((p) => p.estado === "aprobado")
+    .sort((a, b) => b.creado_en.localeCompare(a.creado_en))[0];
+  const presupuestado = aprobado ? Number(aprobado.monto_materiales) : 0;
 
   async function confirmar() {
     setError(null);
     setCargando(true);
-    const r = await registrarAdelantoMateriales(gestion.id, montoNum);
+    const fd = new FormData();
+    fd.set("monto", String(montoNum));
+    if (comprobante) fd.set("comprobante", comprobante);
+    const r = await registrarAdelantoMateriales(gestion.id, fd);
     setCargando(false);
     if (!r.ok) {
       setError(r.error ?? "Error");
@@ -220,6 +232,7 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
     }
     setConfirmando(false);
     setMonto("");
+    setComprobante(null);
   }
 
   if (confirmando) {
@@ -227,7 +240,8 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
       <div className="flex flex-col gap-2">
         <p className="text-[13px] text-muted">
           Vas a cargar un adelanto de{" "}
-          <span className="font-semibold">{plata(montoNum)}</span>. ¿Confirmás?
+          <span className="font-semibold">{plata(montoNum)}</span> con su
+          comprobante ({comprobante?.name}). ¿Confirmás?
         </p>
         <div className="flex gap-3">
           <Button disabled={cargando} onClick={confirmar}>
@@ -255,6 +269,13 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
           <span className="text-muted/50 font-normal"> · ya adelantado {plata(yaAdelantado)}</span>
         )}
       </p>
+      {presupuestado > 0 && (
+        <p className="text-[13px] text-muted">
+          El técnico presupuestó{" "}
+          <span className="font-semibold text-foreground">{plata(presupuestado)}</span>{" "}
+          en materiales.
+        </p>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -263,6 +284,12 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
             setError("Ingresá un monto válido.");
             return;
           }
+          const archivo = new FormData(e.currentTarget).get("comprobante");
+          if (!(archivo instanceof File) || archivo.size === 0) {
+            setError("Adjuntá el comprobante del adelanto (recibo firmado o transferencia).");
+            return;
+          }
+          setComprobante(archivo);
           setConfirmando(true);
         }}
         className="flex flex-wrap items-end gap-3"
@@ -276,6 +303,11 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
             placeholder="0"
           />
         </div>
+        <InputArchivo
+          label="Comprobante del adelanto"
+          name="comprobante"
+          accept="application/pdf,image/*"
+        />
         <Button type="submit">Cargar adelanto</Button>
       </form>
       {error && <p className="text-sm font-medium text-error">{error}</p>}
@@ -420,7 +452,7 @@ export function FinanzasAcciones({
           {rendido != null && (
             <>
               <div className="flex justify-between">
-                <span className="text-muted">Total gastado en la obra (rendido)</span>
+                <span className="text-muted">Gastado en materiales (rendido)</span>
                 <span className="font-mono">{plata(rendido)}</span>
               </div>
               <div className="flex justify-between">
