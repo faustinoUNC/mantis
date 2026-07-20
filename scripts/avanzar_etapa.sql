@@ -6,7 +6,8 @@
 -- Historia: STORY-966 (desasignar = retroceso total), STORY-967 (cancelación
 -- con cargo), STORY-970 (envío de presupuesto no sobrevive), STORY-976 (el
 -- aviso "no puedo continuar" no sobrevive), STORY-914 (cancelar),
--- STORY-1014 (el adelanto del saliente se congela en el evento y se resetea).
+-- STORY-1014 (el adelanto del saliente se congela en el evento y se resetea),
+-- STORY-1017 (las ampliaciones del saliente quedan rechazadas al desasignar).
 
 CREATE OR REPLACE FUNCTION public.avanzar_etapa(p_gestion uuid, p_nueva etapa_gestion, p_detalle jsonb DEFAULT NULL::jsonb)
  RETURNS void
@@ -123,6 +124,13 @@ begin
       set estado = 'rechazada',
           motivo_rechazo = coalesce(motivo_rechazo, 'Técnico desasignado')
       where gestion_id = p_gestion and estado = 'subida';
+    -- STORY-1017: las ampliaciones eran del circuito del saliente — quedan
+    -- rechazadas (la enviada dejaría trabado el índice único del entrante y
+    -- una aprobada inflaría su techo autorizado con plata de otro presupuesto).
+    update public.ampliaciones
+      set estado = 'rechazada',
+          motivo_rechazo = coalesce(motivo_rechazo, 'Técnico desasignado')
+      where gestion_id = p_gestion and estado in ('enviada','aprobada');
   end if;
 
   -- STORY-976: toda transición es una decisión del gestor que resuelve el

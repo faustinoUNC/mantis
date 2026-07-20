@@ -105,6 +105,24 @@ export interface Presupuesto {
   creado_en: string;
 }
 
+// STORY-1017: ampliación de presupuesto a mitad de obra — el técnico propone
+// un gasto extra y el pagador lo autoriza ANTES de gastarlo (circuito espejo
+// del presupuesto inicial). Tabla propia: no contamina `presupuestos`, cuyos
+// consumidores asumen un solo aprobado por gestión.
+export interface Ampliacion {
+  id: string;
+  // Autor — el techo autorizado solo suma ampliaciones del técnico actual
+  // (patrón STORY-983: lo del saliente es historial).
+  tecnico_id: string | null;
+  monto: number;
+  motivo: string;
+  estado: "enviada" | "aprobada" | "rechazada";
+  motivo_rechazo: string | null;
+  // Gate espejo de STORY-935: sin email al pagador no se registra autorización.
+  enviada_pagador_en: string | null;
+  creado_en: string;
+}
+
 export interface Avance {
   id: string;
   // STORY-983: los gates (inspección obligatoria, avance antes de terminar)
@@ -166,6 +184,8 @@ export interface GestionDetalle extends GestionResumen {
   especialidad_id: string;
   eventos: Evento[];
   presupuestos: Presupuesto[];
+  // STORY-1017: ampliaciones de presupuesto (en ejecución)
+  ampliaciones: Ampliacion[];
   avances: Avance[];
   conformidades: Conformidad[];
   // STORY-914: calificación del técnico (una por gestión, se carga al finalizar)

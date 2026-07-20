@@ -293,6 +293,7 @@ export async function obtenerGestion(
   const [
     { data: eventos },
     { data: presupuestos },
+    { data: ampliaciones },
     { data: avances },
     { data: conformidades },
     { data: vinculadas },
@@ -306,6 +307,12 @@ export async function obtenerGestion(
       supabase
         .from("presupuestos")
         .select("id, tecnico_id, monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, motivo_rechazo, creado_en")
+        .eq("gestion_id", id)
+        .order("creado_en", { ascending: false }),
+      // STORY-1017: ampliaciones de presupuesto pedidas a mitad de obra
+      supabase
+        .from("ampliaciones")
+        .select("id, tecnico_id, monto, motivo, estado, motivo_rechazo, enviada_pagador_en, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
       supabase
@@ -395,6 +402,10 @@ export async function obtenerGestion(
       }))
     )) as GestionDetalle["eventos"],
     presupuestos: (presupuestos ?? []) as GestionDetalle["presupuestos"],
+    ampliaciones: (ampliaciones ?? []).map((a) => ({
+      ...a,
+      monto: Number(a.monto),
+    })) as GestionDetalle["ampliaciones"],
     avances: await Promise.all(
       (avances ?? []).map(async (a) => ({
         id: a.id,
@@ -1112,6 +1123,115 @@ export async function resolverPresupuesto(
   });
 
   if (aprobar) return avanzarEtapa(gestionId, "en_ejecucion");
+
+  refrescarTablero(gestionId);
+  return { ok: true };
+}
+
+// ── Ampliación de presupuesto (STORY-1017) ──
+// El técnico propone un gasto extra a mitad de obra y el pagador lo autoriza
+// ANTES de gastarlo — circuito espejo del presupuesto inicial (email + registro
+// de la autorización por el gestor), sin mover la etapa: la obra sigue en
+// ejecución con lo ya aprobado mientras se decide.
+
+export async function crearAmpliacion(
+  gestionId: string,
+  datos: { monto: number; motivo: string }
+): Promise<ActionResult> {
+  const ctx = await exigirTecnicoAsignado(gestionId);
+  if (!ctx) return { ok: false, error: "No tenés permiso." };
+  if (ctx.gestion.etapa !== "en_ejecucion") {
+    return { ok: false, error: "La ampliación se pide durante la ejecución de la obra." };
+  }
+  if (ctx.gestion.aviso_no_continua_en) return { ok: false, error: ERROR_EN_PAUSA };
+  if (!Number.isFinite(datos.monto) || datos.monto <= 0) {
+    return { ok: false, error: "Ingresá el monto extra que necesitás." };
+  }
+  if (!datos.motivo.trim()) {
+    return { ok: false, error: "Contá qué surgió — el pagador autoriza en base a eso." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("ampliaciones").insert({
+    gestion_id: gestionId,
+    tecnico_id: ctx.actual.id,
+    monto: datos.monto,
+    motivo: datos.motivo.trim(),
+  });
+  if (error) {
+    return {
+      ok: false,
+      error: error.code === "23505"
+        ? "Ya hay una ampliación esperando respuesta."
+        : "No se pudo enviar la ampliación.",
+    };
+  }
+
+  await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: "ampliacion_solicitada",
+    actor_id: ctx.actual.id,
+    detalle: { monto: datos.monto, motivo: datos.motivo.trim() },
+  });
+
+  refrescarTablero(gestionId);
+  return { ok: true };
+}
+
+export async function resolverAmpliacion(
+  ampliacionId: string,
+  gestionId: string,
+  aprobar: boolean,
+  motivo?: string
+): Promise<ActionResult> {
+  const actual = await obtenerUsuarioActual();
+  if (!actual) return { ok: false, error: "Sin sesión." };
+  if (!aprobar && !motivo?.trim()) {
+    return { ok: false, error: "Indicá el motivo del rechazo." };
+  }
+
+  const supabase = await createClient();
+  // Espejo de STORY-935: se registra la autorización de lo que el pagador
+  // RECIBIÓ — sin email enviado no hay aprobación (la UI deshabilita el
+  // botón; esto cubre refresh y carreras).
+  if (aprobar) {
+    const { data: a } = await supabase
+      .from("ampliaciones")
+      .select("enviada_pagador_en")
+      .eq("id", ampliacionId)
+      .single();
+    if (!a?.enviada_pagador_en) {
+      return {
+        ok: false,
+        error: "Enviá la ampliación al pagador por email antes de registrar su autorización.",
+      };
+    }
+  }
+
+  // El .eq(gestion_id) cruza id↔gestión y el .eq(estado) evita resolver dos
+  // veces. La RLS limita el update a admin/gestor owner.
+  const { data: filas, error } = await supabase
+    .from("ampliaciones")
+    .update(
+      aprobar
+        ? { estado: "aprobada" }
+        : { estado: "rechazada", motivo_rechazo: motivo?.trim() ?? null }
+    )
+    .eq("id", ampliacionId)
+    .eq("gestion_id", gestionId)
+    .eq("estado", "enviada")
+    .select("monto");
+  if (error || !filas?.length) {
+    return { ok: false, error: "No se pudo resolver la ampliación (¿ya fue resuelta?)." };
+  }
+
+  const monto = Number(filas[0].monto);
+  await supabase.from("eventos_gestion").insert({
+    gestion_id: gestionId,
+    tipo: aprobar ? "ampliacion_aprobada" : "ampliacion_rechazada",
+    actor_id: actual.id,
+    detalle: aprobar ? { monto } : { monto, motivo: motivo?.trim() },
+  });
 
   refrescarTablero(gestionId);
   return { ok: true };

@@ -470,6 +470,91 @@ export async function enviarPresupuestoEmail(
   return { ok: true };
 }
 
+// STORY-1017: aviso de ampliación de presupuesto al pagador — mismo circuito
+// del presupuesto inicial pero sin PDF nuevo: los tres números van en el
+// cuerpo (aprobado, ampliación, nuevo total) y la nota formal llega al final
+// como siempre. Marca enviada_pagador_en: el gate para registrar la
+// autorización (espejo de presupuesto_enviado_en, STORY-935).
+export async function enviarAmpliacionEmail(
+  gestionId: string,
+  ampliacionId: string
+): Promise<ActionResult> {
+  const actual = await exigirMantenimiento(gestionId);
+  if (!actual) return { ok: false, error: "No tenés permiso." };
+
+  const admin = createAdminClient();
+  const { data: amp } = await admin
+    .from("ampliaciones")
+    .select("monto, motivo, estado")
+    .eq("id", ampliacionId)
+    .eq("gestion_id", gestionId)
+    .single();
+  if (!amp || amp.estado !== "enviada") {
+    return { ok: false, error: "La ampliación ya fue resuelta." };
+  }
+
+  // Lo que el pagador ya conoce: presupuesto aprobado + fee anclado.
+  const { data: aprobados } = await admin
+    .from("presupuestos")
+    .select("monto_materiales, monto_mano_obra")
+    .eq("gestion_id", gestionId)
+    .eq("estado", "aprobado")
+    .order("creado_en", { ascending: false })
+    .limit(1);
+  const aprobado = aprobados?.[0];
+  if (!aprobado) {
+    return { ok: false, error: "La gestión no tiene presupuesto aprobado." };
+  }
+  const { data: g } = await admin
+    .from("gestiones")
+    .select("cargo_admin")
+    .eq("id", gestionId)
+    .single();
+
+  // Mismo resolutor de destinatario que la nota (pagador anclado; con legajo
+  // cerrado cae al propietario — defensa STORY-962).
+  const doc = await datosDocumento(gestionId, "presupuesto");
+  if (!doc) return { ok: false, error: "Gestión no encontrada." };
+  if (!doc.emailDestinatario) {
+    return { ok: false, error: "El pagador no tiene email cargado." };
+  }
+
+  const monto = Number(amp.monto);
+  const aprobadoTotal =
+    Number(aprobado.monto_materiales) +
+    Number(aprobado.monto_mano_obra) +
+    Number(g?.cargo_admin ?? 0);
+  const plata = (v: number) => `$ ${v.toLocaleString("es-AR")}`;
+
+  await enviarEmailDocumento({
+    para: doc.emailDestinatario,
+    destinatario: doc.datos.destinatarioNombre,
+    asunto: `Ampliación de presupuesto — ${doc.datos.direccion}`,
+    titulo: "Ampliación del presupuesto aprobado",
+    cuerpo:
+      `Durante el trabajo en ${doc.datos.direccion} surgieron gastos no previstos: ${amp.motivo}. ` +
+      `El presupuesto que aprobaste fue de ${plata(aprobadoTotal)}; la ampliación solicitada es de ${plata(monto)} ` +
+      `y, si la autorizás, el nuevo total será ${plata(aprobadoTotal + monto)}. ` +
+      `Confirmá tu decisión con la inmobiliaria — el gasto extra no se realiza sin tu autorización.`,
+    tipo: "ampliacion",
+    gestion_id: gestionId,
+    adjuntos: [],
+  });
+
+  await admin
+    .from("ampliaciones")
+    .update({ enviada_pagador_en: new Date().toISOString() })
+    .eq("id", ampliacionId);
+
+  await registrarEvento(gestionId, "ampliacion_enviada_pagador", actual.id, {
+    monto,
+    total: aprobadoTotal + monto,
+    para: doc.datos.destinatarioRotulo.toLowerCase(),
+  });
+
+  return { ok: true };
+}
+
 // STORY-950: permite combinar hasta 2 medios de pago (ej. mitad efectivo,
 // mitad transferencia) en vez de forzar un único medio para el 100%. El
 // monto del segundo medio lo tipea la administración; el del primero es el

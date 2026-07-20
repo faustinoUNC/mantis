@@ -21,6 +21,11 @@ export const LABEL_EVENTO: Record<string, string> = {
   presupuesto_aprobado: "Presupuesto aprobado",
   presupuesto_rechazado: "Presupuesto rechazado",
   presupuesto_enviado_pagador: "Presupuesto enviado por email al pagador",
+  // STORY-1017: ampliación de presupuesto a mitad de obra
+  ampliacion_solicitada: "Ampliación de presupuesto solicitada",
+  ampliacion_enviada_pagador: "Ampliación enviada por email al pagador",
+  ampliacion_aprobada: "Ampliación de presupuesto autorizada",
+  ampliacion_rechazada: "Ampliación de presupuesto rechazada",
   conformidad_aprobada: "Conformidad aprobada",
   conformidad_rechazada: "Conformidad rechazada",
   materiales_rendidos: "Comprobantes de materiales rendidos",

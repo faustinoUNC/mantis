@@ -21,6 +21,7 @@ import { VisorFoto } from "@/components/ui/visor-foto.client";
 import type { UsuarioActual } from "@/features/auth/types";
 import {
   descargarPresupuestoPDF,
+  enviarAmpliacionEmail,
   enviarPresupuestoEmail,
 } from "@/features/finanzas/service";
 import {
@@ -31,6 +32,8 @@ import {
   cancelarGestion,
   cancelarSolicitudAsignacion,
   avisarNoPuedoContinuar,
+  crearAmpliacion,
+  resolverAmpliacion,
   resolverAvisoTecnico,
   desasignarTecnico,
   enviarPresupuesto,
@@ -869,6 +872,208 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
               — aprueba lo que recibió.
             </p>
           ) : null}
+        </div>
+      )}
+      {error && <p className="text-sm font-medium text-error">{error}</p>}
+    </div>
+  );
+}
+
+// ── Ampliación de presupuesto (STORY-1017) — permiso ANTES de gastar de más ──
+
+// Técnico en ejecución: si surge un gasto no previsto, pide el extra con
+// monto + motivo y espera la autorización del pagador antes de gastarlo.
+function AmpliacionTecnico({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  const [abierto, setAbierto] = useState(false);
+  // Solo lo propio: las ampliaciones de un saliente desasignado son historial
+  // (patrón STORY-983). Vienen ordenadas desc.
+  const propias = gestion.ampliaciones.filter(
+    (a) => a.tecnico_id === gestion.tecnico_id
+  );
+  const enviada = propias.find((a) => a.estado === "enviada");
+  const ultima = propias[0];
+
+  if (enviada) {
+    return (
+      <div className="flex flex-col gap-1">
+        <p className="text-[13px] font-medium text-muted">Ampliación de presupuesto</p>
+        <p className="text-sm text-muted">
+          Pediste{" "}
+          <span className="font-semibold text-foreground">{plata(enviada.monto)}</span>{" "}
+          extra — esperando la autorización del pagador. No hagas el gasto
+          hasta que llegue la respuesta.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-[13px] font-medium text-muted">
+        Ampliación de presupuesto{" "}
+        <span className="text-muted/50 font-normal">· si surge un gasto no previsto</span>
+      </p>
+      {ultima?.estado === "aprobada" && (
+        <p className="text-sm text-brand-active bg-brand-soft border border-brand-soft-border rounded-md px-3 py-2">
+          Ampliación de {plata(ultima.monto)} autorizada — podés avanzar con el
+          gasto extra.
+        </p>
+      )}
+      {ultima?.estado === "rechazada" && (
+        <p className="text-sm text-error bg-error-soft border border-error-soft-border rounded-md px-3 py-2">
+          Ampliación rechazada
+          {ultima.motivo_rechazo ? `: ${ultima.motivo_rechazo}` : ""} — ajustate
+          a lo aprobado (si hace falta, podés pedir otra).
+        </p>
+      )}
+      {abierto ? (
+        <form
+          className="flex flex-col gap-3 max-w-md"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            correr(() =>
+              crearAmpliacion(gestion.id, {
+                monto: Number(f.get("monto")),
+                motivo: String(f.get("motivo") ?? ""),
+              })
+            );
+          }}
+        >
+          <div className="w-44">
+            <Input label="Monto extra ($)" name="monto" type="number" min="1" step="0.01" required />
+          </div>
+          <Textarea
+            label="Qué surgió"
+            name="motivo"
+            required
+            placeholder="Contá el gasto que apareció — el pagador autoriza en base a esto"
+          />
+          <div className="flex gap-3">
+            <Button type="submit" disabled={cargando}>
+              Pedir ampliación
+            </Button>
+            <Button type="button" variante="fantasma" onClick={() => setAbierto(false)}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <Button
+          variante="secundario"
+          className="self-start"
+          onClick={() => setAbierto(true)}
+        >
+          Pedir ampliación de presupuesto
+        </Button>
+      )}
+      {error && <p className="text-sm font-medium text-error">{error}</p>}
+    </div>
+  );
+}
+
+// Gestor owner: recibe la ampliación, la envía al pagador por email y
+// registra su respuesta — espejo del circuito del presupuesto (STORY-935:
+// sin email enviado no se registra la autorización).
+function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
+  const { error, cargando, correr } = useAccion();
+  const [rechazando, setRechazando] = useState(false);
+  // Un envío local vale aunque el refresh vivo tarde en confirmarlo (patrón
+  // mailEnviado de EvaluacionPresupuesto).
+  const [mailEnviado, setMailEnviado] = useState(false);
+  const enviada = gestion.ampliaciones.find((a) => a.estado === "enviada");
+  if (!enviada) return null;
+  const enviadaPagador = mailEnviado || Boolean(enviada.enviada_pagador_en);
+
+  const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
+  const aprobadoTotal = aprobado
+    ? Number(aprobado.monto_materiales) +
+      Number(aprobado.monto_mano_obra) +
+      Number(gestion.cargo_admin ?? 0)
+    : null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-[13px] font-medium text-muted">
+        El técnico pidió ampliar el presupuesto
+      </p>
+      <div className="rounded-md border border-border bg-surface-2/50 p-4 flex flex-col gap-2 max-w-md">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted">Gasto extra solicitado</span>
+          <span className="font-mono font-semibold">{plata(enviada.monto)}</span>
+        </div>
+        {aprobadoTotal != null && (
+          <>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted">
+                Aprobado por el {gestion.pagador ?? "pagador"}
+              </span>
+              <span className="font-mono">{plata(aprobadoTotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm pt-1 border-t border-border font-semibold">
+              <span>Nuevo total si autoriza</span>
+              <span className="font-mono">
+                {plata(aprobadoTotal + Number(enviada.monto))}
+              </span>
+            </div>
+          </>
+        )}
+        <p className="text-sm leading-relaxed">“{enviada.motivo}”</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variante="secundario"
+          disabled={cargando}
+          onClick={async () => {
+            const ok = await correr(() => enviarAmpliacionEmail(gestion.id, enviada.id));
+            if (ok) setMailEnviado(true);
+          }}
+        >
+          {enviadaPagador
+            ? "Reenviar al pagador por email"
+            : "Enviar al pagador por email"}
+        </Button>
+        {enviadaPagador && <span className="text-[12px] text-muted">Email enviado ✓</span>}
+      </div>
+
+      {rechazando ? (
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const motivo = String(new FormData(e.currentTarget).get("motivo"));
+            correr(() => resolverAmpliacion(enviada.id, gestion.id, false, motivo));
+          }}
+        >
+          <div className="flex-1 min-w-52">
+            <Input label="Motivo del rechazo" name="motivo" required />
+          </div>
+          <Button type="submit" disabled={cargando} variante="secundario">
+            Confirmar rechazo
+          </Button>
+          <Button type="button" variante="fantasma" onClick={() => setRechazando(false)}>
+            Cancelar
+          </Button>
+        </form>
+      ) : (
+        <div className="flex flex-wrap items-end gap-3">
+          <Button
+            disabled={cargando || !enviadaPagador}
+            onClick={() => correr(() => resolverAmpliacion(enviada.id, gestion.id, true))}
+          >
+            Registrar autorización
+          </Button>
+          <Button variante="secundario" onClick={() => setRechazando(true)}>
+            Rechazar
+          </Button>
+          {!enviadaPagador && (
+            <p className="w-full text-[12px] text-muted">
+              Para registrar la autorización, primero enviá la ampliación al{" "}
+              {gestion.pagador ?? "pagador"} por email — autoriza lo que recibió.
+            </p>
+          )}
         </div>
       )}
       {error && <p className="text-sm font-medium text-error">{error}</p>}
@@ -1830,6 +2035,9 @@ export function DetalleGestion({
       <RefrescoVivo tabla="gestiones" filtro={`id=eq.${gestion.id}`} />
       <RefrescoVivo tabla="avances" filtro={`gestion_id=eq.${gestion.id}`} />
       <RefrescoVivo tabla="presupuestos" filtro={`gestion_id=eq.${gestion.id}`} />
+      {/* STORY-1017: la ampliación del técnico y su resolución refrescan al
+          otro lado del circuito apenas pasan */}
+      <RefrescoVivo tabla="ampliaciones" filtro={`gestion_id=eq.${gestion.id}`} />
       <RefrescoVivo tabla="conformidades" filtro={`gestion_id=eq.${gestion.id}`} />
       {/* STORY-968: si lo desasignan mientras mira el detalle, el UPDATE de
           gestiones no le llega (la fila salió de su alcance RLS). Su propia
@@ -1998,6 +2206,11 @@ export function DetalleGestion({
         {gestion.etapa === "en_ejecucion" && esTecnicoAsignado && !tecnicoEnPausa && (
           <div className="flex flex-col gap-6">
             <FormAvance gestion={gestion} />
+            {/* STORY-1017: el permiso por el gasto extra se pide ANTES de
+                gastarlo — acá, en plena ejecución */}
+            <div className="border-t border-border pt-5">
+              <AmpliacionTecnico gestion={gestion} />
+            </div>
             <div className="border-t border-border pt-5">
               <AccionConformidadTecnico gestion={gestion} />
             </div>
@@ -2014,6 +2227,11 @@ export function DetalleGestion({
             administrativo/admin Y el gestor de mantenimiento dueño de la
             gestión (antes solo veía el texto "el técnico está trabajando").
             Ya no aplica en conformidad. */}
+        {/* STORY-1017: la ampliación pendiente la resuelve el dueño del
+            circuito del presupuesto (gestor owner / admin) */}
+        {gestion.etapa === "en_ejecucion" && esGestorOwner && (
+          <AmpliacionGestor gestion={gestion} />
+        )}
         {gestion.etapa === "en_ejecucion" && (esAdministrativo || esGestorOwner) && (
           <div className="border-t border-border pt-5">
             <FinanzasAcciones gestion={gestion} />

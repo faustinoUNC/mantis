@@ -391,8 +391,38 @@ export function FinanzasAcciones({
 
   if (gestion.etapa === "facturacion_cobro") {
     const trabajo = Number(gestion.costo_final ?? 0);
+    // STORY-1017: techo AUTORIZADO por el pagador = presupuesto aprobado +
+    // ampliaciones que autorizó (solo las del técnico actual — las de un
+    // saliente son historial, patrón STORY-983). Si la rendición lo superó,
+    // AVISO ámbar antes de facturar — aviso, no candado (resolución 14ª
+    // sesión: un permiso pedido después de gastar no cambia el desenlace).
+    const aprobadoCobro = gestion.presupuestos.find((p) => p.estado === "aprobado");
+    const ampliado = gestion.ampliaciones
+      .filter((a) => a.estado === "aprobada" && a.tecnico_id === gestion.tecnico_id)
+      .reduce((s, a) => s + Number(a.monto), 0);
+    const autorizado = aprobadoCobro
+      ? Number(aprobadoCobro.monto_materiales) +
+        Number(aprobadoCobro.monto_mano_obra) +
+        ampliado
+      : null;
+    const excedente = autorizado != null && trabajo > autorizado ? trabajo - autorizado : 0;
     return (
       <div className="flex flex-col gap-5">
+        {excedente > 0 && (
+          <div
+            className="max-w-md rounded-md border border-urgente-soft-border bg-urgente-soft px-4 py-3"
+            role="alert"
+          >
+            <p className="text-sm font-semibold text-urgente-fuerte">
+              El costo de la obra ({plata(trabajo)}) supera lo autorizado por
+              el pagador ({plata(autorizado ?? 0)}) en {plata(excedente)}.
+            </p>
+            <p className="text-[13px] text-muted mt-1">
+              Confirmalo con el {gestion.pagador ?? "pagador"} antes de emitir
+              la nota — es un aviso, no bloquea la facturación.
+            </p>
+          </div>
+        )}
         {/* Composición de la nota: trabajo + fee anclado en el presupuesto */}
         <div className="max-w-md">
           <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
