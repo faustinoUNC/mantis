@@ -1,5 +1,49 @@
 # Correcciones a la documentación de la Práctica Profesional (v20-FINAL)
 
+> ## ⚡ ESTADO tras la revisión de la v22 (2026-07-20)
+>
+> Se re-auditó `PracticaProfesional-v22-FINAL.docx` contra el sistema. **~90 % de esta guía fue aplicada
+> correctamente**: los 4 features fantasma reescritos (IA del inbox, sugerencia de pagador, plazos legales,
+> HU-11), bloque residual borrado, statechart nuevo agregado (correcto), diagrama de ampliaciones agregado,
+> §6.10 ahora es un DER real con los campos que faltaban, Next 16, TOC regenerado, roles unificados,
+> Embudo→"Gestiones activas por etapa", manuales corregidos en lo grueso. **Lo de abajo es lo ÚNICO que
+> queda pendiente — ignorar el resto de la guía salvo como referencia:**
+>
+> ### 🔴 Pendiente grave (v22)
+> 1. **Las imágenes de §7.2 NO se corrigieron y hay dos nuevas de MANTIS 1.** Siguen (renumeradas): árbol
+>    `features/` con `incidentes/` (image14), árbol `shared/` con middleware/types/colors (image15), árbol
+>    raíz `frontend/` con `hooks/` (image9), convención `nombreFeature.types.ts` (image20), flujo con leyenda
+>    `shared/types/`+`hooks/` (image3). Y aparecieron dos árboles nuevos también de MANTIS 1: rutas `app/`
+>    con `(cliente)/incidentes`, `/dashboard/...` (image13) y `components/` con `cliente/`, `admin/`,
+>    `landing/`, `ai-help-chat` (image18). Reemplazar TODOS por la estructura real (sección §0.3 de esta guía).
+> 2. **El DER visual de MANTIS 2 y el diagrama de casos de uso renderizado se BORRARON sin reemplazo.**
+>    Ahora §6.4/§6.9/§6.10 y el statechart quedaron solo como código mermaid/PlantUML — en un documento Word
+>    el código no renderiza: el jurado ve texto plano. **Generar los renders** (mermaid.live / plantuml) del
+>    statechart, el DER corregido y el diagrama de casos de uso corregido, y pegarlos junto al código.
+>
+> ### 🟡 Retoques de texto pendientes (v22)
+> 3. Manual Técnico §4.4: el título dice "…y pedir adelanto de materiales" y el bullet lo presenta como
+>    acción disponible en la app. No hay botón: el adelanto se pide por fuera y lo registra la administración.
+>    Reescribir título y bullet (la parte de ampliaciones que sigue está perfecta).
+> 4. UC 6.6.2.9 "Definir Responsable de Pago" — campo Actores: dice "Sistema (cálculo automático), confirmado
+>    por Gestor Comercial". Debe decir solo "Gestor Comercial" (la descripción de arriba ya está bien).
+> 5. FAQ del manual GF ("¿Puedo editar el monto a liquidar a mano?"): dice "menos adelantos **y fee**" —
+>    el fee NO se resta (contradice la fórmula correcta de la sección anterior). Quitar "y fee".
+> 6. Tabla comparativa nota de cobro vs. detalle de liquidación, fila "Se envía": la nota de cobro NO va
+>    "Por mail automáticamente" — se emite y envía con botones manuales. Solo el detalle al técnico es automático.
+> 7. §6.7.3 Enrolamiento — campo "Entradas": quedó "contraseña propia" (las Actividades de abajo ya están
+>    bien: el técnico crea la contraseña recién al ser aprobado). Quitarla de Entradas.
+> 8. Manual Admin §3.2: "Gestiones activas por etapa" quedó listada bajo "En el período (sigue el selector)".
+>    Es foto del momento ("ahora") — moverla a la lista "Para resolver hoy" o a su propio bloque "Carga por etapa".
+> 9. Error gramatical del reemplazo trazabilidad→seguimiento (×2): "garantizar **la** seguimiento" (Mandato)
+>    y "mantener **la** seguimiento financiero" (HU del GF) → "el seguimiento".
+> 10. Statechart: falta una transición real: presupuesto/en_ejecucion → facturacion_cobro cuando se cancela
+>     CON cargo (el cargo se cobra y de ahí pasa a cancelada).
+> 11. Menores: falta "Duplex" en los tipos de propiedad (manuales); el buscador del tablero por "N°" sigue
+>     sin mencionarse; manual Técnico 4.5 no menciona los requisitos duros para terminar (≥1 avance previo +
+>     fotos de comprobantes + total gastado); título suelto "Trazabilidad" en la sección de sprints.
+
+
 > **Propósito de este archivo.** Es el resultado de una auditoría completa de consistencia entre el documento
 > `PracticaProfesional-v20-FINAL` (Google Doc) y el sistema MANTIS 2 real (código de este repo + base de datos
 > viva de Supabase). Está pensado como **contexto para una IA (o persona) que vaya a corregir el documento**:
