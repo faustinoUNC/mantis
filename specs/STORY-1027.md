@@ -1,6 +1,6 @@
 # STORY-1027 — El Gestor Financiero puede archivar y desarchivar gestiones finalizadas (v1.1)
 
-**Estado:** ✅ hecha (commit `b996470`; v1.1 pendiente) · **Origen:** card Trello #148 "No se si esto es un bug pero lo dejo acá" (tester Ramiro, confirmado bug por Fausti, 2026-07-21). Pedido: tanto el Gestor Comercial como el Gestor Financiero deben poder archivar y desarchivar gestiones finalizadas; hoy solo puede el administrador (y el gestor owner). De paso (comentario de la card): el orden de las cards del Archivo debe ser consistente con Finanzas y los demás módulos.
+**Estado:** ✅ hecha (commits `b996470` v1.0, `c930054` v1.1) · **Origen:** card Trello #148 "No se si esto es un bug pero lo dejo acá" (tester Ramiro, confirmado bug por Fausti, 2026-07-21). Pedido: tanto el Gestor Comercial como el Gestor Financiero deben poder archivar y desarchivar gestiones finalizadas; hoy solo puede el administrador (y el gestor owner). De paso (comentario de la card): el orden de las cards del Archivo debe ser consistente con Finanzas y los demás módulos.
 
 ## Problema
 
@@ -30,6 +30,6 @@
 
 ## Dev Agent Record
 
-- **Commit:** `b996470` (v1.0); v1.1 pendiente.
+- **Commit:** `b996470` (v1.0), `c930054` (v1.1).
 - **Archivos:** migración `story_1027_administrativo_archiva` (aplicada en Supabase: `archivada_en` en la whitelist `v_finanzas` de `proteger_gestiones_update()`); `codigo/features/gestiones/service.ts` (`gestionesArchivadas` ordena por `creado_en desc`); **v1.1** `codigo/components/gestiones/tablero.client.tsx` (`"finalizado"` en `COLUMNAS_MANTENIMIENTO` y `COLUMNAS_ADMINISTRATIVO`).
 - **Verificación:** `tsc --noEmit` + eslint verdes. **SQL con rol simulado** (Ramiro Zarate, gestor_administrativo, en transacción con rollback): archivar ✅, desarchivar ✅, editar `descripcion` sigue bloqueado con `sin_permiso` ✅. **E2E** como Laura Benítez (demo, Gestor Financiero): "Archivar gestión" en el detalle de una finalizada → badge Archivada + evento "Gestión archivada — Laura Benítez" en Actividad; "Desarchivar" desde la vista Archivo → vuelve al tablero + evento `desarchivada`. Estado de la base restaurado tras la prueba. **v1.1** verificado en navegador: como Laura (financiera) la columna Finalizado sale activa junto con Cobro/Liquidación y el resto opacado; como Gestor Comercial sale activa junto con las operativas y Cobro/Liquidación opacadas.
