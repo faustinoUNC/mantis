@@ -29,7 +29,7 @@ import { ETAPAS, ETAPAS_TERMINALES, type GestionResumen, type StatsTecnico } fro
 import { listarAdelantos } from "@/features/finanzas/consultas";
 import { obtenerMetricas, type Metricas } from "@/features/metricas/service";
 import { misNotificaciones } from "@/features/notificaciones/service";
-import { NOMBRE_ROL } from "@/features/auth/types";
+import { NOMBRE_ROL, RUTA_POR_ROL } from "@/features/auth/types";
 import { listarTecnicos, misFranjas } from "@/features/tecnicos/service";
 import { DIAS } from "@/features/tecnicos/types";
 import { rutaPermitida } from "./config";
@@ -195,6 +195,9 @@ export function armarGrafico(m: Metricas, args: ArgsGrafico) {
     }
   };
 
+  // El mes corriente se marca "(en curso)": es parcial — Informes directamente
+  // no lo dibuja en sus series (ventanaUtil); acá se muestra pero avisado.
+  const mesActual = new Date().toISOString().slice(0, 7);
   const esPromedio = metrica === "tiempo_ciclo_dias" || metrica === "calificacion_promedio";
   const acum = new Map<string, { total: number; n: number }>();
   for (const f of filas) {
@@ -218,7 +221,12 @@ export function armarGrafico(m: Metricas, args: ArgsGrafico) {
     : esPromedio ? (x: number) => Math.round(x * 10) / 10
     : (x: number) => Math.round(x);
   let serie = [...acum.entries()].map(([k, v]) => ({
-    label: agrupar_por === "mes" ? labelMes(k) : k,
+    label:
+      agrupar_por === "mes"
+        ? k === mesActual
+          ? `${labelMes(k)} (en curso)`
+          : labelMes(k)
+        : k,
     _orden: k,
     valor: redondeo(esPromedio ? v.total / v.n : metrica === "cantidad" ? v.n : v.total),
   }));
@@ -561,7 +569,7 @@ export function crearTools(usuario: UsuarioActual) {
 
   const metricas_negocio = tool({
     description:
-      "Los números del negocio (mismos datos que la pantalla Informes): plata por cobrar y por liquidar, ingresos cobrados por mes, tiempo de ciclo, cuellos de botella por etapa, capacidad de técnicos por especialidad. Usala para '¿cómo viene el negocio?', '¿cuánto facturamos?', '¿dónde se traba el funnel?'.",
+      "Los números del negocio (mismos datos que los informes del Inicio): plata por cobrar y por liquidar, ingresos cobrados por mes, tiempo de ciclo, cuellos de botella por etapa, capacidad de técnicos por especialidad. Usala para '¿cómo viene el negocio?', '¿cuánto facturamos?', '¿dónde se traba el funnel?'. Si la respuesta comenta la evolución mensual o compara categorías, llamá TAMBIÉN a graficar (sin que te lo pidan) para acompañarla con el gráfico.",
     inputSchema: z.object({}),
     execute: seguro(async () => {
       const m = await obtenerMetricas();
@@ -578,10 +586,18 @@ export function crearTools(usuario: UsuarioActual) {
         acc.n += 1;
         porMes.set(mes, acc);
       }
+      const mesActual = new Date().toISOString().slice(0, 7);
       const ingresos = [...porMes.entries()]
         .sort((a, b) => b[0].localeCompare(a[0]))
         .slice(0, 3)
-        .map(([mes, v]) => ({ mes, cobrado: plata(v.cobrado), fee_inmobiliaria: plata(v.fee), gestiones: v.n }));
+        .map(([mes, v]) => ({
+          mes,
+          cobrado: plata(v.cobrado),
+          fee_inmobiliaria: plata(v.fee),
+          gestiones: v.n,
+          // Mes parcial: los informes del Inicio lo excluyen de sus series.
+          ...(mes === mesActual && { en_curso: true }),
+        }));
 
       // Tiempo de ciclo (creación → cobro) de las cobradas, en días.
       const ciclos = m.filas
@@ -621,6 +637,10 @@ export function crearTools(usuario: UsuarioActual) {
         .slice(0, 4);
 
       return {
+        // Los modelos chicos leen el tool result con más atención que el system
+        // prompt: el empujón a graficar viaja acá (STORY-1026 v1.1).
+        recordatorio:
+          "Si tu respuesta compara meses o categorías (ingresos por mes, etapas, técnicos), llamá AHORA a la tool graficar para acompañarla con el gráfico — no lo describas solo en texto.",
         alcance: rol === "gestor_mantenimiento" ? "solo tus gestiones" : "todo el sistema",
         activas: m.activas,
         urgentes_sin_asignar: m.urgentesSinAsignar,
@@ -640,7 +660,7 @@ export function crearTools(usuario: UsuarioActual) {
   // desde el output de ESTA tool — el modelo jamás escribe un número del gráfico.
   const graficar = tool({
     description:
-      "Mostrá un GRÁFICO dentro del chat (se dibuja solo a partir del resultado de esta tool). Elegí el cruce: una dimensión (agrupar_por) × una métrica; el servidor calcula la serie con los mismos datos que Informes. Usala siempre que la respuesta compare categorías o muestre una evolución: rankings de técnicos o gestores, distribución por etapa o especialidad, ingresos o gestiones por mes. Después comentá en texto solo los 2-3 datos salientes del resultado — no repitas la lista entera.",
+      "Mostrá un GRÁFICO dentro del chat (se dibuja solo a partir del resultado de esta tool — es la ÚNICA forma de graficar: nada de imágenes markdown ni HTML). Elegí el cruce: una dimensión (agrupar_por) × una métrica; el servidor calcula la serie con los mismos datos que los informes del Inicio. Usala proactivamente, sin que el usuario la pida, siempre que la respuesta compare categorías o muestre una evolución: rankings de técnicos o gestores, distribución por etapa o especialidad, ingresos o gestiones por mes. Después comentá en texto solo los 2-3 datos salientes del resultado — no repitas la lista entera.",
     inputSchema: z.object({
       titulo: z.string().max(60).describe("Título corto del gráfico, en español"),
       agrupar_por: z.enum(["tecnico", "gestor", "especialidad", "etapa", "mes"]),
@@ -755,7 +775,7 @@ export function crearTools(usuario: UsuarioActual) {
 
   const ranking_tecnicos = tool({
     description:
-      "El ranking de desempeño de los técnicos aprobados: calificación promedio (estrellas), desvío de presupuesto y de plazo, obras activas y realizadas, rechazos de asignación y abandonos. Usala para '¿cuál es el mejor técnico?', '¿a quién conviene asignar?', '¿quién abandona trabajos?'. Si ofrecés un botón para ver más, apuntá a /metricas (Informes, ahí viven las cards de desempeño) — /tecnicos es el listado operativo y NO muestra el ranking.",
+      `El ranking de desempeño de los técnicos aprobados: calificación promedio (estrellas), desvío de presupuesto y de plazo, obras activas y realizadas, rechazos de asignación y abandonos. Usala para '¿cuál es el mejor técnico?', '¿a quién conviene asignar?', '¿quién abandona trabajos?'. Si ofrecés un botón para ver más, apuntá al Inicio (${RUTA_POR_ROL[rol]}, ahí viven las cards de desempeño de los informes) — /tecnicos es el listado operativo y NO muestra el ranking.`,
     inputSchema: z.object({}),
     execute: seguro(async () => {
       const tecnicos = (await listarTecnicos()).filter(

@@ -43,8 +43,13 @@ const CONSULTANDO: Record<string, string> = {
 
 // El texto del modelo llega como texto plano con **negritas** — se renderiza
 // escapado (React) con un mini-parser; jamás HTML del modelo al DOM.
+// STORY-1026 v1.1: si el modelo desobedece y escribe una imagen markdown
+// (![...](url)), acá se descarta — el único gráfico es la tool graficar.
 function Texto({ contenido }: { contenido: string }) {
-  const partes = contenido.split(/(\*\*[^*]+\*\*)/g);
+  const sinImagenes = contenido
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\n{3,}/g, "\n\n");
+  const partes = sinImagenes.split(/(\*\*[^*]+\*\*)/g);
   return (
     <span className="whitespace-pre-wrap">
       {partes.map((p, i) =>

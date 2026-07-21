@@ -22,14 +22,17 @@ export const LIMITES = {
 // STORY-1007 v1.2: las pestañas de Finanzas viven en ?tab= (STORY-1020) — sin
 // estas entradas un botón "Ver liquidaciones/adelantos" caía en Cobros (mismo
 // defecto que el ranking de la card #147).
+// STORY-1026 v1.1: /metricas ya no se ofrece — es solo un redirect legacy
+// (STORY-912): los informes viven en el Inicio de cada rol, que ya está en
+// NAV_POR_ROL.
 const FINANZAS_TABS = [
   { href: "/finanzas?tab=liquidaciones", label: "Finanzas · Liquidaciones" },
   { href: "/finanzas?tab=adelantos", label: "Finanzas · Adelantos" },
 ];
 const EXTRA_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
-  administrador: [{ href: "/metricas", label: "Informes" }, ...FINANZAS_TABS],
-  gestor_mantenimiento: [{ href: "/metricas", label: "Informes" }],
-  gestor_administrativo: [{ href: "/metricas", label: "Informes" }, ...FINANZAS_TABS],
+  administrador: FINANZAS_TABS,
+  gestor_mantenimiento: [],
+  gestor_administrativo: FINANZAS_TABS,
   tecnico: [],
 };
 
