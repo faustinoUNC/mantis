@@ -125,7 +125,9 @@ body {
 /* Entrada escalonada de listas (DESIGN.md §Motion): mismo keyframe `aparecer`,
    delay incremental por hijo con tope en el 8º. */
 .stagger > * {
-  animation: aparecer 0.25s ease-out both;
+  /* backwards (no both): un fill activo de opacity/transform deja a cada hijo
+     en un stacking context permanente y las filas pintan sobre los tooltips */
+  animation: aparecer 0.25s ease-out backwards;
 }
 .stagger > :nth-child(1) { animation-delay: 0ms; }
 .stagger > :nth-child(2) { animation-delay: 35ms; }

@@ -503,7 +503,7 @@ function FilaTecnico({
     <button
       type="button"
       onClick={onSelect}
-      className={`w-full text-left px-3 py-2.5 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+      className={`relative w-full text-left px-3 py-2.5 transition-colors first:rounded-t-lg last:rounded-b-lg hover:z-10 ${
         seleccionado ? "bg-brand-soft/40" : "hover:bg-surface-2"
       }`}
     >
