@@ -1,6 +1,6 @@
 # STORY-1025 — Horarios del técnico: vista arreglada y carga obligatoria al enrolarse (v1.0)
 
-**Estado:** ✅ hecha · **Origen:** pedido directo de Fausti (2026-07-21): "arreglar vista de horarios del técnico y hacer que sea obligatorio que el técnico los ponga cuando se inscribe, así está desde el vamos en el sistema".
+**Estado:** ✅ hecha (commit `158a74a`) · **Origen:** pedido directo de Fausti (2026-07-21): "arreglar vista de horarios del técnico y hacer que sea obligatorio que el técnico los ponga cuando se inscribe, así está desde el vamos en el sistema".
 
 ## Problema
 
@@ -38,6 +38,6 @@
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente de OK_.
+- **Commit:** `158a74a`.
 - **Archivos:** `codigo/features/tecnicos/types.ts` (`FranjaNueva` + `errorFranja()` compartida cliente/server: fin > inicio + solapamiento); `codigo/features/tecnicos/service.ts` (`leerFranjas()` — parsea/valida el JSON del form: forma, día 0–6, `HH:MM`, solapamientos; `altaTecnico` exige ≥1 franja y las inserta en el alta nueva y en la reapertura (delete + insert); `misFranjas` con `.eq(tecnico_id)` explícito; `agregarFranja` valida solapamiento contra las existentes del día); `codigo/components/tecnicos/agenda.client.tsx` (borrar con `await` + estado "…" + error visible bajo el form); `codigo/components/tecnicos/form-tecnico.client.tsx` (bloque "Horarios de trabajo *" con día/desde/hasta + Agregar, lista con Quitar, validación local, `franjas` como JSON en el FormData, submit bloqueado sin ≥1 franja — aplica a enrolamiento Y alta manual).
 - **Verificación:** `tsc --noEmit`, eslint y `next build` verdes. E2E navegador: **agenda** (tecnicouno) — agregar Lun 10–12 sobre Lun 09–18 → "Se pisa con tu franja de 09:00–18:00 del lunes." sin insertar; agregar Jue 10–12 ✅ y borrarla ✅ (botón con estado, lista consistente). **Registro público, viewport mobile 390×844** — enviar sin franjas → "Cargá al menos un horario de trabajo."; franja solapada en el widget → mismo error de pisado; con Lun 09–18 + Mié 10–12 el alta salió y las DOS franjas quedaron en `franjas_disponibilidad` del técnico pendiente (verificado por SQL); técnico de prueba borrado después (auth + storage + cascade, verificado en 0). Regresión del form (especialidades, DNI, CUIL duplicado) intacta.

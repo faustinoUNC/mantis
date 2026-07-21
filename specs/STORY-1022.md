@@ -1,6 +1,6 @@
 # STORY-1022 — Tooltips tapados en listas con animación escalonada (v1.0)
 
-**Estado:** ✅ hecha · **Origen:** pedido directo de Fausti (2026-07-21, con screenshot): el tooltip "Horarios de trabajo" del picker de técnicos (hover sobre la tira de días) sale ilegible — las filas de abajo se dibujan encima y "se ve todo mezclado".
+**Estado:** ✅ hecha (commit `b7befbd`) · **Origen:** pedido directo de Fausti (2026-07-21, con screenshot): el tooltip "Horarios de trabajo" del picker de técnicos (hover sobre la tira de días) sale ilegible — las filas de abajo se dibujan encima y "se ve todo mezclado".
 
 ## Problema
 
@@ -27,6 +27,6 @@ Es el hermano del bug ya documentado en `globals.css:93-94` (transform residual 
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente de OK_.
+- **Commit:** `b7befbd`.
 - **Archivos:** `codigo/app/globals.css` (`.stagger > *`: `both` → `backwards`, con comentario del porqué); `codigo/components/gestiones/detalle.client.tsx` (`relative hover:z-10` en el `<button>` de `FilaTecnico`).
 - **Verificación:** `tsc --noEmit`, eslint y `next build` verdes. E2E navegador (admin, gestión #84 en Asignación con 2 candidatos): hover sobre la tira de días de Faustino → tooltip "Horarios de trabajo · Mar 09:00–21:00" **opaco y por encima** de la fila de Giuliano (antes: la fila de abajo se dibujaba encima — screenshot de Fausti). Stagger visualmente intacto (aparición escalonada igual).

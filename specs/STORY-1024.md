@@ -1,6 +1,6 @@
 # STORY-1024 — El tiempo en pausa no cuenta contra el plazo del técnico (v1.0)
 
-**Estado:** ✅ hecha · **Origen:** sospecha de Fausti (2026-07-21): "revisar si mientras la gestión está pausada corren los días perjudicando métricas del técnico a causa de demora de la obra". **Confirmada en el análisis previo: corren.**
+**Estado:** ✅ hecha (commit `08b68e0`) · **Origen:** sospecha de Fausti (2026-07-21): "revisar si mientras la gestión está pausada corren los días perjudicando métricas del técnico a causa de demora de la obra". **Confirmada en el análisis previo: corren.**
 
 ## Problema
 
@@ -32,6 +32,6 @@ Los datos para corregirlo ya existen en `eventos_gestion`: cada pausa deja un ev
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente de OK_.
+- **Commit:** `08b68e0`.
 - **Archivos:** `codigo/features/gestiones/ejecucion.ts` (`EventoPausa`, `msPausado()` — cada inicio cierra con el primer `fin`/transición posterior, recortado al span y sin doble conteo; `ejecucionParaPlazoDias(transiciones, pausas)`); `codigo/features/metricas/service.ts` (`EventoMetrica.tipo`; `todosLosEventos()` paginado que trae `transicion` + eventos de pausa); `codigo/components/metricas/panel-metricas.client.tsx` (memo de ejecución separa pausas por gestión y las pasa al helper — los demás consumidores ignoran los eventos de pausa por su guard de `aEtapa`); `codigo/features/gestiones/service.ts` (picker: fetch paginado con pausas + pase al helper).
 - **Verificación:** `tsc --noEmit`, eslint y `next build` verdes. **Unit** (tsx, 11 casos): sin pausas, pausa con `aviso_resuelto`, dos pausas, pausa cerrada por transición, pausa fuera del span (antes y después), piso de 1 día, reasignación con pausa vieja, cancelada no computa, ciclo intacto — todos ✅. **E2E con datos sintéticos**: gestión `[TEST-1024]` (plazo 5 días, ejecución 12 días calendario con pausa de 6 adentro) → la card "Desvío de plazo" de Informes mostró **+20%** exactos (real efectivo 6 vs 5; sin el fix habría sido +140%); borrada tras verificar, cascade limpio. La paginación además recuperó historial que ya se truncaba (la card pasó de 59 a 60 gestiones con los mismos datos).

@@ -1,6 +1,6 @@
 # STORY-1023 — Cards del técnico consistentes con las del gestor: la ubicación es el título (v1.0)
 
-**Estado:** ✅ hecha · **Origen:** pedido directo de Fausti (2026-07-21): "hacer que las cards del técnico sean consistentes con las de gestión (el título debería ser la ubicación)".
+**Estado:** ✅ hecha (commit `c6f6ffc`) · **Origen:** pedido directo de Fausti (2026-07-21): "hacer que las cards del técnico sean consistentes con las de gestión (el título debería ser la ubicación)".
 
 ## Problema
 
@@ -29,6 +29,6 @@ Ambas vistas ya comparten query (`tableroGestiones()` → `SELECT_RESUMEN`): `di
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente de OK_.
+- **Commit:** `c6f6ffc`.
 - **Archivos:** `codigo/components/gestiones/mis-trabajos.client.tsx` (único): `TarjetaAccion` — título = dirección con pin + `truncate`, descripción secundaria con `line-clamp-2`; `TarjetaSeguimiento` — título = dirección con pin, secundaria = `descripcion · especialidad` con `truncate`.
 - **Verificación:** `tsc --noEmit`, eslint y `next build` verdes. E2E navegador como tecnicouno, **viewport mobile 390×844**: cards de acción ("Por responder"/"A corregir") titulan con la dirección (Caseros 10, Ituzaingó 1435) y muestran la descripción abajo; cards de seguimiento (En cobro/En liquidación) ídem con `descripción · especialidad` truncada. Badges, #numero, antigüedad y CTA en su lugar; búsqueda intacta (mismos campos).
