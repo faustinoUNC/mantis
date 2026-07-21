@@ -17,7 +17,7 @@ import type {
   Urgencia,
 } from "./types";
 import { ETAPAS_TERMINALES } from "./types";
-import { ejecucionParaPlazoDias, type TransicionEjecucion } from "./ejecucion";
+import { ejecucionParaPlazoDias, type EventoPausa, type TransicionEjecucion } from "./ejecucion";
 import { nombrarSalientes } from "./salientes";
 
 const BUCKET = "gestiones";
@@ -779,13 +779,32 @@ export async function estadisticasTecnicos(
   const idsGestiones = ((gestiones ?? []) as unknown as GFila[]).map((g) => g.id);
   const ejecucionDias = new Map<string, number>();
   if (idsGestiones.length > 0) {
-    const { data: transiciones } = await admin
-      .from("eventos_gestion")
-      .select("gestion_id, de_etapa, a_etapa, creado_en")
-      .eq("tipo", "transicion")
-      .in("gestion_id", idsGestiones);
+    // STORY-1024: paginado — con muchos candidatos los eventos pueden superar
+    // el tope de 1000 filas por request de PostgREST (truncaba en silencio).
+    const PAGINA = 1000;
+    const transiciones: { gestion_id: string; tipo: string; de_etapa: string | null; a_etapa: string | null; creado_en: string }[] = [];
+    for (let desde = 0; ; desde += PAGINA) {
+      const { data } = await admin
+        .from("eventos_gestion")
+        .select("gestion_id, tipo, de_etapa, a_etapa, creado_en")
+        .in("tipo", ["transicion", "tecnico_no_continua", "aviso_resuelto"])
+        .in("gestion_id", idsGestiones)
+        .order("creado_en")
+        .order("id")
+        .range(desde, desde + PAGINA - 1);
+      transiciones.push(...(data ?? []));
+      if (!data || data.length < PAGINA) break;
+    }
     const porGestion = new Map<string, TransicionEjecucion[]>();
-    for (const e of transiciones ?? []) {
+    // STORY-1024: pausas por gestión — se descuentan del % de plazo.
+    const pausasPorGestion = new Map<string, EventoPausa[]>();
+    for (const e of transiciones) {
+      if (e.tipo === "tecnico_no_continua" || e.tipo === "aviso_resuelto") {
+        const lista = pausasPorGestion.get(e.gestion_id) ?? [];
+        lista.push({ tipo: e.tipo === "tecnico_no_continua" ? "inicio" : "fin", t: new Date(e.creado_en).getTime() });
+        pausasPorGestion.set(e.gestion_id, lista);
+        continue;
+      }
       const lista = porGestion.get(e.gestion_id) ?? [];
       lista.push({ aEtapa: e.a_etapa, deEtapa: e.de_etapa, t: new Date(e.creado_en).getTime() });
       porGestion.set(e.gestion_id, lista);
@@ -793,7 +812,7 @@ export async function estadisticasTecnicos(
     // STORY-984: para el % de plazo solo cuentan obras terminadas (salida a
     // conformidad) y con piso de 1 día — canceladas/desasignadas no computan.
     for (const [gid, evs] of porGestion) {
-      const dias = ejecucionParaPlazoDias(evs);
+      const dias = ejecucionParaPlazoDias(evs, pausasPorGestion.get(gid) ?? []);
       if (dias != null) ejecucionDias.set(gid, dias);
     }
   }

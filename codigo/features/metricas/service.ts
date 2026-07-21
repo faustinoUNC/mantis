@@ -40,6 +40,9 @@ export interface FilaMetrica {
 
 export interface EventoMetrica {
   gestionId: string;
+  // transicion | tecnico_no_continua | aviso_resuelto (STORY-1024: las pausas
+  // viajan para descontarlas del cumplimiento de plazo del técnico).
+  tipo: string;
   deEtapa: string | null;
   aEtapa: string | null;
   creadoEn: string;
@@ -67,6 +70,26 @@ export interface Metricas {
   abandonos: { tecnico: string; n: number }[];
 }
 
+// STORY-1024: los eventos superaron el tope de 1000 filas por request de
+// PostgREST y el panel calculaba sobre historial truncado en silencio —
+// se traen paginados (orden estable por creado_en).
+async function todosLosEventos(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const PAGINA = 1000;
+  const filas: { gestion_id: string; tipo: string; de_etapa: string | null; a_etapa: string | null; creado_en: string }[] = [];
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data } = await supabase
+      .from("eventos_gestion")
+      .select("gestion_id, tipo, de_etapa, a_etapa, creado_en")
+      .in("tipo", ["transicion", "tecnico_no_continua", "aviso_resuelto"])
+      .order("creado_en")
+      .order("id")
+      .range(desde, desde + PAGINA - 1);
+    filas.push(...(data ?? []));
+    if (!data || data.length < PAGINA) break;
+  }
+  return filas;
+}
+
 // RLS scopea: el gestor de mantenimiento calcula sobre SUS gestiones, admin y
 // administrativo sobre todas.
 export async function obtenerMetricas(): Promise<Metricas | null> {
@@ -74,16 +97,13 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
   if (!actual || actual.rol === "tecnico") return null;
 
   const supabase = await createClient();
-  const [{ data: gestiones }, { data: eventos }, { data: cobertura }, { data: usuariosTec }, { data: eventosAbandono }] = await Promise.all([
+  const [{ data: gestiones }, eventos, { data: cobertura }, { data: usuariosTec }, { data: eventosAbandono }] = await Promise.all([
     supabase
       .from("gestiones")
       .select(
         "id, descripcion, etapa, urgencia, pagador, tecnico_id, propiedad_id, costo_final, cargo_admin, cargo_cancelacion, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
       ),
-    supabase
-      .from("eventos_gestion")
-      .select("gestion_id, de_etapa, a_etapa, creado_en")
-      .eq("tipo", "transicion"),
+    todosLosEventos(supabase),
     // STORY-954: capacidad = técnicos aprobados y activos por especialidad.
     supabase
       .from("tecnico_especialidades")
@@ -226,8 +246,9 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     pendientesLiquidacion: porLiquidar.length,
     montoPorLiquidar: porLiquidar.reduce((s, g) => s + Number(g.costo_final ?? 0), 0),
     filas,
-    eventos: (eventos ?? []).map((e) => ({
+    eventos: eventos.map((e) => ({
       gestionId: e.gestion_id,
+      tipo: e.tipo,
       deEtapa: e.de_etapa,
       aEtapa: e.a_etapa,
       creadoEn: e.creado_en,

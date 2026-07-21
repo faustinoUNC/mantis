@@ -441,7 +441,15 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     // span primer-entrada→última-salida se tragaba etapas intermedias e
     // inflaba el desvío de plazo del técnico nuevo).
     const porGestion = new Map<string, { aEtapa: string | null; deEtapa: string | null; t: number }[]>();
+    // STORY-1024: pausas por gestión — se descuentan del cumplimiento de plazo.
+    const pausasPorGestion = new Map<string, { tipo: "inicio" | "fin"; t: number }[]>();
     for (const e of metricas.eventos) {
+      if (e.tipo === "tecnico_no_continua" || e.tipo === "aviso_resuelto") {
+        const lista = pausasPorGestion.get(e.gestionId) ?? [];
+        lista.push({ tipo: e.tipo === "tecnico_no_continua" ? "inicio" : "fin", t: new Date(e.creadoEn).getTime() });
+        pausasPorGestion.set(e.gestionId, lista);
+        continue;
+      }
       if (e.aEtapa !== "en_ejecucion" && e.deEtapa !== "en_ejecucion") continue;
       const lista = porGestion.get(e.gestionId) ?? [];
       lista.push({ aEtapa: e.aEtapa, deEtapa: e.deEtapa, t: new Date(e.creadoEn).getTime() });
@@ -455,7 +463,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     for (const [id, evs] of porGestion) {
       const dias = ultimaEjecucionDias(evs);
       if (dias != null) dur.set(id, dias);
-      const diasPlazo = ejecucionParaPlazoDias(evs);
+      const diasPlazo = ejecucionParaPlazoDias(evs, pausasPorGestion.get(id) ?? []);
       if (diasPlazo != null) durPlazo.set(id, diasPlazo);
     }
     return { ejecucionPorGestion: dur, ejecucionPlazoPorGestion: durPlazo };
