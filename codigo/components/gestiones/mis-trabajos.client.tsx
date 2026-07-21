@@ -90,11 +90,13 @@ function TarjetaAccion({ g, cta }: { g: GestionResumen; cta: string }) {
             #{g.numero} · {hace(g.creado_en)}
           </span>
         </div>
-        <p className="font-semibold leading-snug mt-2.5">{g.descripcion}</p>
-        <p className="flex items-center gap-1.5 text-sm text-muted mt-1.5">
+        {/* La ubicación manda (consistente con la card del tablero): el
+            técnico piensa en "a dónde voy"; el detalle del problema, abajo. */}
+        <p className="flex items-center gap-1.5 font-semibold leading-snug mt-2.5">
           <Icono id="pin" size={14} />
           <span className="truncate">{g.direccion}</span>
         </p>
+        <p className="text-sm text-muted mt-1.5 line-clamp-2">{g.descripcion}</p>
         <span className="flex items-center justify-center gap-1.5 w-full min-h-tap mt-3.5 rounded-md bg-brand text-white text-sm font-semibold transition-colors group-hover:bg-brand-hover group-active:bg-brand-active">
           {cta}
           <Icono id="chevron" size={15} strokeWidth={2.2} />
@@ -114,14 +116,12 @@ function TarjetaSeguimiento({ g, estado }: { g: GestionResumen; estado: string }
         )}
       >
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium leading-snug truncate">
-            {g.descripcion}
-          </p>
-          <p className="flex items-center gap-1 text-[13px] text-muted mt-0.5">
+          <p className="flex items-center gap-1 text-sm font-medium leading-snug">
             <Icono id="pin" size={12} />
-            <span className="truncate">
-              {g.direccion} · {g.especialidad}
-            </span>
+            <span className="truncate">{g.direccion}</span>
+          </p>
+          <p className="text-[13px] text-muted mt-0.5 truncate">
+            {g.descripcion} · {g.especialidad}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
