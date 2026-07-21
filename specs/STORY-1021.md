@@ -1,6 +1,6 @@
 # STORY-1021 — Fotos del cliente en el inbox: los adjuntos del mail entran al sistema (v1.0)
 
-**Estado:** 🔨 en desarrollo · **Origen:** pedido directo de Fausti (2026-07-21): hoy, si un inquilino/propietario manda el reporte por mail con una foto, la foto se pierde silenciosamente — la ingesta solo extrae el texto y no queda ni rastro de que el mail traía adjuntos. La única forma de verla es abrir Gmail a mano.
+**Estado:** ✅ hecha (commit `bece00a`) · **Origen:** pedido directo de Fausti (2026-07-21): hoy, si un inquilino/propietario manda el reporte por mail con una foto, la foto se pierde silenciosamente — la ingesta solo extrae el texto y no queda ni rastro de que el mail traía adjuntos. La única forma de verla es abrir Gmail a mano.
 
 ## Problema
 
@@ -34,7 +34,7 @@ La sincronización Gmail → `inbox_reportes` (`codigo/features/inbox/sync.ts`) 
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente (espera OK de Fausti)_.
+- **Commit:** `bece00a`.
 - **Migración:** `story_1021_adjuntos_inbox` (aplicada): `inbox_reportes.adjuntos_paths text[] not null default '{}'` + `gestiones.fotos_reporte_paths text[] not null default '{}'`.
 - **Archivos:** `codigo/features/inbox/sync.ts` (`extraerImagenes` recorre las partes MIME; baja cada adjunto por la API de attachments de Gmail, lo sube a `gestiones/inbox/<gmail_message_id>/<i>-<nombre>` con `upsert: true` y guarda los paths en el insert del reporte; falla de un adjunto → el reporte entra igual, con log); `codigo/features/inbox/service.ts` (`Reporte.adjuntos_urls`, `listarInbox` firma URLs 1 h con el admin client; `crearDesdeReporte` toma `adjuntos_paths` del reclamo y los copia a `gestiones.fotos_reporte_paths` tras crear — mismos objetos, sin duplicar archivos); `codigo/features/gestiones/types.ts` + `service.ts` (`fotos_reporte_urls` en `GestionDetalle`/`obtenerGestion`, patrón `fotoConUrl`); `codigo/components/inbox/inbox.client.tsx` (galería de miniaturas bajo el cuerpo); `codigo/components/gestiones/detalle.client.tsx` (galería bajo la descripción, todos los roles).
 - **Verificación:** `tsc --noEmit` y eslint verdes. **E2E navegador** con mails reales a la casilla del inbox (enviados por la API de Gmail con las credenciales del sync): (1) mail con 1 foto → card del inbox con miniatura, click abre la imagen firmada; (2) convertir en gestión (#201, plomería) → "Fotos del reporte" bajo la descripción del detalle; (3) asignado a tecnicodos y logueado como él → ve la foto en su vista mobile antes de aceptar el trabajo; (4) mail con 3 fotos → 3 miniaturas en la card; (5) regresión: reporte sin adjuntos renderiza sin galería (caso visto en vivo: el cron de producción, con el código viejo, ingiere con `adjuntos_paths` vacío); (6) idempotencia intacta (auto-sync + cron sobre los mismos mails, sin duplicados; storage con `upsert`). Ojo para probar en local: el cron de Vercel (código viejo) gana la carrera del minuto — hasta el deploy, los mails nuevos entran sin fotos.
