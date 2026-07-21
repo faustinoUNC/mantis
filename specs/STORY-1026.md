@@ -1,4 +1,4 @@
-# STORY-1026 — Walter grafica: gráficos dinámicos en las respuestas de métricas (v1.1)
+# STORY-1026 — Walter grafica: gráficos dinámicos en las respuestas de métricas (v1.2)
 
 **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-21): que Walter muestre gráficos al responder métricas, como el Walter del MANTIS original pero "que ande mejor" — y que pueda armar cruces que no tienen reporte desarrollado (ej.: eficiencia por gestor).
 
@@ -72,6 +72,14 @@ Tres defectos reportados sobre la v1.0 en uso real:
 1. **Imágenes markdown inventadas ("me devolvió HTML")**: además de llamar a `graficar`, Haiku escribía en el texto imágenes markdown `![...](https://api.mantis.lat/graph?...)` — un servicio que NO existe (alucinado); el chat renderiza texto plano y eso quedaba como markup crudo. Fix en dos capas: (a) prohibición explícita en el prompt y en la descripción de `graficar` ("el ÚNICO gráfico es la tool; jamás imágenes markdown/URLs/HTML"); (b) defensa en `Texto` (walter.client.tsx): toda imagen markdown que igual llegue se descarta antes de renderizar.
 2. **No graficaba proactivamente** (había que pedírselo): la regla del prompt sola no alcanzó para Haiku. Fix: la regla se volvió imperativa ("una respuesta que compara sin gráfico está incompleta") **y** `metricas_negocio` devuelve un campo `recordatorio` empujando a llamar `graficar` — los modelos chicos leen el tool result con más atención que el system prompt. Verificado: "¿cómo viene el negocio este mes?" ahora sale con gráfico sin pedirlo.
 3. **Mes en curso sin aclarar + ruta `/metricas` muerta**: Walter mostraba julio (mes en curso) mientras las series del Inicio cortan en junio (decisión de STORY-919: `ventanaUtil` excluye el período parcial) — ahora el mes corriente sale etiquetado **"(en curso)"** en el gráfico (`armarGrafico`) y marcado `en_curso: true` en `metricas_negocio`, y el prompt le hace aclararlo. Y `/metricas` (solo un redirect legacy de STORY-912) se dejó de ofrecer: fuera de la whitelist (`EXTRA_POR_ROL`) y del prompt; los botones/menciones de "Informes" apuntan al Inicio del rol (`RUTA_POR_ROL`).
+
+## v1.2 — Datos frescos siempre + el refresh borra el historial (2026-07-21)
+
+Segundo reporte de Fausti: Walter respondió "Ya te lo mostré hace poco" reutilizando números viejos del **historial restaurado** (sessionStorage) sin volver a llamar las tools — y por eso tampoco graficó (nunca vio el `recordatorio` de `metricas_negocio`).
+
+1. **Regla de datos frescos** (prompt): ante CADA pregunta de datos se llaman las tools de nuevo; prohibido reutilizar números de mensajes anteriores o responder "ya te lo mostré". Verificado: la repregunta re-consulta en vez de repetir.
+2. **El refresh borra la conversación** (pedido explícito de Fausti): la persistencia de STORY-1015 queda SOLO para lo que debía resolver — los re-montajes de PanelShell al navegar entre secciones. Un F5 / carga nueva de la página arranca el chat de cero (flag de módulo `paginaYaViva` en walter.client.tsx; en carga fresca se purgan todas las claves `walter-chat:*`). Esto además achica la ventana del historial envenenado (#146) y de datos vencidos.
+3. **El Inicio también muestra el mes en curso** (cambio hermano en el panel, documentado en STORY-919 v1.2): `ventanaUtil` ya no oculta el período parcial — lo dibuja marcado y fuera de la tendencia. Walter y el Inicio quedan coherentes: los dos muestran julio, los dos avisan que está en curso.
 
 ## Dev Agent Record
 

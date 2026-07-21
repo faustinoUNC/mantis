@@ -67,6 +67,14 @@ function Texto({ contenido }: { contenido: string }) {
 
 type BotonNav = { label: string; ruta: string };
 
+// STORY-1026 v1.2 (pedido de Fausti): la conversación vive mientras la página
+// esté cargada — un refresh (F5) arranca de cero, porque el historial viejo
+// confunde (Walter llegó a responder "ya te lo mostré" con números vencidos).
+// Flag de MÓDULO: solo se resetea con una carga real de la página, no con los
+// re-montajes de PanelShell al navegar entre secciones — que era lo único que
+// la persistencia de STORY-1015 debía sobrevivir.
+let paginaYaViva = false;
+
 // Tamaño de la burbuja (size-13) y margen al que se "imanta" contra el borde.
 const TAM_BURBUJA = 52;
 const MARGEN = 8;
@@ -205,11 +213,20 @@ export function Walter({ rol, nombre, usuarioId }: { rol: Rol; nombre: string; u
         // Clave vieja sin usuario (previa a v1.1): se descarta, era legible
         // por cualquier login de la pestaña.
         sessionStorage.removeItem("walter-chat");
-        const guardado = sessionStorage.getItem(claveChat);
-        if (guardado) setMessages(limpiarPartesColgadas(JSON.parse(guardado)) as never);
+        if (!paginaYaViva) {
+          // Carga fresca de la página (refresh o entrada nueva): toda
+          // conversación guardada se descarta, de cualquier usuario.
+          for (const k of Object.keys(sessionStorage)) {
+            if (k.startsWith("walter-chat:")) sessionStorage.removeItem(k);
+          }
+        } else {
+          const guardado = sessionStorage.getItem(claveChat);
+          if (guardado) setMessages(limpiarPartesColgadas(JSON.parse(guardado)) as never);
+        }
       } catch {
         // sin conversación guardada, arranca vacío
       }
+      paginaYaViva = true;
       restaurado.current = true;
     });
     return () => cancelAnimationFrame(frame);

@@ -121,14 +121,20 @@ function rangoCubos(primeraMs: number, ahora: number, gran: Gran): { key: string
   }
   return out;
 }
-// Recorta la serie de cubos a la ventana que se puede leer sin engañar: saca el
-// último cubo (período EN CURSO, siempre parcial → se desploma en falso) y los
-// cubos vacíos del arranque (antes del primer dato → eje muerto + tendencia
-// hundida por ceros que no son "cayó", sino "todavía no había sistema").
-function ventanaUtil<T extends { key: string }>(cubos: T[], acum: Map<string, unknown>): T[] {
-  const sinCurso = cubos.slice(0, -1);
-  const first = sinCurso.findIndex((c) => acum.has(c.key));
-  return first < 0 ? [] : sinCurso.slice(first);
+// Recorta la serie de cubos a la ventana que se puede leer sin engañar: saca
+// los cubos vacíos del arranque (antes del primer dato → eje muerto + tendencia
+// hundida por ceros que no son "cayó", sino "todavía no había sistema") y marca
+// el último (período EN CURSO, siempre parcial): se DIBUJA para ver cómo viene
+// el mes —pedido de Fausti, coherente con Walter (STORY-1026)— pero la
+// tendencia no lo usa, porque un parcial siempre "cae" en falso.
+function ventanaUtil<T extends { key: string }>(
+  cubos: T[],
+  acum: Map<string, unknown>
+): (T & { enCurso: boolean })[] {
+  const first = cubos.findIndex((c) => acum.has(c.key));
+  if (first < 0) return [];
+  const util = cubos.slice(first);
+  return util.map((c, i) => ({ ...c, enCurso: i === util.length - 1 }));
 }
 
 // Regresión lineal (mínimos cuadrados) sobre el índice. Devuelve la línea
@@ -489,17 +495,21 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       acum.set(k, { total: cur.total + c.dias, n: cur.n + 1 });
     }
     const primera = Math.min(...cerradas.map((c) => c.fin));
-    // Se saca el período EN CURSO (último cubo, siempre parcial → cae en falso) y
-    // los cubos vacíos del arranque (antes del primer dato → ensucian el eje).
+    // El período EN CURSO se dibuja marcado "(en curso)"; la tendencia y el
+    // umbral de "pocos datos" solo cuentan períodos completos.
     const cubos = ventanaUtil(rangoCubos(desde ?? primera, ahora, gran), acum);
     const dias = cubos.map((c) => {
       const a = acum.get(c.key);
       return a ? Math.round((a.total / a.n) * 10) / 10 : null;
     });
-    const completos = dias.filter((d): d is number => d != null);
+    const completos = cubos.flatMap((c, i) => (!c.enCurso && dias[i] != null ? [dias[i] as number] : []));
     const tend = tendencia(completos);
     let ti = 0;
-    const data = cubos.map((c, i) => ({ label: c.label, dias: dias[i], tend: dias[i] != null && tend ? tend.yhat[ti++] : null }));
+    const data = cubos.map((c, i) => ({
+      label: c.enCurso ? `${c.label} (en curso)` : c.label,
+      dias: dias[i],
+      tend: !c.enCurso && dias[i] != null && tend ? tend.yhat[ti++] : null,
+    }));
     return { data, n: cerradas.length, pocos: completos.length < MIN_CUBOS_SERIE, diag: tend ? capTendencia(tend.m, gran, completos.length, "dias", false) : null };
   }, [filasEsp, desde, gran, ahora, metricas.eventos, ejecucionPorGestion]);
 
@@ -602,22 +612,24 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       acum.set(k, cur);
     }
     const primera = Math.min(...cobradas.map((f) => new Date(f.cobradoEn!).getTime()));
-    // Se saca el período EN CURSO (último cubo, parcial) y los cubos vacíos del
-    // arranque (los ceros de antes del primer cobro hundían la tendencia).
+    // El período EN CURSO se dibuja (barra atenuada, "(en curso)" en el
+    // tooltip); la tendencia y "pocos datos" solo cuentan períodos completos.
     const cubos = ventanaUtil(rangoCubos(desde ?? primera, ahora, gran), acum);
-    const nComplete = cubos.length; // cubos usados en la tendencia
+    const cubosCompletos = cubos.filter((c) => !c.enCurso);
+    const nComplete = cubosCompletos.length; // cubos usados en la tendencia
     // Tendencia POR serie (no del total): solo se muestra al aislar una serie.
-    const tendTec = tendencia(cubos.map((c) => acum.get(c.key)?.tecnico ?? 0));
-    const tendFee = tendencia(cubos.map((c) => acum.get(c.key)?.fee ?? 0));
+    const tendTec = tendencia(cubosCompletos.map((c) => acum.get(c.key)?.tecnico ?? 0));
+    const tendFee = tendencia(cubosCompletos.map((c) => acum.get(c.key)?.fee ?? 0));
     const data = cubos.map((c, i) => {
       const a = acum.get(c.key) ?? { tecnico: 0, fee: 0 };
       return {
-        label: c.label, tecnico: a.tecnico, fee: a.fee,
-        tendTec: tendTec ? tendTec.yhat[i] : null,
-        tendFee: tendFee ? tendFee.yhat[i] : null,
+        label: c.enCurso ? `${c.label} (en curso)` : c.label,
+        tecnico: a.tecnico, fee: a.fee, enCurso: c.enCurso,
+        tendTec: !c.enCurso && tendTec ? tendTec.yhat[i] : null,
+        tendFee: !c.enCurso && tendFee ? tendFee.yhat[i] : null,
       };
     });
-    const nonEmpty = cubos.filter((c) => acum.has(c.key)).length;
+    const nonEmpty = cubosCompletos.filter((c) => acum.has(c.key)).length;
     return {
       data, n: cobradas.length, pocos: nonEmpty < MIN_CUBOS_SERIE,
       diagTec: tendTec ? capTendencia(tendTec.m, gran, nComplete, "plata", true) : null,
@@ -809,7 +821,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={ciclo.data} margin={{ left: 8, right: 8 }}>
                   <CartesianGrid stroke={GRID} vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} />
+                  {/* El "(en curso)" queda para el tooltip; en el eje clipearía. */}
+                  <XAxis dataKey="label" tickFormatter={(l: string) => l.replace(" (en curso)", "")} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} />
                   <YAxis tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v}d`} />
                   <Tooltip cursor={{ stroke: GRID }} content={<TooltipCaja render={(p) => <p className="text-muted">{p.find((r) => r.name === "dias")?.value ?? "—"} días promedio</p>} />} />
                   <Line type="monotone" dataKey="dias" stroke={BRAND} strokeWidth={2} dot={{ r: 3, fill: BRAND }} connectNulls />
@@ -850,15 +863,20 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
               <ResponsiveContainer width="100%" height={244}>
                 <ComposedChart data={dinero.data} margin={{ left: 8, right: 8 }}>
                   <CartesianGrid stroke={GRID} vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} />
+                  {/* El "(en curso)" queda para el tooltip; en el eje clipearía. */}
+                  <XAxis dataKey="label" tickFormatter={(l: string) => l.replace(" (en curso)", "")} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} />
                   <YAxis tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} tickFormatter={plataCorta} />
                   <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => {
                     const tecnico = p.find((r) => r.name === "tecnico")?.value ?? 0;
                     const fee = p.find((r) => r.name === "fee")?.value ?? 0;
                     return (<><p className="text-muted">Trabajo del técnico: {plata(tecnico)}</p><p className="text-muted">Ganancia inmobiliaria: {plata(fee)}</p><p className="font-medium mt-0.5">Total: {plata(tecnico + fee)}</p></>);
                   }} />} />
-                  <Bar dataKey="tecnico" stackId="a" fill={BRAND} maxBarSize={48} hide={ingresosOcultas.tecnico} />
-                  <Bar dataKey="fee" stackId="a" fill={AMBAR} radius={[3, 3, 0, 0]} maxBarSize={48} hide={ingresosOcultas.fee} />
+                  <Bar dataKey="tecnico" stackId="a" fill={BRAND} maxBarSize={48} hide={ingresosOcultas.tecnico}>
+                    {dinero.data.map((d) => (<Cell key={d.label} fillOpacity={d.enCurso ? 0.55 : 1} />))}
+                  </Bar>
+                  <Bar dataKey="fee" stackId="a" fill={AMBAR} radius={[3, 3, 0, 0]} maxBarSize={48} hide={ingresosOcultas.fee}>
+                    {dinero.data.map((d) => (<Cell key={d.label} fillOpacity={d.enCurso ? 0.55 : 1} />))}
+                  </Bar>
                   {/* La tendencia se muestra SOLO al aislar una serie (la de esa serie). */}
                   {soloTecnico && <Line type="monotone" dataKey="tendTec" stroke={TENDENCIA} strokeWidth={1.5} strokeDasharray="4 4" dot={false} />}
                   {soloFee && <Line type="monotone" dataKey="tendFee" stroke={TENDENCIA} strokeWidth={1.5} strokeDasharray="4 4" dot={false} />}

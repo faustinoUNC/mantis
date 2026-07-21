@@ -1,4 +1,6 @@
-# STORY-919 — Retoques del dashboard de métricas (post carga demo) (v1.1)
+# STORY-919 — Retoques del dashboard de métricas (post carga demo) (v1.2)
+
+> **Cambios v1.2 (2026-07-21):** las series temporales ("Tiempo de ciclo" e "Ingresos cobrados") vuelven a **mostrar el período en curso** — pedido de Fausti al ver que Walter (STORY-1026) muestra julio y el panel cortaba en junio. `ventanaUtil` ya no descarta el último cubo: lo marca `enCurso` y se dibuja (barra atenuada en Ingresos; "(en curso)" en el tooltip — el eje lo omite para no clipear), pero la **tendencia y el umbral de "pocos datos" siguen contando solo períodos completos** (la corrección anti-sesgo de la v1.0 sigue vigente: la línea punteada termina en el último período completo).
 
 > **Cambios v1.1 (2026-07-13):** la card **"Rechazos por tipo" se ELIMINÓ** del dashboard por decisión de Fausti — "no es valiosa para el negocio". Con ella se fue su código de soporte: memo `rechazos`/`totalRechazos` del panel, la constante `ROJO`, el campo `EventoMetrica.tipo` y el fetch de eventos `asignacion_rechazada` (el service vuelve a traer solo `transicion`). No re-proponer esta métrica (queda también en Descartados de `tasks/PENDIENTES.md`).
 
