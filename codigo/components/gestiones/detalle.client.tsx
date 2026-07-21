@@ -2218,6 +2218,23 @@ export function DetalleGestion({
         {gestion.descripcion}
       </h1>
 
+      {/* STORY-1021: fotos que el cliente adjuntó al mail del reporte (inbox) —
+          las ven todos los roles; al técnico le muestran el problema antes de ir. */}
+      {gestion.fotos_reporte_urls.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {gestion.fotos_reporte_urls.map((url, i) => (
+            <a key={url} href={url} target="_blank" rel="noreferrer" className="shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt={`Foto del reporte ${i + 1}`}
+                className="rounded-md h-24 border border-border object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      )}
+
       {/* STORY-1001: nació vinculada a otra gestión (trabajo adicional
           descubierto en la inspección/ejecución de aquella). Bajo la RLS del
           técnico el origen puede no ser visible → la línea no se muestra. */}

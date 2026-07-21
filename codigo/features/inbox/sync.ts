@@ -29,7 +29,8 @@ function decodificarBase64Url(datos: string): string {
 
 type ParteGmail = {
   mimeType?: string;
-  body?: { data?: string };
+  filename?: string;
+  body?: { data?: string; attachmentId?: string; size?: number };
   parts?: ParteGmail[];
 };
 
@@ -42,6 +43,27 @@ function extraerTexto(parte: ParteGmail): string | null {
     if (texto) return texto;
   }
   return null;
+}
+
+// STORY-1021: adjuntos de imagen del mail (la foto del problema que manda el
+// cliente). Solo image/*, hasta 10 MB cada uno — lo demás sigue en Gmail.
+type AdjuntoImagen = { attachmentId: string; mimeType: string; filename: string };
+
+function extraerImagenes(parte: ParteGmail): AdjuntoImagen[] {
+  const imagenes: AdjuntoImagen[] = [];
+  if (
+    parte.mimeType?.startsWith("image/") &&
+    parte.body?.attachmentId &&
+    (parte.body.size ?? 0) <= 10 * 1024 * 1024
+  ) {
+    imagenes.push({
+      attachmentId: parte.body.attachmentId,
+      mimeType: parte.mimeType,
+      filename: parte.filename || "foto",
+    });
+  }
+  for (const p of parte.parts ?? []) imagenes.push(...extraerImagenes(p));
+  return imagenes;
 }
 
 export async function ejecutarSincronizacion(): Promise<
@@ -115,11 +137,38 @@ export async function ejecutarSincronizacion(): Promise<
     const cuerpo =
       (msg.payload ? extraerTexto(msg.payload) : null) ?? msg.snippet ?? "";
 
+    // STORY-1021: bajar las fotos adjuntas al bucket ANTES del insert, así el
+    // reporte nace con sus paths. Si una falla, el reporte entra igual con las
+    // que se pudieron bajar — la foto es complemento, no gate.
+    const adjuntosPaths: string[] = [];
+    const imagenes = msg.payload ? extraerImagenes(msg.payload).slice(0, 5) : [];
+    for (const [i, img] of imagenes.entries()) {
+      const adjRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}/attachments/${img.attachmentId}`,
+        { headers: auth }
+      );
+      if (!adjRes.ok) continue;
+      const adj = (await adjRes.json()) as { data?: string };
+      if (!adj.data) continue;
+      const bytes = Buffer.from(
+        adj.data.replace(/-/g, "+").replace(/_/g, "/"),
+        "base64"
+      );
+      const nombre = img.filename.replace(/[^\w.\-]/g, "_").slice(-60);
+      const path = `inbox/${msg.id}/${i}-${nombre}`;
+      const { error: errSubida } = await admin.storage
+        .from("gestiones")
+        .upload(path, bytes, { contentType: img.mimeType, upsert: true });
+      if (!errSubida) adjuntosPaths.push(path);
+      else console.error(`inbox/sync: no se pudo subir ${path}: ${errSubida.message}`);
+    }
+
     const { error } = await admin.from("inbox_reportes").insert({
       gmail_message_id: msg.id,
       remitente: header("From"),
       asunto: header("Subject"),
       cuerpo: cuerpo.slice(0, 5000),
+      adjuntos_paths: adjuntosPaths,
       recibido_en: msg.internalDate
         ? new Date(Number(msg.internalDate)).toISOString()
         : null,

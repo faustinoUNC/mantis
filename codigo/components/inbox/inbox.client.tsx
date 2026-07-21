@@ -89,6 +89,21 @@ function ReporteCard({
           {reporte.cuerpo}
         </p>
       )}
+      {/* STORY-1021: fotos que el cliente adjuntó al mail */}
+      {reporte.adjuntos_urls.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-3">
+          {reporte.adjuntos_urls.map((url, i) => (
+            <a key={url} href={url} target="_blank" rel="noreferrer" className="shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt={`Foto adjunta ${i + 1}`}
+                className="rounded-md h-20 border border-border object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      )}
 
       {modo === "ninguno" && (
         <div className="flex flex-wrap gap-2 mt-4">

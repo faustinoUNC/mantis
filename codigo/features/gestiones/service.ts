@@ -284,7 +284,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, adelanto_materiales, nota_emitida_en, presupuesto_enviado_en, archivada_en, aviso_no_continua_motivo, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, fotos_reporte_paths, adelanto_materiales, nota_emitida_en, presupuesto_enviado_en, archivada_en, aviso_no_continua_motivo, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -342,6 +342,7 @@ export async function obtenerGestion(
     cargo_cancelacion: number | null;
     materiales_total: number | null;
     materiales_fotos_paths: string[] | null;
+    fotos_reporte_paths: string[] | null;
     adelanto_materiales: number | null;
     nota_emitida_en: string | null;
     presupuesto_enviado_en: string | null;
@@ -377,6 +378,9 @@ export async function obtenerGestion(
       fila.adelanto_materiales == null ? null : Number(fila.adelanto_materiales),
     materiales_fotos_urls: (
       await Promise.all((fila.materiales_fotos_paths ?? []).map(fotoConUrl))
+    ).filter((u): u is string => u != null),
+    fotos_reporte_urls: (
+      await Promise.all((fila.fotos_reporte_paths ?? []).map(fotoConUrl))
     ).filter((u): u is string => u != null),
     nota_emitida_en: fila.nota_emitida_en,
     presupuesto_enviado_en: fila.presupuesto_enviado_en,

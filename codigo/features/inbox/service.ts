@@ -5,6 +5,7 @@ import { obtenerUsuarioActual } from "@/features/auth/service";
 import type { ActionResult } from "@/features/empleados/types";
 import { crearGestion } from "@/features/gestiones/service";
 import type { Urgencia } from "@/features/gestiones/types";
+import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 
 export interface Reporte {
@@ -17,6 +18,8 @@ export interface Reporte {
   estado: "pendiente" | "gestionado" | "descartado";
   motivo_descarte: string | null;
   gestion_id: string | null;
+  // STORY-1021: fotos adjuntas del mail del cliente (URLs firmadas, 1 h)
+  adjuntos_urls: string[];
 }
 
 async function exigirStaffMantenimiento() {
@@ -48,12 +51,32 @@ export async function listarInbox(): Promise<Reporte[]> {
   const { data } = await supabase
     .from("inbox_reportes")
     .select(
-      "id, canal, remitente, asunto, cuerpo, recibido_en, estado, motivo_descarte, gestion_id"
+      "id, canal, remitente, asunto, cuerpo, recibido_en, estado, motivo_descarte, gestion_id, adjuntos_paths"
     )
     .eq("estado", "pendiente") // lo procesado vive en sus gestiones/auditoría
     .order("creado_en", { ascending: false })
     .limit(50);
-  return (data ?? []) as Reporte[];
+
+  const admin = createAdminClient();
+  return Promise.all(
+    (data ?? []).map(async (fila) => {
+      const { adjuntos_paths, ...resto } = fila as Omit<Reporte, "adjuntos_urls"> & {
+        adjuntos_paths: string[] | null;
+      };
+      const urls = await Promise.all(
+        (adjuntos_paths ?? []).map(async (path) => {
+          const { data: firmada } = await admin.storage
+            .from("gestiones")
+            .createSignedUrl(path, 3600);
+          return firmada?.signedUrl ?? null;
+        })
+      );
+      return {
+        ...resto,
+        adjuntos_urls: urls.filter((u): u is string => u != null),
+      };
+    })
+  );
 }
 
 export async function descartarReporte(
@@ -101,7 +124,7 @@ export async function crearDesdeReporte(
     .update({ estado: "gestionado", procesado_por: actual.id })
     .eq("id", reporteId)
     .eq("estado", "pendiente")
-    .select("id");
+    .select("id, adjuntos_paths");
   if (!reclamado?.length) {
     revalidatePath("/inbox");
     return { ok: false, error: "El reporte ya fue procesado por otra persona." };
@@ -122,6 +145,16 @@ export async function crearDesdeReporte(
     .from("inbox_reportes")
     .update({ gestion_id: r.data.gestionId })
     .eq("id", reporteId);
+
+  // STORY-1021: las fotos del mail viajan a la gestión (mismos objetos del
+  // bucket, solo se copian los paths) — el técnico ve el problema antes de ir.
+  const adjuntos = (reclamado[0] as { adjuntos_paths: string[] | null }).adjuntos_paths;
+  if (adjuntos?.length) {
+    await createAdminClient()
+      .from("gestiones")
+      .update({ fotos_reporte_paths: adjuntos })
+      .eq("id", r.data.gestionId);
+  }
 
   revalidatePath("/inbox");
   return { ok: true, data: { gestionId: r.data.gestionId } };
