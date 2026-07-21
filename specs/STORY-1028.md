@@ -1,6 +1,6 @@
 # STORY-1028 — El botón de expandir el panel lateral no desaparece en pantallas bajas (v1.0)
 
-**Estado:** ✅ implementada y verificada E2E (commit pendiente) · **Origen:** card Trello #151 "No puedo volver a poner el panel lateral como antes. El botón para ampliarlo desapareció" (tester, 2026-07-21). Screenshot: ventana de 656 px de alto, sidebar colapsado a rail de íconos, sin chevron visible → el usuario queda atrapado en el rail.
+**Estado:** ✅ hecha (commit `23c90c5`) · **Origen:** card Trello #151 "No puedo volver a poner el panel lateral como antes. El botón para ampliarlo desapareció" (tester, 2026-07-21). Screenshot: ventana de 656 px de alto, sidebar colapsado a rail de íconos, sin chevron visible → el usuario queda atrapado en el rail.
 
 ## Problema
 
@@ -28,6 +28,6 @@ El rail colapsado (STORY-989 v1.1) usa `overflow-visible` en el `<nav>` para que
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente_.
+- **Commit:** `23c90c5`.
 - **Archivos:** `codigo/components/paneles/sidebar.client.tsx` (nav del rail: `min-h-0 overflow-y-auto` bajo `@media (max-height:50rem)`; tooltips `hidden` en el mismo caso).
 - **Verificación:** `tsc --noEmit` + eslint verdes. **E2E** (Playwright, rol admin = 10 ítems, la ventana del tester 1357×656): colapsado → el chevron de expandir y el pie quedan visibles, los íconos scrollean, y el botón expande de vuelta ✅. **Regresión** en 1357×900: rail sin scroll, tooltip "Finanzas" visible a la derecha, chevron abajo ✅. Modo expandido intacto en ambas alturas.
