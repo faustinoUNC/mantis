@@ -151,12 +151,35 @@ function SaldarAdelanto({
   );
 }
 
+// STORY-1029: par label/valor de los carteles de adelanto — el monto en mono,
+// en ámbar fuerte solo cuando sigue abierto (un acento un significado).
+function MontoConstancia({
+  label,
+  monto,
+  alerta,
+}: {
+  label: string;
+  monto: number;
+  alerta?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-[12px] font-medium text-muted">{label}</p>
+      <p className={`font-mono text-sm font-semibold ${alerta ? "text-urgente-fuerte" : ""}`}>
+        {plata(monto)}
+      </p>
+    </div>
+  );
+}
+
 function DatosGestion({
   gestion,
   esAdministrativo,
+  esTecnico,
 }: {
   gestion: GestionDetalle;
   esAdministrativo: boolean;
+  esTecnico: boolean;
 }) {
   // STORY-1014: adelantos entregados a técnicos que salieron de la gestión —
   // constancia permanente (se lee del historial congelado; la columna viva se
@@ -259,8 +282,11 @@ function DatosGestion({
           </Dato>
         )}
       </div>
-      {(adelantosSalientes.length > 0 || canceladaConAdelanto || sobrantes.length > 0) && (
-        <div className="mt-4 rounded-md border border-urgente-fuerte/30 bg-urgente-fuerte/5 px-4 py-3 flex flex-col gap-2">
+      {/* STORY-1029: la plata con un técnico que salió es un arreglo interno
+          inmobiliaria↔técnico — el técnico entrante no la ve. */}
+      {!esTecnico &&
+        (adelantosSalientes.length > 0 || canceladaConAdelanto || sobrantes.length > 0) && (
+        <div className="mt-4 rounded-md border border-urgente-soft-border bg-urgente-soft px-4 py-3 flex flex-col gap-4">
           {adelantosSalientes.map((e) => {
             const monto = Number(e.detalle?.adelanto_saliente);
             const devuelto = Number(e.detalle?.devolucion_adelanto ?? 0);
@@ -271,22 +297,36 @@ function DatosGestion({
             const nombre =
               typeof saliente === "string" && !/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(saliente)
                 ? saliente
-                : "El técnico saliente";
+                : "Técnico saliente";
             const saldado = saldadoDe(e.id, "desasignacion");
+            const resuelto = pendiente <= 0 || Boolean(saldado);
             return (
-              <div key={e.id} className="flex flex-col gap-1.5">
-                <p className="text-sm text-urgente-fuerte">
-                  {nombre} recibió{" "}
-                  <span className="font-mono font-semibold">{plata(monto)}</span>{" "}
-                  en adelantos antes de ser desasignado ({fechaHora(e.creado_en)})
-                  {devuelto > 0 && <> — devolvió/ajustó <span className="font-mono">{plata(devuelto)}</span></>}
-                  {pendiente <= 0
-                    ? <> — saldado en el acto.</>
-                    : saldado
-                      ? <> — <span className="font-semibold">saldado el {fechaHora(saldado.creado_en)}</span>{saldado.detalle?.nota ? <>: {String(saldado.detalle.nota)}</> : null}.</>
-                      : <> — quedan <span className="font-mono font-semibold">{plata(pendiente)}</span> a resolver con el técnico, fuera del sistema.</>}
-                </p>
-                {pendiente > 0 && !saldado && esAdministrativo && (
+              <div key={e.id} className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-sm font-semibold">{nombre}</p>
+                  <span className="text-[12px] text-muted">
+                    desasignado · {fechaHora(e.creado_en)}
+                  </span>
+                  <Badge tono={resuelto ? "neutro" : "urgente"} className="ml-auto">
+                    {resuelto ? "Saldado" : "A resolver"}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-x-6 gap-y-1.5">
+                  <MontoConstancia label="Adelanto" monto={monto} />
+                  {devuelto > 0 && (
+                    <MontoConstancia label="Devolvió en el acto" monto={devuelto} />
+                  )}
+                  {!resuelto && (
+                    <MontoConstancia label="Pendiente" monto={pendiente} alerta />
+                  )}
+                </div>
+                {saldado && (
+                  <p className="text-[12px] text-muted">
+                    Saldado el {fechaHora(saldado.creado_en)}
+                    {saldado.detalle?.nota ? ` — ${String(saldado.detalle.nota)}` : ""}
+                  </p>
+                )}
+                {!resuelto && esAdministrativo && (
                   <SaldarAdelanto gestionId={gestion.id} origen="desasignacion" origenEventoId={e.id} />
                 )}
               </div>
@@ -295,15 +335,31 @@ function DatosGestion({
           {canceladaConAdelanto && (() => {
             const saldado = saldadoDe(null, "cancelacion");
             return (
-              <div className="flex flex-col gap-1.5">
-                <p className="text-sm text-urgente-fuerte">
-                  {gestion.tecnico_nombre ?? "El técnico"} tenía{" "}
-                  <span className="font-mono font-semibold">{plata(gestion.adelanto_materiales!)}</span>{" "}
-                  en adelantos cuando la gestión se canceló
-                  {saldado
-                    ? <> — <span className="font-semibold">saldado el {fechaHora(saldado.creado_en)}</span>{saldado.detalle?.nota ? <>: {String(saldado.detalle.nota)}</> : null}.</>
-                    : <> — a resolver con el técnico, fuera del sistema.</>}
-                </p>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-sm font-semibold">
+                    {gestion.tecnico_nombre ?? "El técnico"}
+                  </p>
+                  <span className="text-[12px] text-muted">
+                    tenía adelanto al cancelarse la gestión
+                  </span>
+                  <Badge tono={saldado ? "neutro" : "urgente"} className="ml-auto">
+                    {saldado ? "Saldado" : "A resolver"}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-x-6 gap-y-1.5">
+                  <MontoConstancia
+                    label="Adelanto"
+                    monto={Number(gestion.adelanto_materiales)}
+                    alerta={!saldado}
+                  />
+                </div>
+                {saldado && (
+                  <p className="text-[12px] text-muted">
+                    Saldado el {fechaHora(saldado.creado_en)}
+                    {saldado.detalle?.nota ? ` — ${String(saldado.detalle.nota)}` : ""}
+                  </p>
+                )}
                 {!saldado && esAdministrativo && (
                   <SaldarAdelanto gestionId={gestion.id} origen="cancelacion" origenEventoId={null} />
                 )}
@@ -314,15 +370,25 @@ function DatosGestion({
             const sobrante = Number(e.detalle?.sobrante);
             const saldado = saldadoDe(e.id, "sobrante");
             return (
-              <div key={e.id} className="flex flex-col gap-1.5">
-                <p className="text-sm text-urgente-fuerte">
-                  El adelanto superó lo debido al liquidar por{" "}
-                  <span className="font-mono font-semibold">{plata(sobrante)}</span>{" "}
-                  ({fechaHora(e.creado_en)})
-                  {saldado
-                    ? <> — <span className="font-semibold">saldado el {fechaHora(saldado.creado_en)}</span>{saldado.detalle?.nota ? <>: {String(saldado.detalle.nota)}</> : null}.</>
-                    : <> — a resolver con el técnico, fuera del sistema.</>}
-                </p>
+              <div key={e.id} className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-sm font-semibold">Sobrante de liquidación</p>
+                  <span className="text-[12px] text-muted">
+                    el adelanto superó lo debido · {fechaHora(e.creado_en)}
+                  </span>
+                  <Badge tono={saldado ? "neutro" : "urgente"} className="ml-auto">
+                    {saldado ? "Saldado" : "A resolver"}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-x-6 gap-y-1.5">
+                  <MontoConstancia label="Sobrante" monto={sobrante} alerta={!saldado} />
+                </div>
+                {saldado && (
+                  <p className="text-[12px] text-muted">
+                    Saldado el {fechaHora(saldado.creado_en)}
+                    {saldado.detalle?.nota ? ` — ${String(saldado.detalle.nota)}` : ""}
+                  </p>
+                )}
                 {!saldado && esAdministrativo && (
                   <SaldarAdelanto gestionId={gestion.id} origen="sobrante" origenEventoId={e.id} />
                 )}
@@ -1640,6 +1706,9 @@ function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
 function DesasignarTecnico({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const [abierto, setAbierto] = useState(false);
+  // STORY-1030: campo de plata controlado — letras y símbolos no se pueden
+  // tipear (mismo patrón que "Monto a adelantar ahora" de finanzas.client).
+  const [devolucion, setDevolucion] = useState("");
   const adelanto = Number(gestion.adelanto_materiales ?? 0);
 
   if (!abierto) {
@@ -1669,7 +1738,7 @@ function DesasignarTecnico({ gestion }: { gestion: GestionDetalle }) {
               gestion.id,
               String(form.get("motivo")),
               form.get("abandono") === "on",
-              Number(String(form.get("devolucion") ?? "").replace(/[^\d.]/g, "")) || undefined
+              Number(devolucion) || undefined
             )
           );
         }}
@@ -1679,26 +1748,34 @@ function DesasignarTecnico({ gestion }: { gestion: GestionDetalle }) {
           evaluación, presupuesto y rendición. El historial y las fotos de{" "}
           {gestion.tecnico_nombre ?? "el técnico saliente"} se conservan.
         </p>
+        {/* STORY-1029: cartel corto y estructurado — el monto manda, el
+            contexto es una línea. */}
         {adelanto > 0 && (
-          <div className="rounded-md border border-urgente-fuerte/30 bg-urgente-fuerte/5 px-4 py-3 flex flex-col gap-2">
-            <p className="text-sm text-urgente-fuerte">
-              {gestion.tecnico_nombre ?? "Este técnico"} recibió{" "}
-              <span className="font-semibold font-mono">{plata(adelanto)}</span>{" "}
-              en adelantos de materiales. Queda registrado en el historial — la
-              devolución o el ajuste se arregla con el técnico por fuera del
-              sistema. Al nuevo técnico no se le descuenta nada de esto.
+          <div className="rounded-md border border-urgente-soft-border bg-urgente-soft px-4 py-3 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-urgente-fuerte">
+                Adelanto en su mano
+              </p>
+              <span className="font-mono text-[15px] font-semibold text-urgente-fuerte">
+                {plata(adelanto)}
+              </span>
+            </div>
+            <p className="text-[12px] text-muted">
+              Queda registrado en el historial y se arregla con él por fuera
+              del sistema. Al nuevo técnico no se le descuenta nada.
             </p>
             <div className="w-52">
               <Input
                 label="Devolución / ajuste en el acto (opcional)"
-                name="devolucion"
                 inputMode="decimal"
+                value={devolucion}
+                onChange={(e) => setDevolucion(e.target.value.replace(/[^\d.]/g, ""))}
                 placeholder="0"
               />
             </div>
             <p className="text-[12px] text-muted">
-              Efectivo que devuelve ahora, o el valor acordado de materiales
-              que ya compró y quedan en la obra.
+              Efectivo que devuelve ahora, o el valor de materiales que quedan
+              en la obra.
             </p>
           </div>
         )}
@@ -1926,17 +2003,56 @@ function FechaItem({ fecha }: { fecha: string }) {
   );
 }
 
-function Actividad({ gestion }: { gestion: GestionDetalle }) {
+function Actividad({ gestion, esTecnico }: { gestion: GestionDetalle; esTecnico: boolean }) {
+  // STORY-1029: la contabilidad del adelanto con un saliente es interna —
+  // al técnico no le llegan los saldados, los montos congelados en la
+  // desasignación ni los adelantos registrados de una tenencia anterior
+  // (los propios solo pueden existir después de la última desasignación;
+  // el motivo y el saliente sí se ven, son contexto de obra).
+  const ultimaDesasignacion = esTecnico
+    ? gestion.eventos
+        .filter(
+          (e) =>
+            e.tipo === "transicion" && e.a_etapa === "asignacion" && e.detalle?.tecnico_saliente
+        )
+        .sort((a, b) => b.creado_en.localeCompare(a.creado_en))[0]
+    : undefined;
+  const eventos = esTecnico
+    ? gestion.eventos
+        .filter((e) => e.tipo !== "adelanto_saldado")
+        .filter(
+          (e) =>
+            !(
+              e.tipo === "adelanto_materiales_registrado" &&
+              ultimaDesasignacion &&
+              e.creado_en <= ultimaDesasignacion.creado_en
+            )
+        )
+        .map((e) => {
+          if (
+            !e.detalle ||
+            (e.detalle.adelanto_saliente == null && e.detalle.devolucion_adelanto == null)
+          )
+            return e;
+          const resto = Object.fromEntries(
+            Object.entries(e.detalle).filter(
+              ([k]) => k !== "adelanto_saliente" && k !== "devolucion_adelanto"
+            )
+          );
+          return { ...e, detalle: resto };
+        })
+    : gestion.eventos;
+
   // STORY-969: la evidencia de la rendición no desaparece al aprobar la
   // conformidad — el evento de rendición lleva la galería. Solo el MÁS
   // reciente: las fotos de la gestión son las de la última rendición (una
   // vieja de un técnico desasignado ya no las tiene).
-  const ultimaRendicion = gestion.eventos
+  const ultimaRendicion = eventos
     .filter((e) => e.tipo === "materiales_rendidos")
     .sort((a, b) => b.creado_en.localeCompare(a.creado_en))[0];
 
   const items: ItemActividad[] = [
-    ...gestion.eventos.map((e): ItemActividad =>
+    ...eventos.map((e): ItemActividad =>
       e.tipo === "transicion" && e.a_etapa === "cancelada"
         ? {
             clase: "evento",
@@ -2260,7 +2376,11 @@ export function DetalleGestion({
 
       {gestion.etapa !== "cancelada" && <EtapaStepper etapa={gestion.etapa} />}
 
-      <DatosGestion gestion={gestion} esAdministrativo={esAdministrativo} />
+      <DatosGestion
+        gestion={gestion}
+        esAdministrativo={esAdministrativo}
+        esTecnico={usuario.rol === "tecnico"}
+      />
 
       {/* STORY-1001: gestiones que surgieron de esta — fila simple con link
           cruzado y etapa a la vista. Sin visor gráfico (Regla #0). */}
@@ -2454,7 +2574,7 @@ export function DetalleGestion({
 
       {esAdmin && <ReasignarGestor gestion={gestion} gestores={gestores} />}
 
-      <Actividad gestion={gestion} />
+      <Actividad gestion={gestion} esTecnico={usuario.rol === "tecnico"} />
     </div>
   );
 }
