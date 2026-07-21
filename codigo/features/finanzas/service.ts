@@ -785,6 +785,108 @@ export async function registrarAdelantoMateriales(
   return { ok: true };
 }
 
+// STORY-1019: cierre MANUAL de un adelanto "a resolver" (desasignación,
+// cancelación o sobrante de liquidación). No es cobranza: registra el hecho
+// de que se arregló, con nota obligatoria (la constancia de CÓMO). Los hechos
+// congelados no se editan — el estado cambia agregando este evento; la
+// derivación de features/finanzas/consultas.ts lo lee para cerrar el ítem.
+// El monto y el técnico se recalculan del hecho de origen (no se confía en
+// el form). Sin fila en matriz_notificaciones: no notifica (el que salda es
+// el que registra).
+export async function marcarAdelantoSaldado(
+  gestionId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const actual = await exigirAdministrativo();
+  if (!actual) return { ok: false, error: "No tenés permiso." };
+  const nota = String(formData.get("nota") ?? "").trim();
+  if (!nota) {
+    return { ok: false, error: "Contá cómo se arregló — la nota es la constancia." };
+  }
+  const origen = String(formData.get("origen") ?? "");
+  const origenEventoId = String(formData.get("origen_evento_id") ?? "") || null;
+  if (!["desasignacion", "cancelacion", "sobrante"].includes(origen)) {
+    return { ok: false, error: "Origen inválido." };
+  }
+
+  const admin = createAdminClient();
+  // Recalcular monto + técnico desde el hecho de origen.
+  let monto = 0;
+  let tecnicoId: string | null = null;
+  if (origen === "cancelacion") {
+    const { data: g } = await admin
+      .from("gestiones")
+      .select("etapa, adelanto_materiales, tecnico_id")
+      .eq("id", gestionId)
+      .single();
+    const fila = g as unknown as { etapa: string; adelanto_materiales: number | null; tecnico_id: string | null } | null;
+    if (!fila || fila.etapa !== "cancelada" || Number(fila.adelanto_materiales ?? 0) <= 0) {
+      return { ok: false, error: "Esta gestión no tiene un adelanto a resolver por cancelación." };
+    }
+    monto = Number(fila.adelanto_materiales);
+    tecnicoId = fila.tecnico_id;
+  } else {
+    if (!origenEventoId) return { ok: false, error: "Falta el evento de origen." };
+    const { data: e } = await admin
+      .from("eventos_gestion")
+      .select("id, gestion_id, detalle")
+      .eq("id", origenEventoId)
+      .eq("gestion_id", gestionId)
+      .single();
+    const ev = e as unknown as { detalle: Record<string, unknown> | null } | null;
+    if (!ev) return { ok: false, error: "No se encontró el registro de origen." };
+    if (origen === "desasignacion") {
+      const entregado = Number(ev.detalle?.adelanto_saliente ?? 0);
+      const devuelto = Number(ev.detalle?.devolucion_adelanto ?? 0);
+      monto = Math.max(entregado - devuelto, 0);
+      const saliente = String(ev.detalle?.tecnico_saliente ?? "");
+      tecnicoId = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(saliente) ? saliente : null;
+    } else {
+      monto = Number(ev.detalle?.sobrante ?? 0);
+      const { data: g } = await admin
+        .from("gestiones")
+        .select("tecnico_id")
+        .eq("id", gestionId)
+        .single();
+      tecnicoId = (g as unknown as { tecnico_id: string | null } | null)?.tecnico_id ?? null;
+    }
+    if (monto <= 0) return { ok: false, error: "Ese adelanto no tiene monto a resolver." };
+  }
+
+  // Doble saldado: el mismo origen no se cierra dos veces.
+  const { data: previos } = await admin
+    .from("eventos_gestion")
+    .select("detalle")
+    .eq("gestion_id", gestionId)
+    .eq("tipo", "adelanto_saldado");
+  const yaSaldado = ((previos ?? []) as { detalle: Record<string, unknown> | null }[]).some(
+    (p) =>
+      origen === "cancelacion"
+        ? p.detalle?.origen === "cancelacion"
+        : String(p.detalle?.origen_evento_id ?? "") === origenEventoId
+  );
+  if (yaSaldado) return { ok: false, error: "Ese adelanto ya estaba marcado como saldado." };
+
+  // Nombre congelado del técnico (el evento debe leerse solo, sin joins).
+  let tecnicoNombre: string | null = null;
+  if (tecnicoId) {
+    const { data: t } = await admin.from("tecnicos").select("nombre").eq("id", tecnicoId).single();
+    tecnicoNombre = (t as unknown as { nombre: string } | null)?.nombre ?? null;
+  }
+
+  await registrarEvento(gestionId, "adelanto_saldado", actual.id, {
+    monto,
+    origen,
+    ...(origenEventoId ? { origen_evento_id: origenEventoId } : {}),
+    ...(tecnicoId ? { tecnico_id: tecnicoId } : {}),
+    ...(tecnicoNombre ? { tecnico: tecnicoNombre } : {}),
+    nota,
+  });
+  revalidatePath(`/gestiones/${gestionId}`);
+  revalidatePath("/finanzas");
+  return { ok: true };
+}
+
 // STORY-946: la administración ya no tipea el monto — lo calcula el sistema
 // (mismo criterio que el sugerido de STORY-934: materiales rendidos + mano
 // de obra presupuestada, con fallback a costo_final para gestiones viejas

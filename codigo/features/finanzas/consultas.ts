@@ -10,7 +10,11 @@ import {
 } from "./medios";
 import {
   diasDesde,
+  type AdelantosData,
   type CobrosData,
+  type FilaAdelantoSaldado,
+  type GrupoAdelantosTecnico,
+  type ItemAdelantoAResolver,
   type LiquidacionesData,
 } from "./consultas-types";
 
@@ -156,6 +160,244 @@ export async function listarCobros(): Promise<CobrosData> {
   });
 
   return { pendientes, cerrados };
+}
+
+// ── ADELANTOS (STORY-1019) ──────────────────────────────────────────────
+// LA derivación de los tres estados del ciclo de vida del adelanto. Vive SOLO
+// acá: la pestaña de Finanzas, el perfil del técnico, el aviso de liquidación
+// y la tool de Walter leen esta función — la lógica no se repite en ningún
+// componente (read-model sobre hechos congelados, patrón historial STORY-985).
+//   EN OBRA     = columna adelanto_materiales viva en gestión activa.
+//   A RESOLVER  = desasignación (neto de devolución en el acto), cancelación
+//                 con adelanto y sobrante de liquidación — sin evento de
+//                 saldado que los cierre.
+//   SALDADO     = por liquidación (el descuento ES el saldado, automático) o
+//                 manual (evento adelanto_saldado con nota).
+async function derivarAdelantos(): Promise<AdelantosData> {
+  const admin = createAdminClient();
+
+  type Ev = { id: string; gestion_id: string; creado_en: string; detalle: Record<string, unknown> | null };
+  const [{ data: evDesasigRaw }, { data: evLiqRaw }, { data: evSaldadoRaw }, { data: vivasRaw }] =
+    await Promise.all([
+      admin
+        .from("eventos_gestion")
+        .select("id, gestion_id, creado_en, detalle")
+        .not("detalle->adelanto_saliente", "is", null),
+      admin
+        .from("eventos_gestion")
+        .select("id, gestion_id, creado_en, detalle")
+        .eq("tipo", "liquidacion_registrada")
+        .not("detalle->sobrante", "is", null),
+      admin
+        .from("eventos_gestion")
+        .select("id, gestion_id, creado_en, detalle")
+        .eq("tipo", "adelanto_saldado"),
+      admin.from("gestiones").select("id").gt("adelanto_materiales", 0),
+    ]);
+  const evDesasig = (evDesasigRaw ?? []) as unknown as Ev[];
+  const evLiq = (evLiqRaw ?? []) as unknown as Ev[];
+  const evSaldado = (evSaldadoRaw ?? []) as unknown as Ev[];
+
+  // Info de TODAS las gestiones involucradas, una sola query.
+  const ids = [
+    ...new Set([
+      ...((vivasRaw ?? []) as { id: string }[]).map((g) => g.id),
+      ...evDesasig.map((e) => e.gestion_id),
+      ...evLiq.map((e) => e.gestion_id),
+      ...evSaldado.map((e) => e.gestion_id),
+    ]),
+  ];
+  type Info = {
+    id: string;
+    descripcion: string;
+    etapa: string;
+    adelanto_materiales: number | null;
+    liq_pagada_en: string | null;
+    tecnico_id: string | null;
+    propiedades: { direccion: string } | null;
+    tecnico: { nombre: string } | null;
+  };
+  const info = new Map<string, Info>();
+  if (ids.length > 0) {
+    const { data } = await admin
+      .from("gestiones")
+      .select(
+        "id, descripcion, etapa, adelanto_materiales, liq_pagada_en, tecnico_id, propiedades(direccion), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre)"
+      )
+      .in("id", ids);
+    for (const g of (data ?? []) as unknown as Info[]) info.set(g.id, g);
+  }
+
+  // Nombres de los salientes (el evento congela el UUID).
+  const salienteIds = [
+    ...new Set(
+      evDesasig
+        .map((e) => String(e.detalle?.tecnico_saliente ?? ""))
+        .filter((s) => /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(s))
+    ),
+  ];
+  const nombreTecnico = new Map<string, string>();
+  if (salienteIds.length > 0) {
+    const { data } = await admin.from("tecnicos").select("id, nombre").in("id", salienteIds);
+    for (const t of (data ?? []) as { id: string; nombre: string }[]) nombreTecnico.set(t.id, t.nombre);
+  }
+
+  // Saldados manuales: qué orígenes cierran.
+  const saldadoPorEvento = new Set(
+    evSaldado.map((e) => String(e.detalle?.origen_evento_id ?? "")).filter(Boolean)
+  );
+  const saldadoCancelacion = new Set(
+    evSaldado.filter((e) => e.detalle?.origen === "cancelacion").map((e) => e.gestion_id)
+  );
+
+  // ── EN OBRA ──
+  const enObra = [...info.values()]
+    .filter(
+      (g) =>
+        Number(g.adelanto_materiales ?? 0) > 0 &&
+        g.etapa !== "cancelada" &&
+        g.liq_pagada_en == null
+    )
+    .map((g) => ({
+      id: g.id,
+      descripcion: g.descripcion,
+      direccion: g.propiedades?.direccion ?? "—",
+      tecnicoNombre: g.tecnico?.nombre ?? "—",
+      monto: Number(g.adelanto_materiales),
+    }));
+
+  // ── A RESOLVER ──
+  const items: ItemAdelantoAResolver[] = [];
+  for (const e of evDesasig) {
+    const monto = Number(e.detalle?.adelanto_saliente ?? 0);
+    const devuelto = Number(e.detalle?.devolucion_adelanto ?? 0);
+    const pendiente = Math.max(monto - devuelto, 0);
+    if (pendiente <= 0 || saldadoPorEvento.has(e.id)) continue;
+    const g = info.get(e.gestion_id);
+    const tecnicoId = String(e.detalle?.tecnico_saliente ?? "") || null;
+    items.push({
+      gestionId: e.gestion_id,
+      descripcion: g?.descripcion ?? "—",
+      direccion: g?.propiedades?.direccion ?? "—",
+      tecnicoId,
+      tecnicoNombre: (tecnicoId && nombreTecnico.get(tecnicoId)) || "El técnico saliente",
+      monto: pendiente,
+      origen: "desasignacion",
+      origenEventoId: e.id,
+      diasPendiente: diasDesde(e.creado_en),
+    });
+  }
+  for (const g of info.values()) {
+    if (g.etapa !== "cancelada" || Number(g.adelanto_materiales ?? 0) <= 0) continue;
+    if (saldadoCancelacion.has(g.id)) continue;
+    items.push({
+      gestionId: g.id,
+      descripcion: g.descripcion,
+      direccion: g.propiedades?.direccion ?? "—",
+      tecnicoId: g.tecnico_id,
+      tecnicoNombre: g.tecnico?.nombre ?? "—",
+      monto: Number(g.adelanto_materiales),
+      origen: "cancelacion",
+      origenEventoId: null,
+      diasPendiente: null, // la fecha de cancelación vive en el evento de transición; sin alarma acá
+    });
+  }
+  for (const e of evLiq) {
+    const sobrante = Number(e.detalle?.sobrante ?? 0);
+    if (sobrante <= 0 || saldadoPorEvento.has(e.id)) continue;
+    const g = info.get(e.gestion_id);
+    items.push({
+      gestionId: e.gestion_id,
+      descripcion: g?.descripcion ?? "—",
+      direccion: g?.propiedades?.direccion ?? "—",
+      tecnicoId: g?.tecnico_id ?? null,
+      tecnicoNombre: g?.tecnico?.nombre ?? "—",
+      monto: sobrante,
+      origen: "sobrante",
+      origenEventoId: e.id,
+      diasPendiente: diasDesde(e.creado_en),
+    });
+  }
+  // Agrupado por técnico, mayor deuda primero; adentro, lo más viejo primero.
+  const porTecnico = new Map<string, GrupoAdelantosTecnico>();
+  for (const it of items) {
+    const clave = it.tecnicoId ?? "—";
+    const grupo = porTecnico.get(clave) ?? {
+      tecnicoId: it.tecnicoId,
+      tecnicoNombre: it.tecnicoNombre,
+      total: 0,
+      items: [],
+    };
+    grupo.total += it.monto;
+    grupo.items.push(it);
+    porTecnico.set(clave, grupo);
+  }
+  const aResolver = [...porTecnico.values()]
+    .map((g) => ({
+      ...g,
+      items: [...g.items].sort((a, b) => (b.diasPendiente ?? -1) - (a.diasPendiente ?? -1)),
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  // ── SALDADOS ──
+  const sobrantePorGestion = new Map<string, number>();
+  for (const e of evLiq)
+    sobrantePorGestion.set(e.gestion_id, Number(e.detalle?.sobrante ?? 0));
+  const saldados: FilaAdelantoSaldado[] = [];
+  for (const g of info.values()) {
+    const adelanto = Number(g.adelanto_materiales ?? 0);
+    if (g.liq_pagada_en == null || adelanto <= 0) continue;
+    const recuperado = adelanto - (sobrantePorGestion.get(g.id) ?? 0);
+    if (recuperado <= 0) continue;
+    saldados.push({
+      id: `liq-${g.id}`,
+      gestionId: g.id,
+      descripcion: g.descripcion,
+      direccion: g.propiedades?.direccion ?? "—",
+      tecnicoNombre: g.tecnico?.nombre ?? "—",
+      monto: recuperado,
+      modo: "liquidacion",
+      nota: null,
+      fecha: g.liq_pagada_en,
+    });
+  }
+  for (const e of evSaldado) {
+    const g = info.get(e.gestion_id);
+    saldados.push({
+      id: e.id,
+      gestionId: e.gestion_id,
+      descripcion: g?.descripcion ?? "—",
+      direccion: g?.propiedades?.direccion ?? "—",
+      tecnicoNombre: String(e.detalle?.tecnico ?? "") || (g?.tecnico?.nombre ?? "—"),
+      monto: Number(e.detalle?.monto ?? 0),
+      modo: "manual",
+      nota: String(e.detalle?.nota ?? "") || null,
+      fecha: e.creado_en,
+    });
+  }
+  saldados.sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+  return { enObra, aResolver, saldados };
+}
+
+// Pestaña "Adelantos" de Finanzas (solo admin + gestor administrativo).
+export async function listarAdelantos(): Promise<AdelantosData> {
+  if (!(await permitido())) return { enObra: [], aResolver: [], saldados: [] };
+  return derivarAdelantos();
+}
+
+// Perfil staff del técnico + aviso en la pantalla de liquidación: la MISMA
+// derivación, filtrada por técnico. La ve todo el staff (es el dato con el
+// que se decide si darle otra obra); el técnico no.
+export async function adelantosAResolverDeTecnico(
+  tecnicoId: string
+): Promise<ItemAdelantoAResolver[]> {
+  const actual = await obtenerUsuarioActual();
+  if (!actual || actual.rol === "tecnico") return [];
+  const data = await derivarAdelantos();
+  return data.aResolver
+    .filter((g) => g.tecnicoId === tecnicoId)
+    .flatMap((g) => g.items);
 }
 
 // ── LIQUIDACIONES ───────────────────────────────────────────────────────

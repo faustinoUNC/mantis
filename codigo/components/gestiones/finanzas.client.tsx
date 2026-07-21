@@ -349,11 +349,16 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
 
 export function FinanzasAcciones({
   gestion,
+  deudasTecnico = [],
 }: {
   gestion: GestionDetalle & {
     nota_emitida_en?: string | null;
     cargo_admin?: number | null;
   };
+  // STORY-1019: adelantos "a resolver" del técnico (derivación de
+  // features/finanzas, viene de la page) — aviso antes de liquidar, no
+  // bloquea ni descuenta (el descuento cross-gestión sería cobranza).
+  deudasTecnico?: import("@/features/finanzas/consultas-types").ItemAdelantoAResolver[];
 }) {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
@@ -510,6 +515,23 @@ export function FinanzasAcciones({
     const sobrante = Math.max(adelanto - base, 0);
     return (
       <div className="flex flex-col gap-4">
+        {deudasTecnico.length > 0 && (
+          <div
+            className="max-w-md rounded-md border border-urgente-soft-border bg-urgente-soft px-4 py-3"
+            role="alert"
+          >
+            <p className="text-sm font-semibold text-urgente-fuerte">
+              {gestion.tecnico_nombre ?? "El técnico"} tiene{" "}
+              {plata(deudasTecnico.reduce((s, d) => s + d.monto, 0))} en adelantos a
+              resolver{" "}
+              ({deudasTecnico.map((d) => `${plata(d.monto)} de "${d.descripcion}"`).join(" · ")}).
+            </p>
+            <p className="text-[13px] text-muted mt-1">
+              Tenelo en cuenta antes de liquidar — es un aviso, no descuenta ni
+              bloquea. El detalle vive en Finanzas → Adelantos.
+            </p>
+          </div>
+        )}
         <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
           {rendido != null && (
             <>

@@ -7,6 +7,8 @@ import { DocumentacionTecnico } from "@/components/tecnicos/documentacion-tecnic
 import { EspecialidadesTecnico } from "@/components/tecnicos/especialidades-tecnico.client";
 import { Evaluacion } from "@/components/tecnicos/evaluacion.client";
 import { listarEspecialidadesActivas } from "@/features/especialidades/service";
+import { adelantosAResolverDeTecnico } from "@/features/finanzas/consultas";
+import { pesos } from "@/features/finanzas/consultas-types";
 import { obtenerTecnico } from "@/features/tecnicos/service";
 
 export default async function TecnicoDetallePage({
@@ -15,9 +17,12 @@ export default async function TecnicoDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [tecnico, catalogo] = await Promise.all([
+  // STORY-1019: los adelantos a resolver del técnico se muestran donde se
+  // decide si darle otra obra (misma derivación única de features/finanzas).
+  const [tecnico, catalogo, deudas] = await Promise.all([
     obtenerTecnico(id),
     listarEspecialidadesActivas(),
+    adelantosAResolverDeTecnico(id),
   ]);
   if (!tecnico) notFound();
 
@@ -74,6 +79,30 @@ export default async function TecnicoDetallePage({
         </h2>
         <DocumentacionTecnico tecnicoId={id} docs={tecnico.docs} />
       </Card>
+
+      {/* STORY-1019: plata en la mano del técnico que quedó sin aplicar
+          (desasignación, cancelación o sobrante) — solo si hay. */}
+      {deudas.length > 0 && (
+        <div className="mt-4 rounded-md border border-urgente-fuerte/30 bg-urgente-fuerte/5 px-4 py-3">
+          <p className="text-sm font-semibold text-urgente-fuerte">
+            Adelantos a resolver:{" "}
+            {pesos(deudas.reduce((s, d) => s + d.monto, 0))} en {deudas.length}{" "}
+            {deudas.length === 1 ? "gestión" : "gestiones"}
+          </p>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {deudas.map((d) => (
+              <li key={d.origenEventoId ?? `cancel-${d.gestionId}`} className="text-[13px]">
+                <Link
+                  href={`/gestiones/${d.gestionId}`}
+                  className="text-brand hover:text-brand-hover"
+                >
+                  {pesos(d.monto)} — {d.descripcion}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {tecnico.estado === "rechazado" && tecnico.motivo_rechazo && (
         <p className="mt-4 text-sm text-error bg-error-soft border border-error-soft-border rounded-md px-4 py-3">

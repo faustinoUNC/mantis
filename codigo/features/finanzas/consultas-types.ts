@@ -53,6 +53,63 @@ export interface LiquidacionesData {
   cerrados: FilaLiquidacionCerrada[];
 }
 
+// ── Filas de ADELANTOS (STORY-1019) ──────────────────────────────────────
+// Ciclo de vida completo del adelanto, derivado de columna + eventos (cero
+// tablas): EN OBRA (curso normal) → se salda solo al liquidar → o queda
+// A RESOLVER si la obra no lo concretó (desasignación, cancelación, sobrante).
+export type OrigenAdelanto = "desasignacion" | "cancelacion" | "sobrante";
+
+export const ORIGEN_ADELANTO_LABEL: Record<OrigenAdelanto, string> = {
+  desasignacion: "Técnico desasignado",
+  cancelacion: "Gestión cancelada",
+  sobrante: "Sobrante de liquidación",
+};
+
+export interface FilaAdelantoEnObra {
+  id: string; // gestión
+  descripcion: string;
+  direccion: string;
+  tecnicoNombre: string;
+  monto: number;
+}
+
+export interface ItemAdelantoAResolver {
+  gestionId: string;
+  descripcion: string;
+  direccion: string;
+  tecnicoId: string | null;
+  tecnicoNombre: string;
+  monto: number; // neto (descuenta devolución en el acto)
+  origen: OrigenAdelanto;
+  origenEventoId: string | null; // null solo para cancelación
+  diasPendiente: number | null;
+}
+
+export interface GrupoAdelantosTecnico {
+  tecnicoId: string | null;
+  tecnicoNombre: string;
+  total: number;
+  items: ItemAdelantoAResolver[];
+}
+
+export interface FilaAdelantoSaldado {
+  id: string; // clave única de la fila (evento o `liq-{gestion}`)
+  gestionId: string;
+  descripcion: string;
+  direccion: string;
+  tecnicoNombre: string;
+  monto: number;
+  modo: "liquidacion" | "manual";
+  nota: string | null; // solo manual
+  fecha: string; // ISO
+}
+
+export interface AdelantosData {
+  enObra: FilaAdelantoEnObra[];
+  aResolver: GrupoAdelantosTecnico[];
+  saldados: FilaAdelantoSaldado[];
+}
+
 // ── Umbral de alerta de antigüedad ───────────────────────────────────────
 // A partir de estos días, la antigüedad de un pendiente se pinta en ámbar
 // (token urgente). Lista cerrada, sin configurabilidad (Regla #0).

@@ -26,6 +26,7 @@ import {
   tableroGestiones,
 } from "@/features/gestiones/service";
 import { ETAPAS, ETAPAS_TERMINALES, type GestionResumen, type StatsTecnico } from "@/features/gestiones/types";
+import { listarAdelantos } from "@/features/finanzas/consultas";
 import { obtenerMetricas } from "@/features/metricas/service";
 import { misNotificaciones } from "@/features/notificaciones/service";
 import { NOMBRE_ROL } from "@/features/auth/types";
@@ -104,6 +105,9 @@ export function crearTools(usuario: UsuarioActual) {
   const veTecnicos = rol === "administrador" || rol === "gestor_mantenimiento";
   const veCartera = esStaff;
   const esAdmin = rol === "administrador";
+  // STORY-1019: espejo del guard de /finanzas — si no puede entrar a
+  // Finanzas, su asistente tampoco sabe de adelantos.
+  const veFinanzas = rol === "administrador" || rol === "gestor_administrativo";
 
   // ── Compartidas (todos los roles) ──
 
@@ -336,6 +340,48 @@ export function crearTools(usuario: UsuarioActual) {
         urgentes: todas.filter((g) => g.urgencia === "urgente").length,
         con_presupuesto_esperando_decision: todas.filter((g) => g.presupuesto_pendiente).length,
         con_aviso_de_tecnico: todas.filter((g) => g.aviso_no_continua_en).length,
+      };
+    }),
+  });
+
+  // STORY-1019: ciclo de vida de la plata adelantada — misma derivación única
+  // que la pestaña Finanzas → Adelantos (features/finanzas/consultas.ts), con
+  // su mismo guard de rol adentro. Responde "¿qué técnicos desasigné que
+  // tenían adelanto?", "¿cuánta plata está en la calle?", "¿me deben plata?".
+  const adelantos_tecnicos = tool({
+    description:
+      "Los adelantos de materiales entregados a técnicos, en sus tres estados (mismos datos que Finanzas → Adelantos): EN OBRA (curso normal), A RESOLVER (técnicos desasignados con plata en la mano, gestiones canceladas con adelanto, sobrantes de liquidación — agrupado por técnico con total) y SALDADOS. Usala para '¿qué técnicos me deben plata?', '¿a quién desasigné que tenía adelanto?', '¿cuánta plata hay en la calle en adelantos?'.",
+    inputSchema: z.object({}),
+    execute: seguro(async () => {
+      const d = await listarAdelantos();
+      return {
+        en_obra: d.enObra.map((f) => ({
+          gestion_id: f.id,
+          tecnico: f.tecnicoNombre,
+          monto: plata(f.monto),
+          direccion: f.direccion,
+          descripcion: trunc(f.descripcion, 70),
+        })),
+        a_resolver: d.aResolver.map((g) => ({
+          tecnico: g.tecnicoNombre,
+          total: plata(g.total),
+          items: g.items.map((i) => ({
+            gestion_id: i.gestionId,
+            monto: plata(i.monto),
+            origen: i.origen,
+            direccion: i.direccion,
+            descripcion: trunc(i.descripcion, 70),
+            dias_pendiente: i.diasPendiente,
+          })),
+        })),
+        saldados_recientes: d.saldados.slice(0, 10).map((f) => ({
+          gestion_id: f.gestionId,
+          tecnico: f.tecnicoNombre,
+          monto: plata(f.monto),
+          como: f.modo === "liquidacion" ? "descontado al liquidar" : `a mano: ${f.nota ?? ""}`,
+        })),
+        total_en_obra: plata(d.enObra.reduce((s, f) => s + f.monto, 0)),
+        total_a_resolver: plata(d.aResolver.reduce((s, g) => s + g.total, 0)),
       };
     }),
   });
@@ -657,6 +703,7 @@ export function crearTools(usuario: UsuarioActual) {
     mis_notificaciones,
     sugerir_navegacion,
     ...(esStaff && { resumen_tablero, metricas_negocio }),
+    ...(veFinanzas && { adelantos_tecnicos }),
     ...(veCartera && { consultar_cartera, historial_propiedad }),
     ...(veTecnicos && { ranking_tecnicos, detalle_tecnico, inbox_reportes }),
     ...(esAdmin && { auditoria_reciente, equipo_interno }),

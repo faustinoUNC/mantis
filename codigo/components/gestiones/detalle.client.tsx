@@ -23,7 +23,9 @@ import {
   descargarPresupuestoPDF,
   enviarAmpliacionEmail,
   enviarPresupuestoEmail,
+  marcarAdelantoSaldado,
 } from "@/features/finanzas/service";
+import type { ItemAdelantoAResolver, OrigenAdelanto } from "@/features/finanzas/consultas-types";
 import {
   archivarGestion,
   asignarTecnico,
@@ -98,13 +100,85 @@ function Dato({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-function DatosGestion({ gestion }: { gestion: GestionDetalle }) {
+// STORY-1019: cierre manual de un adelanto "a resolver" — botón + nota
+// obligatoria (cómo se arregló). El estado cambia agregando el evento
+// adelanto_saldado; la constancia congelada no se toca.
+function SaldarAdelanto({
+  gestionId,
+  origen,
+  origenEventoId,
+}: {
+  gestionId: string;
+  origen: OrigenAdelanto;
+  origenEventoId: string | null;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const { error, cargando, correr } = useAccion();
+  if (!abierto) {
+    return (
+      <Button variante="fantasma" className="self-start" onClick={() => setAbierto(true)}>
+        Marcar saldada
+      </Button>
+    );
+  }
+  return (
+    <form
+      className="flex flex-wrap items-end gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
+        fd.set("origen", origen);
+        if (origenEventoId) fd.set("origen_evento_id", origenEventoId);
+        correr(() => marcarAdelantoSaldado(gestionId, fd));
+      }}
+    >
+      <div className="min-w-64 flex-1">
+        <Input
+          label="Cómo se arregló"
+          name="nota"
+          required
+          placeholder="Devolvió el efectivo / los materiales quedaron en la obra / …"
+        />
+      </div>
+      <Button disabled={cargando} type="submit">
+        {cargando ? "Guardando…" : "Confirmar saldado"}
+      </Button>
+      <Button type="button" variante="fantasma" disabled={cargando} onClick={() => setAbierto(false)}>
+        Cancelar
+      </Button>
+      {error && <p className="w-full text-sm font-medium text-error">{error}</p>}
+    </form>
+  );
+}
+
+function DatosGestion({
+  gestion,
+  esAdministrativo,
+}: {
+  gestion: GestionDetalle;
+  esAdministrativo: boolean;
+}) {
   // STORY-1014: adelantos entregados a técnicos que salieron de la gestión —
   // constancia permanente (se lee del historial congelado; la columna viva se
   // resetea al desasignar). La recuperación es un arreglo humano; acá solo se
   // asegura que la plata no se olvide.
   const adelantosSalientes = gestion.eventos.filter(
     (e) => e.detalle?.adelanto_saliente != null
+  );
+  // STORY-1019: el saldado es un EVENTO nuevo, no una edición del congelado.
+  // Cada constancia busca su cierre por origen; mientras no exista, el
+  // administrativo puede registrarlo (nota obligatoria).
+  const saldados = gestion.eventos.filter((e) => e.tipo === "adelanto_saldado");
+  const saldadoDe = (origenEventoId: string | null, origen: OrigenAdelanto) =>
+    saldados.find((s) =>
+      origen === "cancelacion"
+        ? s.detalle?.origen === "cancelacion"
+        : String(s.detalle?.origen_evento_id ?? "") === origenEventoId
+    );
+  const canceladaConAdelanto =
+    gestion.etapa === "cancelada" && Number(gestion.adelanto_materiales ?? 0) > 0;
+  const sobrantes = gestion.eventos.filter(
+    (e) => e.tipo === "liquidacion_registrada" && Number(e.detalle?.sobrante ?? 0) > 0
   );
   return (
     <Card className="p-5 mt-5">
@@ -185,8 +259,8 @@ function DatosGestion({ gestion }: { gestion: GestionDetalle }) {
           </Dato>
         )}
       </div>
-      {adelantosSalientes.length > 0 && (
-        <div className="mt-4 rounded-md border border-urgente-fuerte/30 bg-urgente-fuerte/5 px-4 py-3 flex flex-col gap-1">
+      {(adelantosSalientes.length > 0 || canceladaConAdelanto || sobrantes.length > 0) && (
+        <div className="mt-4 rounded-md border border-urgente-fuerte/30 bg-urgente-fuerte/5 px-4 py-3 flex flex-col gap-2">
           {adelantosSalientes.map((e) => {
             const monto = Number(e.detalle?.adelanto_saliente);
             const devuelto = Number(e.detalle?.devolucion_adelanto ?? 0);
@@ -198,16 +272,61 @@ function DatosGestion({ gestion }: { gestion: GestionDetalle }) {
               typeof saliente === "string" && !/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(saliente)
                 ? saliente
                 : "El técnico saliente";
+            const saldado = saldadoDe(e.id, "desasignacion");
             return (
-              <p key={e.id} className="text-sm text-urgente-fuerte">
-                {nombre} recibió{" "}
-                <span className="font-mono font-semibold">{plata(monto)}</span>{" "}
-                en adelantos antes de ser desasignado ({fechaHora(e.creado_en)})
-                {devuelto > 0 && <> — devolvió/ajustó <span className="font-mono">{plata(devuelto)}</span></>}
-                {pendiente > 0
-                  ? <> — quedan <span className="font-mono font-semibold">{plata(pendiente)}</span> a resolver con el técnico, fuera del sistema.</>
-                  : <> — saldado en el acto.</>}
-              </p>
+              <div key={e.id} className="flex flex-col gap-1.5">
+                <p className="text-sm text-urgente-fuerte">
+                  {nombre} recibió{" "}
+                  <span className="font-mono font-semibold">{plata(monto)}</span>{" "}
+                  en adelantos antes de ser desasignado ({fechaHora(e.creado_en)})
+                  {devuelto > 0 && <> — devolvió/ajustó <span className="font-mono">{plata(devuelto)}</span></>}
+                  {pendiente <= 0
+                    ? <> — saldado en el acto.</>
+                    : saldado
+                      ? <> — <span className="font-semibold">saldado el {fechaHora(saldado.creado_en)}</span>{saldado.detalle?.nota ? <>: {String(saldado.detalle.nota)}</> : null}.</>
+                      : <> — quedan <span className="font-mono font-semibold">{plata(pendiente)}</span> a resolver con el técnico, fuera del sistema.</>}
+                </p>
+                {pendiente > 0 && !saldado && esAdministrativo && (
+                  <SaldarAdelanto gestionId={gestion.id} origen="desasignacion" origenEventoId={e.id} />
+                )}
+              </div>
+            );
+          })}
+          {canceladaConAdelanto && (() => {
+            const saldado = saldadoDe(null, "cancelacion");
+            return (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-sm text-urgente-fuerte">
+                  {gestion.tecnico_nombre ?? "El técnico"} tenía{" "}
+                  <span className="font-mono font-semibold">{plata(gestion.adelanto_materiales!)}</span>{" "}
+                  en adelantos cuando la gestión se canceló
+                  {saldado
+                    ? <> — <span className="font-semibold">saldado el {fechaHora(saldado.creado_en)}</span>{saldado.detalle?.nota ? <>: {String(saldado.detalle.nota)}</> : null}.</>
+                    : <> — a resolver con el técnico, fuera del sistema.</>}
+                </p>
+                {!saldado && esAdministrativo && (
+                  <SaldarAdelanto gestionId={gestion.id} origen="cancelacion" origenEventoId={null} />
+                )}
+              </div>
+            );
+          })()}
+          {sobrantes.map((e) => {
+            const sobrante = Number(e.detalle?.sobrante);
+            const saldado = saldadoDe(e.id, "sobrante");
+            return (
+              <div key={e.id} className="flex flex-col gap-1.5">
+                <p className="text-sm text-urgente-fuerte">
+                  El adelanto superó lo debido al liquidar por{" "}
+                  <span className="font-mono font-semibold">{plata(sobrante)}</span>{" "}
+                  ({fechaHora(e.creado_en)})
+                  {saldado
+                    ? <> — <span className="font-semibold">saldado el {fechaHora(saldado.creado_en)}</span>{saldado.detalle?.nota ? <>: {String(saldado.detalle.nota)}</> : null}.</>
+                    : <> — a resolver con el técnico, fuera del sistema.</>}
+                </p>
+                {!saldado && esAdministrativo && (
+                  <SaldarAdelanto gestionId={gestion.id} origen="sobrante" origenEventoId={e.id} />
+                )}
+              </div>
             );
           })}
         </div>
@@ -2008,11 +2127,16 @@ export function DetalleGestion({
   usuario,
   tecnicos,
   gestores,
+  deudasTecnico = [],
 }: {
   gestion: GestionDetalle;
   usuario: UsuarioActual;
   tecnicos: TecnicoDisponible[];
   gestores: { id: string; nombre: string }[];
+  // STORY-1019: adelantos "a resolver" del técnico asignado (cualquier
+  // gestión) — la misma derivación de features/finanzas, traída por la page
+  // solo en liquidación. Alimenta el aviso ámbar antes de liquidar.
+  deudasTecnico?: ItemAdelantoAResolver[];
 }) {
   const esAdmin = usuario.rol === "administrador";
   const esGestorOwner =
@@ -2110,7 +2234,7 @@ export function DetalleGestion({
 
       {gestion.etapa !== "cancelada" && <EtapaStepper etapa={gestion.etapa} />}
 
-      <DatosGestion gestion={gestion} />
+      <DatosGestion gestion={gestion} esAdministrativo={esAdministrativo} />
 
       {/* STORY-1001: gestiones que surgieron de esta — fila simple con link
           cruzado y etapa a la vista. Sin visor gráfico (Regla #0). */}
@@ -2243,7 +2367,7 @@ export function DetalleGestion({
           </p>
         )}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
-          esAdministrativo && <FinanzasAcciones gestion={gestion} />}
+          esAdministrativo && <FinanzasAcciones gestion={gestion} deudasTecnico={deudasTecnico} />}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
           !esAdministrativo && (esGestorOwner || esTecnicoAsignado) && (
             <p className="text-sm text-muted">

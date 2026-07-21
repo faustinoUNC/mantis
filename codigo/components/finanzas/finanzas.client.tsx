@@ -10,10 +10,12 @@ import { FiltrosLista } from "@/components/ui/filtros-lista.client";
 import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 import {
   DIAS_ALERTA,
+  ORIGEN_ADELANTO_LABEL,
   antiguedadLegible,
   claveMes,
   mesLabel,
   pesos,
+  type AdelantosData,
   type CobrosData,
   type FilaCobroCerrado,
   type FilaCobroPendiente,
@@ -29,7 +31,7 @@ import {
 // + orden de pendientes (v1.5, patrón STORY-927). Sin gráficos: eso vive en
 // Informes. El server layer no cambia.
 
-type Tab = "cobros" | "liquidaciones";
+type Tab = "cobros" | "liquidaciones" | "adelantos";
 type OrdenPendientes = "antiguedad" | "monto";
 
 // "Buscar por" (patrón STORY-927, mismo criterio que el tablero). El medio de
@@ -47,6 +49,13 @@ const CAMPOS_LIQUIDACIONES: CampoBusqueda<FilaLiquidacion>[] = [
   { id: "descripcion", label: "Descripción", de: (f) => [f.descripcion] },
   { id: "tecnico", label: "Técnico", de: (f) => [f.tecnicoNombre] },
   { id: "medio", label: "Medio de pago", de: (f) => ["medioLabel" in f ? f.medioLabel : null] },
+];
+// STORY-1019: las tres secciones de Adelantos comparten estos campos.
+type FilaAdelanto = { direccion: string; descripcion: string; tecnicoNombre: string };
+const CAMPOS_ADELANTOS: CampoBusqueda<FilaAdelanto>[] = [
+  { id: "direccion", label: "Dirección", de: (f) => [f.direccion] },
+  { id: "descripcion", label: "Descripción", de: (f) => [f.descripcion] },
+  { id: "tecnico", label: "Técnico", de: (f) => [f.tecnicoNombre] },
 ];
 
 // Suma de un campo numérico de una lista de filas.
@@ -85,9 +94,11 @@ function agruparPorMes<T extends { fecha: string; monto: number }>(
 export function Finanzas({
   cobros,
   liquidaciones,
+  adelantos,
 }: {
   cobros: CobrosData;
   liquidaciones: LiquidacionesData;
+  adelantos: AdelantosData;
 }) {
   const [tab, setTab] = useState<Tab>("cobros");
   const [busqueda, setBusqueda] = useState("");
@@ -106,6 +117,7 @@ export function Finanzas({
   const TABS: { id: Tab; label: string }[] = [
     { id: "cobros", label: "Cobros" },
     { id: "liquidaciones", label: "Liquidaciones" },
+    { id: "adelantos", label: "Adelantos" },
   ];
 
   // ── Resumen (la foto de hoy — no lo afecta la búsqueda) ──
@@ -199,20 +211,30 @@ export function Finanzas({
             ? "Gestión, dirección o pagador…"
             : "Gestión, dirección o técnico…"
         }
-        campos={tab === "cobros" ? CAMPOS_COBROS : CAMPOS_LIQUIDACIONES}
+        campos={
+          tab === "cobros"
+            ? CAMPOS_COBROS
+            : tab === "liquidaciones"
+              ? CAMPOS_LIQUIDACIONES
+              : (CAMPOS_ADELANTOS as CampoBusqueda<unknown>[])
+        }
         campo={campo}
         onCampo={setCampo}
         extra={
-          <div className="w-52">
-            <Select
-              label="Orden de pendientes"
-              value={orden}
-              onChange={(e) => setOrden(e.target.value as OrdenPendientes)}
-            >
-              <option value="antiguedad">Más antiguas primero</option>
-              <option value="monto">Mayor monto primero</option>
-            </Select>
-          </div>
+          // Adelantos agrupa por técnico (mayor deuda primero) — el orden de
+          // pendientes no aplica ahí.
+          tab !== "adelantos" ? (
+            <div className="w-52">
+              <Select
+                label="Orden de pendientes"
+                value={orden}
+                onChange={(e) => setOrden(e.target.value as OrdenPendientes)}
+              >
+                <option value="antiguedad">Más antiguas primero</option>
+                <option value="monto">Mayor monto primero</option>
+              </Select>
+            </div>
+          ) : undefined
         }
       />
 
@@ -226,6 +248,9 @@ export function Finanzas({
           campo={campo}
           orden={orden}
         />
+      </div>
+      <div className={tab === "adelantos" ? "" : "hidden"}>
+        <TabAdelantos adelantos={adelantos} busqueda={busqueda} campo={campo} />
       </div>
     </div>
   );
@@ -567,6 +592,155 @@ function TabCobros({
               direccion={f.direccion}
               persona={`${f.pagadorRotulo}: ${f.pagadorNombre}`}
               medio={f.medioLabel}
+            />
+          )}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Pestaña ADELANTOS (STORY-1019) ───────────────────────────────────────
+// Ciclo de vida completo de la plata adelantada, derivado en el server
+// (features/finanzas/consultas.ts — la lógica NO vive acá): A RESOLVER arriba
+// (la sección con acción pendiente: ámbar + antigüedad, agrupada por técnico),
+// EN OBRA al medio (curso normal, informativo, sin alarmas) y SALDADOS abajo
+// por mes (por liquidación —automático— o a mano, con la nota como constancia).
+// La pestaña no escribe nada: el botón de saldar vive en la gestión.
+function TabAdelantos({
+  adelantos,
+  busqueda,
+  campo,
+}: {
+  adelantos: AdelantosData;
+  busqueda: string;
+  campo: string;
+}) {
+  const hayBusqueda = busqueda.trim() !== "";
+  const grupos = useMemo(
+    () =>
+      adelantos.aResolver
+        .map((g) => ({
+          ...g,
+          items: g.items.filter((f) => coincideCampo(busqueda, campo, CAMPOS_ADELANTOS, f)),
+        }))
+        .filter((g) => g.items.length > 0),
+    [adelantos.aResolver, busqueda, campo]
+  );
+  const enObra = useMemo(
+    () => adelantos.enObra.filter((f) => coincideCampo(busqueda, campo, CAMPOS_ADELANTOS, f)),
+    [adelantos.enObra, busqueda, campo]
+  );
+  const saldados = useMemo(
+    () => adelantos.saldados.filter((f) => coincideCampo(busqueda, campo, CAMPOS_ADELANTOS, f)),
+    [adelantos.saldados, busqueda, campo]
+  );
+  const gruposMes = useMemo(() => agruparPorMes(saldados), [saldados]);
+  const totalAResolver = sumar(grupos, (g) => sumar(g.items, (f) => f.monto));
+
+  return (
+    <>
+      <EncabezadoGrupo
+        titulo="A resolver"
+        cantidad={sumar(grupos, (g) => g.items.length)}
+        total={totalAResolver}
+      />
+      {grupos.length === 0 ? (
+        <Vacio
+          texto={
+            hayBusqueda
+              ? "Ningún adelanto a resolver coincide con la búsqueda."
+              : "No hay adelantos a resolver. La plata entregada está toda en obras en curso o saldada."
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-1">
+          {grupos.map((g) => (
+            <div key={g.tecnicoId ?? "—"}>
+              <div className="flex items-baseline justify-between mb-2 mt-3">
+                <h3 className="text-sm font-medium text-foreground">
+                  {g.tecnicoNombre}{" "}
+                  <span className="text-muted font-normal">
+                    · {g.items.length} {g.items.length === 1 ? "gestión" : "gestiones"}
+                  </span>
+                </h3>
+                <span className="text-sm font-semibold tabular-nums font-mono text-urgente-fuerte">
+                  {pesos(sumar(g.items, (f) => f.monto))}
+                </span>
+              </div>
+              <Grilla>
+                {g.items.map((f) => (
+                  <TarjetaGestion
+                    key={f.origenEventoId ?? `cancel-${f.gestionId}`}
+                    id={f.gestionId}
+                    monto={f.monto}
+                    descripcion={f.descripcion}
+                    direccion={f.direccion}
+                    persona={ORIGEN_ADELANTO_LABEL[f.origen]}
+                    antiguedad={f.diasPendiente != null ? antiguedadLegible(f.diasPendiente) : undefined}
+                    alerta={f.diasPendiente != null && f.diasPendiente >= DIAS_ALERTA}
+                  />
+                ))}
+              </Grilla>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <EncabezadoGrupo
+        titulo="En obra"
+        cantidad={enObra.length}
+        total={sumar(enObra, (f) => f.monto)}
+      />
+      {enObra.length === 0 ? (
+        <Vacio
+          texto={
+            hayBusqueda
+              ? "Ningún adelanto en obra coincide con la búsqueda."
+              : "No hay adelantos en obras en curso."
+          }
+        />
+      ) : (
+        <Grilla>
+          {enObra.map((f) => (
+            <TarjetaGestion
+              key={f.id}
+              id={f.id}
+              monto={f.monto}
+              descripcion={f.descripcion}
+              direccion={f.direccion}
+              persona={`Técnico: ${f.tecnicoNombre}`}
+              medio="En obra"
+            />
+          ))}
+        </Grilla>
+      )}
+
+      {gruposMes.length === 0 ? (
+        <>
+          <EncabezadoGrupo titulo="Saldados" cantidad={0} total={0} />
+          <Vacio
+            texto={
+              hayBusqueda
+                ? "Ningún adelanto saldado coincide con la búsqueda."
+                : "Todavía no hay adelantos saldados."
+            }
+          />
+        </>
+      ) : (
+        <HistorialMensual
+          titulo="Saldados"
+          grupos={gruposMes}
+          hayBusqueda={hayBusqueda}
+          tarjeta={(f) => (
+            <TarjetaGestion
+              key={f.id}
+              id={f.gestionId}
+              monto={f.monto}
+              descripcion={f.nota ? `${f.descripcion} — ${f.nota}` : f.descripcion}
+              direccion={f.direccion}
+              persona={`Técnico: ${f.tecnicoNombre}`}
+              medio={f.modo === "liquidacion" ? "Al liquidar" : "A mano"}
             />
           )}
         />

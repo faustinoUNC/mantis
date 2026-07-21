@@ -30,6 +30,8 @@ export const LABEL_EVENTO: Record<string, string> = {
   conformidad_rechazada: "Conformidad rechazada",
   materiales_rendidos: "Comprobantes de materiales rendidos",
   adelanto_materiales_registrado: "Adelanto de materiales registrado",
+  // STORY-1019: cierre manual de un adelanto "a resolver"
+  adelanto_saldado: "Adelanto saldado con el técnico",
   tecnico_no_continua: "El técnico avisó que no puede continuar",
   aviso_resuelto: "El gestor resolvió el aviso — el técnico continúa",
   gestor_reasignado: "Gestor reasignado",
@@ -69,6 +71,12 @@ export function detalleLegible(detalle: Record<string, unknown> | null): string 
   // materiales — la Auditoría responde "quién autorizó dar de más".
   if (detalle.excedente_tope != null)
     partes.push(`Excedió lo autorizado en ${plataD(detalle.excedente_tope)}`);
+  // STORY-1019: el saldado manual dice de dónde venía la plata y cómo se
+  // arregló (la nota es la constancia).
+  if (detalle.origen === "desasignacion") partes.push("Origen: desasignación");
+  if (detalle.origen === "cancelacion") partes.push("Origen: cancelación");
+  if (detalle.origen === "sobrante") partes.push("Origen: sobrante de liquidación");
+  if (detalle.nota) partes.push(String(detalle.nota));
   if (detalle.plazo_dias != null) partes.push(`Plazo: ${detalle.plazo_dias} día${Number(detalle.plazo_dias) === 1 ? "" : "s"}`);
   if (detalle.pagador) partes.push(`Paga: ${detalle.pagador}`);
   if (detalle.medio) partes.push(`Medio: ${MEDIO_LABEL[String(detalle.medio)] ?? detalle.medio}`);

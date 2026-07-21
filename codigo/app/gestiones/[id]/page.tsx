@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { DetalleGestion } from "@/components/gestiones/detalle.client";
 import { obtenerUsuarioActual } from "@/features/auth/service";
 import { listarEmpleados } from "@/features/empleados/service";
+import { adelantosAResolverDeTecnico } from "@/features/finanzas/consultas";
 import {
   obtenerGestion,
   tecnicosDisponibles,
@@ -26,9 +27,16 @@ export default async function GestionPage({
   const necesitaTecnicos =
     gestion.etapa === "asignacion" &&
     (usuario.rol === "administrador" || usuario.rol === "gestor_mantenimiento");
-  const [tecnicos, empleados] = await Promise.all([
+  // STORY-1019: al liquidar, aviso si el técnico tiene adelantos a resolver
+  // (de cualquier gestión) — misma derivación única de features/finanzas.
+  const necesitaDeudas =
+    gestion.etapa === "liquidacion_tecnico" &&
+    gestion.tecnico_id != null &&
+    (usuario.rol === "administrador" || usuario.rol === "gestor_administrativo");
+  const [tecnicos, empleados, deudasTecnico] = await Promise.all([
     necesitaTecnicos ? tecnicosDisponibles(gestion.especialidad_id) : [],
     usuario.rol === "administrador" ? listarEmpleados() : [],
+    necesitaDeudas ? adelantosAResolverDeTecnico(gestion.tecnico_id!) : [],
   ]);
 
   return (
@@ -39,6 +47,7 @@ export default async function GestionPage({
       gestores={empleados
         .filter((e) => e.rol === "gestor_mantenimiento" && e.esta_activo)
         .map((e) => ({ id: e.id, nombre: e.nombre }))}
+      deudasTecnico={deudasTecnico}
     />
   );
 }
