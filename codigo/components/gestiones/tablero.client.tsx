@@ -21,16 +21,19 @@ import { cn } from "@/shared/utils/cn";
 import { coincideCampo, type CampoBusqueda } from "@/shared/utils/filtros";
 
 // Columnas accionables por rol (visual; el permiso real vive en avanzar_etapa)
+// STORY-1027 v1.1: finalizado cuenta para ambos gestores — ahí pueden archivar.
 const COLUMNAS_MANTENIMIENTO = new Set([
   "ingresado",
   "asignacion",
   "presupuesto",
   "en_ejecucion",
   "conformidad",
+  "finalizado",
 ]);
 const COLUMNAS_ADMINISTRATIVO = new Set([
   "facturacion_cobro",
   "liquidacion_tecnico",
+  "finalizado",
 ]);
 
 function accionable(rol: Rol, etapa: string) {
