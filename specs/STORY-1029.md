@@ -39,6 +39,6 @@ STORY-1014 creó la constancia del adelanto entregado a un técnico que salió d
 
 ## Dev Agent Record
 
-- **Commit:** ver commit del push conjunto con STORY-1030 (2026-07-21).
+- **Commit:** `9dc4e02` (2026-07-21, conjunto con STORY-1030).
 - **Archivos:** `codigo/components/gestiones/detalle.client.tsx` — helper `MontoConstancia`, prop `esTecnico` en `DatosGestion` (gate de la caja entera) y en `Actividad` (omite `adelanto_saldado`, quita `adelanto_saliente`/`devolucion_adelanto` del evento de desasignación y omite los `adelanto_materiales_registrado` anteriores a la última desasignación); rediseño de la constancia (encabezado nombre+contexto+`Badge` A resolver/Saldado, montos label/valor, nota del saldado como línea secundaria) y del cartel del modal ("Adelanto en su mano" + monto, contexto en una línea).
 - **Verificación:** `tsc`/eslint verdes. E2E navegador (gestión #108 `[DEMO]`, adelanto $700.000 de Ramiro Zarate): desasignado como Admin con devolución $150.000 → constancia nueva "Ramiro Zarate · desasignado · [A resolver]" con Adelanto/Devolvió/Pendiente ($550.000 en ámbar) y "Marcar saldada"; Actividad staff completa ("Adelanto al saliente: $700.000 · Devuelto/ajustado: $150.000"). Como Tecnico Uno (solicitud de asignación pendiente): cero apariciones de constancia, montos del saliente, saldados o adelantos registrados previos — sí ve "Técnico desasignado" con el motivo y el CTA de aceptar. "Marcar saldada" con nota → badge "Saldado", fila Pendiente desaparece, línea "Saldado el 21/7, 20:03 — …" y evento en Actividad staff.

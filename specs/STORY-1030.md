@@ -23,6 +23,6 @@ El campo "Devolución / ajuste en el acto" (STORY-1014, `DesasignarTecnico` en `
 
 ## Dev Agent Record
 
-- **Commit:** ver commit del push conjunto con STORY-1029 (2026-07-21).
+- **Commit:** `9dc4e02` (2026-07-21, conjunto con STORY-1029).
 - **Archivos:** `codigo/components/gestiones/detalle.client.tsx` (`DesasignarTecnico`) — estado `devolucion` controlado con `replace(/[^\d.]/g, "")` en el `onChange` (patrón "Monto a adelantar ahora" de `finanzas.client.tsx`); el submit lee el estado.
 - **Verificación:** `tsc`/eslint verdes. E2E navegador (gestión #108 `[DEMO]`): tipear `abc$%!hola` deja el campo vacío; tipear `1a5b0c000!` deja `150000`; la desasignación con esa devolución la congeló bien en el evento (`devolucion_adelanto: 150000`, verificado en la constancia y la Actividad).
