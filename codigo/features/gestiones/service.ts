@@ -144,7 +144,8 @@ export async function gestionesArchivadas(): Promise<
     .from("gestiones")
     .select(`${SELECT_RESUMEN}, archivada_en`)
     .not("archivada_en", "is", null)
-    .order("archivada_en", { ascending: false });
+    // STORY-1027: por fecha de ingreso, como Finanzas y el tablero.
+    .order("creado_en", { ascending: false });
   return (data ?? []).map((g) => ({
     ...normalizarFila(g as Record<string, unknown>),
     archivada_en: (g as Record<string, unknown>).archivada_en as string,
