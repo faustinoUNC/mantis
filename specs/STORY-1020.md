@@ -1,6 +1,6 @@
 # STORY-1020 — Volver contextual: el detalle de gestión vuelve a donde estabas, no siempre al tablero (v1.0)
 
-**Estado:** 🔨 implementada y verificada E2E, sin commitear (espera OK) · **Origen:** pedido directo de Fausti (2026-07-21): desde Finanzas, tocar una card de cobros/liquidaciones/adelantos abre la gestión correcta, pero "← Volver" manda al tablero en vez de a la pestaña de Finanzas donde estaba la card. Pidió además barrer si el patrón se repite en otros "volver".
+**Estado:** ✅ hecha (commit `f852c20`) · **Origen:** pedido directo de Fausti (2026-07-21): desde Finanzas, tocar una card de cobros/liquidaciones/adelantos abre la gestión correcta, pero "← Volver" manda al tablero en vez de a la pestaña de Finanzas donde estaba la card. Pidió además barrer si el patrón se repite en otros "volver".
 
 ## Problema
 
@@ -31,6 +31,6 @@ Agravante en Finanzas: la pestaña activa (Cobros/Liquidaciones/Adelantos) es `u
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente — espera OK de Fausti)_.
+- **Commit:** `f852c20`.
 - **Archivos:** `codigo/components/gestiones/detalle.client.tsx` (el "← Volver" pasa de `<Link href="/tablero|/tecnico">` a botón con `router.back()` y fallback a esos mismos destinos cuando `window.history.length <= 1`); `codigo/components/finanzas/finanzas.client.tsx` (la pestaña deja de ser `useState` y se deriva de `useSearchParams().get("tab")` — Next sincroniza el param con `history.replaceState` y con el back/forward del navegador; `irATab` hace `replaceState` de `?tab=` con Cobros = URL limpia; valor inválido → Cobros). `app/finanzas/page.tsx` sin cambios (se probó pasar `searchParams` como prop y se descartó: el back restaura el payload RSC cacheado del render original y la pestaña volvía a Cobros — la URL vía `useSearchParams` es la única fuente que el back restaura de verdad). Sin migraciones, sin server layer.
 - **Verificación:** `tsc --noEmit`, eslint y `next build` verdes (`/finanzas` dinámica — sin queja de Suspense por `useSearchParams`). **E2E navegador** (admin): (1) Finanzas → Adelantos → card → detalle → "← Volver" → `/finanzas?tab=adelantos` con **Adelantos** activa y solo sus secciones visibles; (2) ídem con **Liquidaciones** cambiando de pestaña por click (URL pasa a `?tab=liquidaciones` al toque); (3) regresión tablero → gestión → Volver → `/tablero`; (4) `/finanzas?tab=adelantos` pegada directa abre Adelantos; `?tab=cualquiercosa` abre Cobros sin error. El fallback sin historial (criterio 3) no es reproducible en Playwright (toda pestaña nueva arranca en `about:blank` y ya tiene historial) — la rama es trivial y queda para la prueba manual de Fausti: pegar la URL de una gestión en una pestaña nueva y tocar Volver.
