@@ -17,12 +17,19 @@ export const LIMITES = {
 
 // ── Whitelist de deep links ──
 // La seguridad de `sugerir_navegacion`: el modelo SOLO puede ofrecer rutas de
-// esta lista (estáticas de NAV_POR_ROL + /metricas donde corresponde) o los
+// esta lista (estáticas de NAV_POR_ROL + extras donde corresponde) o los
 // patrones dinámicos del rol. Nada fuera de acá llega al cliente.
-const EXTRA_POR_ROL: Record<Rol, string[]> = {
-  administrador: ["/metricas"],
-  gestor_mantenimiento: ["/metricas"],
-  gestor_administrativo: ["/metricas"],
+// STORY-1007 v1.2: las pestañas de Finanzas viven en ?tab= (STORY-1020) — sin
+// estas entradas un botón "Ver liquidaciones/adelantos" caía en Cobros (mismo
+// defecto que el ranking de la card #147).
+const FINANZAS_TABS = [
+  { href: "/finanzas?tab=liquidaciones", label: "Finanzas · Liquidaciones" },
+  { href: "/finanzas?tab=adelantos", label: "Finanzas · Adelantos" },
+];
+const EXTRA_POR_ROL: Record<Rol, { href: string; label: string }[]> = {
+  administrador: [{ href: "/metricas", label: "Informes" }, ...FINANZAS_TABS],
+  gestor_mantenimiento: [{ href: "/metricas", label: "Informes" }],
+  gestor_administrativo: [{ href: "/metricas", label: "Informes" }, ...FINANZAS_TABS],
   tecnico: [],
 };
 
@@ -48,7 +55,7 @@ const PATRONES_POR_ROL: Record<Rol, RegExp[]> = {
 export function rutasEstaticas(rol: Rol): { href: string; label: string }[] {
   return [
     ...NAV_POR_ROL[rol].map(({ href, label }) => ({ href, label })),
-    ...EXTRA_POR_ROL[rol].map((href) => ({ href, label: "Informes" })),
+    ...EXTRA_POR_ROL[rol],
   ];
 }
 

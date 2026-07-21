@@ -27,7 +27,7 @@ import {
 } from "@/features/gestiones/service";
 import { ETAPAS, ETAPAS_TERMINALES, type GestionResumen, type StatsTecnico } from "@/features/gestiones/types";
 import { listarAdelantos } from "@/features/finanzas/consultas";
-import { obtenerMetricas } from "@/features/metricas/service";
+import { obtenerMetricas, type Metricas } from "@/features/metricas/service";
 import { misNotificaciones } from "@/features/notificaciones/service";
 import { NOMBRE_ROL } from "@/features/auth/types";
 import { listarTecnicos, misFranjas } from "@/features/tecnicos/service";
@@ -84,6 +84,179 @@ function compactarStats(s: StatsTecnico | null | undefined) {
     obras_realizadas: s.obrasRealizadas,
     rechazo_asignaciones_pct: s.pctRechazoAsig,
     abandonos: s.abandonos,
+  };
+}
+
+// ── STORY-1026: pivoteo server-side para la tool `graficar` ──
+// El modelo elige el cruce (dimensión × métrica); los NÚMEROS salen siempre de
+// acá — mismos datos que Informes (obtenerMetricas, RLS de sesión). El mismo
+// output alimenta el gráfico del cliente y el comentario del modelo, así el
+// texto y el gráfico no pueden contradecirse (la falla del Walter v1).
+
+const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const TOPE_GRUPOS = 12;
+
+export type ArgsGrafico = {
+  titulo: string;
+  agrupar_por: "tecnico" | "gestor" | "especialidad" | "etapa" | "mes";
+  metrica:
+    | "cantidad"
+    | "monto_cobrado"
+    | "fee_inmobiliaria"
+    | "tiempo_ciclo_dias"
+    | "calificacion_promedio"
+    | "dias_en_etapa";
+  estado?: "activas" | "finalizadas" | "todas";
+  periodo?: "este_mes" | "ultimos_3_meses" | "ultimos_6_meses" | "ultimo_anio" | "historico";
+};
+
+const labelMes = (clave: string) =>
+  `${MESES_CORTOS[Number(clave.slice(5, 7)) - 1]} ${clave.slice(0, 4)}`;
+
+// Días promedio de permanencia por etapa (misma derivación que los cuellos de
+// botella de metricas_negocio, sobre el event log completo).
+function permanenciaPorEtapa(eventos: Metricas["eventos"]) {
+  const porGestion = new Map<string, { aEtapa: string | null; t: number }[]>();
+  for (const e of eventos) {
+    if (e.tipo !== "transicion") continue;
+    const lista = porGestion.get(e.gestionId) ?? [];
+    lista.push({ aEtapa: e.aEtapa, t: new Date(e.creadoEn).getTime() });
+    porGestion.set(e.gestionId, lista);
+  }
+  const acum = new Map<string, { total: number; n: number }>();
+  for (const evs of porGestion.values()) {
+    const orden = [...evs].sort((a, b) => a.t - b.t);
+    for (let i = 0; i < orden.length - 1; i++) {
+      const etapa = orden[i].aEtapa;
+      if (!etapa) continue;
+      const dias = (orden[i + 1].t - orden[i].t) / 86400000;
+      const acc = acum.get(etapa) ?? { total: 0, n: 0 };
+      acc.total += dias;
+      acc.n += 1;
+      acum.set(etapa, acc);
+    }
+  }
+  return acum;
+}
+
+export function armarGrafico(m: Metricas, args: ArgsGrafico) {
+  const { agrupar_por, metrica } = args;
+  const estado = args.estado ?? "todas";
+  const periodo = args.periodo ?? "historico";
+  const titulo = args.titulo.trim().slice(0, 60) || "Gráfico";
+
+  // Permanencia por etapa: cruce especial que sale del event log, no de filas.
+  if (metrica === "dias_en_etapa") {
+    if (agrupar_por !== "etapa") {
+      return { error: "dias_en_etapa solo se cruza con agrupar_por: etapa. Rearmá el gráfico así." };
+    }
+    const serie = [...permanenciaPorEtapa(m.eventos).entries()]
+      .map(([etapa, v]) => ({
+        label: ETIQUETA_ETAPA[etapa] ?? etapa,
+        valor: Math.round((v.total / v.n) * 10) / 10,
+      }))
+      .sort((a, b) => b.valor - a.valor);
+    if (!serie.length) return { error: "Todavía no hay historial de etapas para graficar." };
+    return { titulo, tipo: "barras", unidad: "días", serie };
+  }
+
+  // Las métricas de plata/ciclo son de gestiones COBRADAS (hechos congelados):
+  // filtran y fechan por cobradoEn; el resto, por creadoEn.
+  const usaCobro = metrica === "monto_cobrado" || metrica === "fee_inmobiliaria" || metrica === "tiempo_ciclo_dias";
+  const ahora = new Date();
+  const desde =
+    periodo === "este_mes"
+      ? new Date(ahora.getFullYear(), ahora.getMonth(), 1).getTime()
+      : periodo === "historico"
+        ? null
+        : ahora.getTime() -
+          { ultimos_3_meses: 90, ultimos_6_meses: 180, ultimo_anio: 365 }[periodo] * 86400000;
+
+  let filas = m.filas;
+  if (estado === "activas") filas = filas.filter((f) => !ETAPAS_TERMINALES.has(f.etapa));
+  if (estado === "finalizadas") filas = filas.filter((f) => f.etapa === "finalizado");
+  if (usaCobro) filas = filas.filter((f) => f.cobradoEn && f.cobradoMonto != null);
+  if (desde != null) {
+    filas = filas.filter((f) => new Date((usaCobro ? f.cobradoEn : f.creadoEn) as string).getTime() >= desde);
+  }
+
+  const clave = (f: Metricas["filas"][number]): string | null => {
+    switch (agrupar_por) {
+      case "tecnico":
+        return f.tecnicoNombre;
+      case "gestor":
+        return f.gestorNombre;
+      case "especialidad":
+        return f.especialidad;
+      case "etapa":
+        return ETIQUETA_ETAPA[f.etapa] ?? f.etapa;
+      case "mes":
+        return ((usaCobro ? f.cobradoEn : f.creadoEn) as string).slice(0, 7);
+    }
+  };
+
+  const esPromedio = metrica === "tiempo_ciclo_dias" || metrica === "calificacion_promedio";
+  const acum = new Map<string, { total: number; n: number }>();
+  for (const f of filas) {
+    const k = clave(f);
+    if (k == null) continue; // sin técnico/gestor asignado: no es un grupo
+    let v: number | null = null;
+    if (metrica === "cantidad") v = 1;
+    else if (metrica === "monto_cobrado") v = Number(f.cobradoMonto ?? 0);
+    else if (metrica === "fee_inmobiliaria") v = Number(f.cobradoFee ?? 0);
+    else if (metrica === "tiempo_ciclo_dias")
+      v = (new Date(f.cobradoEn as string).getTime() - new Date(f.creadoEn).getTime()) / 86400000;
+    else if (metrica === "calificacion_promedio") v = f.estrellas;
+    if (v == null || v < 0) continue; // sin dato no hay promedio que valga
+    const acc = acum.get(k) ?? { total: 0, n: 0 };
+    acc.total += v;
+    acc.n += 1;
+    acum.set(k, acc);
+  }
+
+  const redondeo = metrica === "cantidad" ? (x: number) => x
+    : esPromedio ? (x: number) => Math.round(x * 10) / 10
+    : (x: number) => Math.round(x);
+  let serie = [...acum.entries()].map(([k, v]) => ({
+    label: agrupar_por === "mes" ? labelMes(k) : k,
+    _orden: k,
+    valor: redondeo(esPromedio ? v.total / v.n : metrica === "cantidad" ? v.n : v.total),
+  }));
+  if (!serie.length) {
+    return { error: "No hay datos para ese cruce con esos filtros. Probá otro período o estado, o avisale al usuario." };
+  }
+
+  serie =
+    agrupar_por === "mes"
+      ? serie.sort((a, b) => a._orden.localeCompare(b._orden))
+      : serie.sort((a, b) => b.valor - a.valor);
+
+  let mostrando_top: number | undefined;
+  if (serie.length > TOPE_GRUPOS) {
+    if (esPromedio) {
+      mostrando_top = TOPE_GRUPOS;
+      serie = serie.slice(0, TOPE_GRUPOS);
+    } else {
+      const resto = serie.slice(TOPE_GRUPOS - 1);
+      serie = [
+        ...serie.slice(0, TOPE_GRUPOS - 1),
+        { label: "Otros", _orden: "~", valor: resto.reduce((s, x) => s + x.valor, 0) },
+      ];
+    }
+  }
+
+  const unidad =
+    metrica === "cantidad" ? "gestiones"
+    : metrica === "tiempo_ciclo_dias" ? "días"
+    : metrica === "calificacion_promedio" ? "estrellas"
+    : "$";
+  return {
+    titulo,
+    tipo: agrupar_por === "mes" ? "linea" : "barras",
+    unidad,
+    serie: serie.map(({ label, valor }) => ({ label, valor })),
+    ...(esPromedio ? {} : { total: serie.reduce((s, x) => s + x.valor, 0) }),
+    ...(mostrando_top && { mostrando_top }),
   };
 }
 
@@ -350,7 +523,7 @@ export function crearTools(usuario: UsuarioActual) {
   // tenían adelanto?", "¿cuánta plata está en la calle?", "¿me deben plata?".
   const adelantos_tecnicos = tool({
     description:
-      "Los adelantos de materiales entregados a técnicos, en sus tres estados (mismos datos que Finanzas → Adelantos): EN OBRA (curso normal), A RESOLVER (técnicos desasignados con plata en la mano, gestiones canceladas con adelanto, sobrantes de liquidación — agrupado por técnico con total) y SALDADOS. Usala para '¿qué técnicos me deben plata?', '¿a quién desasigné que tenía adelanto?', '¿cuánta plata hay en la calle en adelantos?'.",
+      "Los adelantos de materiales entregados a técnicos, en sus tres estados (mismos datos que Finanzas → Adelantos): EN OBRA (curso normal), A RESOLVER (técnicos desasignados con plata en la mano, gestiones canceladas con adelanto, sobrantes de liquidación — agrupado por técnico con total) y SALDADOS. Usala para '¿qué técnicos me deben plata?', '¿a quién desasigné que tenía adelanto?', '¿cuánta plata hay en la calle en adelantos?'. Si ofrecés un botón, usá /finanzas?tab=adelantos (no /finanzas pelado, que cae en Cobros).",
     inputSchema: z.object({}),
     execute: seguro(async () => {
       const d = await listarAdelantos();
@@ -462,6 +635,39 @@ export function crearTools(usuario: UsuarioActual) {
     }),
   });
 
+  // STORY-1026: gráficos dinámicos en el chat. El modelo compone el cruce con
+  // enums; el server calcula la serie (armarGrafico) y el cliente la dibuja
+  // desde el output de ESTA tool — el modelo jamás escribe un número del gráfico.
+  const graficar = tool({
+    description:
+      "Mostrá un GRÁFICO dentro del chat (se dibuja solo a partir del resultado de esta tool). Elegí el cruce: una dimensión (agrupar_por) × una métrica; el servidor calcula la serie con los mismos datos que Informes. Usala siempre que la respuesta compare categorías o muestre una evolución: rankings de técnicos o gestores, distribución por etapa o especialidad, ingresos o gestiones por mes. Después comentá en texto solo los 2-3 datos salientes del resultado — no repitas la lista entera.",
+    inputSchema: z.object({
+      titulo: z.string().max(60).describe("Título corto del gráfico, en español"),
+      agrupar_por: z.enum(["tecnico", "gestor", "especialidad", "etapa", "mes"]),
+      metrica: z
+        .enum([
+          "cantidad",
+          "monto_cobrado",
+          "fee_inmobiliaria",
+          "tiempo_ciclo_dias",
+          "calificacion_promedio",
+          "dias_en_etapa",
+        ])
+        .describe(
+          "cantidad = gestiones; monto_cobrado/fee_inmobiliaria = plata cobrada (hechos congelados); tiempo_ciclo_dias = promedio creación→cobro; calificacion_promedio = estrellas; dias_en_etapa = permanencia promedio (solo con agrupar_por: etapa)"
+        ),
+      estado: z.enum(["activas", "finalizadas", "todas"]).optional(),
+      periodo: z
+        .enum(["este_mes", "ultimos_3_meses", "ultimos_6_meses", "ultimo_anio", "historico"])
+        .optional(),
+    }),
+    execute: seguro(async (args) => {
+      const m = await obtenerMetricas();
+      if (!m) return { error: "No hay métricas disponibles para este rol." };
+      return armarGrafico(m, args);
+    }),
+  });
+
   const consultar_cartera = tool({
     description:
       "La cartera de la inmobiliaria: propiedades administradas (con propietario e inquilino actual), o el listado de propietarios o inquilinos con su contacto. Usala para '¿qué propiedades administramos?', 'el teléfono de tal propietario', '¿está ocupada tal dirección?'.",
@@ -549,7 +755,7 @@ export function crearTools(usuario: UsuarioActual) {
 
   const ranking_tecnicos = tool({
     description:
-      "El ranking de desempeño de los técnicos aprobados: calificación promedio (estrellas), desvío de presupuesto y de plazo, obras activas y realizadas, rechazos de asignación y abandonos. Usala para '¿cuál es el mejor técnico?', '¿a quién conviene asignar?', '¿quién abandona trabajos?'.",
+      "El ranking de desempeño de los técnicos aprobados: calificación promedio (estrellas), desvío de presupuesto y de plazo, obras activas y realizadas, rechazos de asignación y abandonos. Usala para '¿cuál es el mejor técnico?', '¿a quién conviene asignar?', '¿quién abandona trabajos?'. Si ofrecés un botón para ver más, apuntá a /metricas (Informes, ahí viven las cards de desempeño) — /tecnicos es el listado operativo y NO muestra el ranking.",
     inputSchema: z.object({}),
     execute: seguro(async () => {
       const tecnicos = (await listarTecnicos()).filter(
@@ -702,7 +908,7 @@ export function crearTools(usuario: UsuarioActual) {
     mis_pendientes,
     mis_notificaciones,
     sugerir_navegacion,
-    ...(esStaff && { resumen_tablero, metricas_negocio }),
+    ...(esStaff && { resumen_tablero, metricas_negocio, graficar }),
     ...(veFinanzas && { adelantos_tecnicos }),
     ...(veCartera && { consultar_cartera, historial_propiedad }),
     ...(veTecnicos && { ranking_tecnicos, detalle_tecnico, inbox_reportes }),

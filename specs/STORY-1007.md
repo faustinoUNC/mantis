@@ -1,4 +1,4 @@
-# STORY-1007 — Walter: asistente IA con burbuja flotante y tools por rol (v1.1)
+# STORY-1007 — Walter: asistente IA con burbuja flotante y tools por rol (v1.2)
 
 **Estado:** ✅ done · **Origen:** pedido de Fausti (2026-07-19) + resolución de party mode (12ª sesión). Evolución del "Walter" de la tesis original, rediseñado desde cero sobre los estándares vigentes (Vercel AI SDK, OWASP LLM Top 10 2025, Anthropic tool design) y con la seguridad como requisito innegociable.
 
@@ -90,3 +90,26 @@ Reglas de diseño de tools: descripciones prescriptivas (cuándo usarla), schema
   - Burbuja ausente en el login (monta solo en `PanelShell`). `tsc` y eslint verdes.
   - v1.0 fixes durante la verificación: "activas" alineada a la definición de Informes (excluye terminales) y prompt sin narración de proceso.
   - **v1.1** (burbuja arrastrable): verificado en viewport 390×760 como técnico — drag de (344,638) a (120,400) → imán al borde izquierdo (x=8, y conservada), el click posterior al drag NO abre el panel, el tap sí abre, y tras recargar la posición persiste (8,374). `tsc`/eslint verdes.
+
+## v1.2 — Dos bugs del tester (cards #146 y #147, 2026-07-21)
+
+### Bug 1 (card #146): "error de carga" — el historial quedaba envenenado por un tool call cortado
+
+**Síntoma (Rami):** preguntando por cuellos de botella Walter ofreció los botones de tablero/métricas; después de navegar y volver a preguntar, el chat quedó en "No pude responder ahora" para siempre (solo "Nueva" lo destrababa).
+
+**Causa raíz:** navegar mientras Walter consulta una tool corta el stream (Walter se desmonta), y la persistencia de STORY-1015 guarda la conversación en ese estado: una parte de tool en `input-streaming`/`input-available` **sin resultado**. Al mensaje siguiente ese historial viaja al modelo — un tool call sin tool result es un request inválido para la API — y TODOS los mensajes posteriores fallan. Además la parte colgada se renderiza como "Calculando los números…" girando eterno.
+
+**Fix (dos capas):**
+
+- `app/api/asistente/route.ts` — `sanitizarMensajes` descarta las partes de tool que no estén completas (solo pasan `output-available`/`output-error`): el historial que llega al modelo es SIEMPRE válido, venga de donde venga.
+- `walter.client.tsx` — al restaurar de `sessionStorage` se limpian esas mismas partes colgadas (no queda el spinner eterno en el hilo).
+
+### Bug 2 (card #147): "ver ranking completo" llevaba al listado de técnicos, no a la métrica
+
+**Síntoma (Rami):** pidió el top de técnicos; el botón de Walter llevó a `/tecnicos` (listado operativo) en vez de a la card de calificaciones de Informes.
+
+**Fix:** guía de navegación explícita — la descripción de `ranking_tecnicos` y la guía del prompt indican que para rankings/comparaciones/desempeño el botón va a **Informes** (`/metricas`, ya whitelisteada) con label acorde ("Ver informes"), reservando `/tecnicos` para gestión operativa (documentación, altas). Con STORY-1026, además, el ranking se muestra como gráfico en el propio chat.
+
+**Barrido del patrón (pedido de Fausti):** se auditó cada tool contra su destino natural en la whitelist. Todos correctos (inbox → `/inbox`, auditoría → `/admin/auditoria`, equipo → `/admin/empleados`, cartera → `/cartera/propiedades[/<id>]`, archivo → `/gestiones/archivadas`, agenda → `/tecnico/agenda`) salvo UNO que repetía el defecto: las pestañas de **Finanzas** viven en la URL (`?tab=`, STORY-1020) y la whitelist solo permitía `/finanzas` pelado — un botón "Ver liquidaciones/adelantos" aterrizaba en Cobros. Fix: `EXTRA_POR_ROL` pasa a llevar `{href, label}` y suma `/finanzas?tab=liquidaciones` y `/finanzas?tab=adelantos` para admin y gestor financiero (espejo del guard `veFinanzas`); la descripción de `adelantos_tecnicos` indica el deep link. Las rutas nuevas entran solas al prompt vía `rutasEstaticas`.
+
+**Criterios v1.2:** (1) cortar a Walter navegando en plena consulta y volver a preguntar → responde normal (historial saneado), sin spinner eterno en el hilo restaurado; (2) "top de técnicos" + botón → aterriza en Informes; (3) regresión: botones de navegación válidos, streaming y reintento intactos.

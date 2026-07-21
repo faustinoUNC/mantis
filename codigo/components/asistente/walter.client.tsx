@@ -5,11 +5,20 @@
 // `aparecer`, esmeralda solo como acento, targets ≥44px, voseo.
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Rol } from "@/features/auth/types";
 import { CHIPS_POR_ROL, LIMITES } from "@/features/asistente/config";
 import { cn } from "@/shared/utils/cn";
+import type { GraficoWalter as DatosGrafico } from "@/components/asistente/grafico.client";
+
+// STORY-1026: recharts solo se descarga cuando aparece el primer gráfico
+// (el técnico no tiene la tool y no lo carga nunca).
+const Grafico = dynamic(() => import("@/components/asistente/grafico.client"), {
+  ssr: false,
+  loading: () => <span className="block h-[170px] animate-pulse rounded-md bg-surface-2" />,
+});
 
 // Qué está consultando cada tool (estado "pensando" honesto, no genérico).
 const CONSULTANDO: Record<string, string> = {
@@ -29,6 +38,7 @@ const CONSULTANDO: Record<string, string> = {
   equipo_interno: "Consultando el equipo",
   mi_agenda: "Mirando tu agenda",
   sugerir_navegacion: "Preparando accesos",
+  graficar: "Armando el gráfico",
 };
 
 // El texto del modelo llega como texto plano con **negritas** — se renderiza
@@ -63,7 +73,28 @@ function dentroDeViewport(x: number, y: number) {
   };
 }
 
-export function Walter({ rol, nombre }: { rol: Rol; nombre: string }) {
+// STORY-1007 v1.2: navegar en pleno streaming corta la respuesta y puede
+// persistir un tool call sin resultado — al restaurar se descartan esas partes
+// (el server también las filtra; acá evitamos el "Consultando…" girando eterno).
+function limpiarPartesColgadas(mensajes: unknown): unknown {
+  if (!Array.isArray(mensajes)) return [];
+  return mensajes.map((m) =>
+    m && typeof m === "object" && Array.isArray((m as { parts?: unknown[] }).parts)
+      ? {
+          ...m,
+          parts: (m as { parts: { type?: string; state?: string }[] }).parts.filter(
+            (p) =>
+              typeof p?.type !== "string" ||
+              !p.type.startsWith("tool-") ||
+              p.state === "output-available" ||
+              p.state === "output-error"
+          ),
+        }
+      : m
+  );
+}
+
+export function Walter({ rol, nombre, usuarioId }: { rol: Rol; nombre: string; usuarioId: string }) {
   const [abierto, setAbierto] = useState(false);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -159,29 +190,35 @@ export function Walter({ rol, nombre }: { rol: Rol; nombre: string }) {
   // sessionStorage (por pestaña, efímero: el alcance de una sesión de chat),
   // igual que ya se hace con la posición de la burbuja. `restaurado` evita que
   // el primer render con messages=[] pise lo guardado antes de restaurar.
+  // v1.1: la clave es POR USUARIO — otro login en la misma pestaña no debe ver
+  // (ni pisar) la conversación ajena.
+  const claveChat = `walter-chat:${usuarioId}`;
   const restaurado = useRef(false);
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       try {
-        const guardado = sessionStorage.getItem("walter-chat");
-        if (guardado) setMessages(JSON.parse(guardado));
+        // Clave vieja sin usuario (previa a v1.1): se descarta, era legible
+        // por cualquier login de la pestaña.
+        sessionStorage.removeItem("walter-chat");
+        const guardado = sessionStorage.getItem(claveChat);
+        if (guardado) setMessages(limpiarPartesColgadas(JSON.parse(guardado)) as never);
       } catch {
         // sin conversación guardada, arranca vacío
       }
       restaurado.current = true;
     });
     return () => cancelAnimationFrame(frame);
-  }, [setMessages]);
+  }, [setMessages, claveChat]);
 
   useEffect(() => {
     if (!restaurado.current) return;
     try {
-      if (messages.length) sessionStorage.setItem("walter-chat", JSON.stringify(messages));
-      else sessionStorage.removeItem("walter-chat");
+      if (messages.length) sessionStorage.setItem(claveChat, JSON.stringify(messages));
+      else sessionStorage.removeItem(claveChat);
     } catch {
       // sin persistencia no pasa nada
     }
-  }, [messages]);
+  }, [messages, claveChat]);
 
   const ocupado = status === "submitted" || status === "streaming";
 
@@ -278,7 +315,7 @@ export function Walter({ rol, nombre }: { rol: Rol; nombre: string }) {
                   clearError();
                   // STORY-1015: empezar de cero es explícito y persistente.
                   try {
-                    sessionStorage.removeItem("walter-chat");
+                    sessionStorage.removeItem(claveChat);
                   } catch {
                     // sin persistencia no pasa nada
                   }
@@ -328,7 +365,11 @@ export function Walter({ rol, nombre }: { rol: Rol; nombre: string }) {
               <div key={m.id} className={cn("flex", m.role === "user" && "justify-end")}>
                 <div
                   className={cn(
-                    "text-sm rounded-lg px-3.5 py-2.5 max-w-[85%] space-y-2",
+                    "text-sm rounded-lg px-3.5 py-2.5 space-y-2",
+                    // STORY-1026: un mensaje con gráfico usa todo el ancho del panel.
+                    m.parts.some((p) => p.type === "tool-graficar" && p.state === "output-available")
+                      ? "w-full"
+                      : "max-w-[85%]",
                     m.role === "user"
                       ? "bg-brand-soft border border-brand-soft-border"
                       : "border border-border"
@@ -359,6 +400,13 @@ export function Walter({ rol, nombre }: { rol: Rol; nombre: string }) {
                           ))}
                         </span>
                       );
+                    }
+                    // STORY-1026: gráfico calculado server-side, atado a SU
+                    // mensaje (persiste con el chat, no es estado global).
+                    if (parte.type === "tool-graficar" && parte.state === "output-available") {
+                      const salida = parte.output as (DatosGrafico & { error?: string }) | undefined;
+                      if (!salida || salida.error || !salida.serie?.length) return null;
+                      return <Grafico key={i} grafico={salida} />;
                     }
                     // Cualquier otra tool en curso → estado honesto.
                     if (

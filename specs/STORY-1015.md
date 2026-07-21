@@ -1,4 +1,4 @@
-# STORY-1015 — Walter conserva la conversación al navegar entre secciones (v1.0)
+# STORY-1015 — Walter conserva la conversación al navegar entre secciones (v1.1)
 
 **Estado:** 🔨 en prueba · **Origen:** card Trello #135 (Rami, 2026-07-19, https://trello.com/c/Educo9xk): "el único error que le vi, es que borra el chat cuando te movés de un apartado a otro".
 
@@ -36,3 +36,15 @@ La posición de la burbuja **sí** sobrevive porque ya se persiste en `sessionSt
 - **Commit:** `29b3933` (2026-07-19, junto con STORY-1016).
 - **Archivos:** `codigo/components/asistente/walter.client.tsx` (restaurar + guardar `messages` en `sessionStorage` bajo `walter-chat` con ref `restaurado`; "Nueva" limpia la clave), `specs/README.md`, `tasks/PENDIENTES.md`.
 - **Verificación:** `tsc`/eslint verdes. E2E navegador (admin): Walter → mensaje + respuesta → navegar Tablero→Finanzas → reabrir con la conversación intacta; "Nueva" + navegar → vuelve al saludo inicial (persistencia limpiada); sin mismatch de hidratación en consola.
+
+## v1.1 — La conversación es del usuario, no de la pestaña (bug del tester, card #135)
+
+**Problema (Rami, 2026-07-21):** cerrar sesión y entrar con OTRO usuario en la misma pestaña mostraba la conversación del anterior (probado entre técnicos). La clave `walter-chat` era única por pestaña — la card lo documentaba como corner case "tocar Nueva si aparece", pero es una fuga de privacidad real: un chat puede contener datos del alcance del usuario anterior.
+
+**Fix:**
+
+- La clave pasa a ser **por usuario**: `walter-chat:<usuarioId>`. `PanelShell` le pasa `usuarioId` a `<Walter>` (dato de sesión server-side, como ya hace con la campana). Cada usuario restaura SOLO su conversación; la del otro no se toca (si vuelve a entrar, la recupera).
+- Limpieza de la clave vieja sin usuario (`walter-chat`) al montar, para que ninguna charla previa al fix quede legible por otro.
+- La posición de la burbuja (`walter-burbuja`) sigue global: es preferencia de dispositivo, no dato.
+
+**Criterios v1.1:** (1) usuario A chatea → logout → login usuario B en la misma pestaña → Walter arranca con el saludo inicial, sin rastro del chat de A; (2) B chatea, logout, login A → A recupera SU conversación; (3) regresión: navegar entre secciones con el mismo usuario sigue conservando el chat.

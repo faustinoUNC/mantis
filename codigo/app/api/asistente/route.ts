@@ -48,6 +48,17 @@ function sanitizarMensajes(mensajes: unknown): UIMessage[] | null {
   if (validos.length === 0) return null;
   const ultimos = validos.slice(-LIMITES.mensajesHistorial);
   for (const m of ultimos) {
+    // STORY-1007 v1.2: navegar en pleno streaming corta la respuesta y el
+    // historial persistido puede traer tool calls SIN resultado — un historial
+    // así es inválido para la API y envenenaba todos los mensajes siguientes.
+    // Solo pasan las partes de tool completas.
+    m.parts = m.parts.filter(
+      (p) =>
+        !p.type.startsWith("tool-") ||
+        !("state" in p) ||
+        p.state === "output-available" ||
+        p.state === "output-error"
+    );
     for (const p of m.parts) {
       if (p.type === "text" && p.text.length > LIMITES.caracteresInput) {
         p.text = p.text.slice(0, LIMITES.caracteresInput);

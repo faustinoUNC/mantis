@@ -84,7 +84,7 @@ export async function PanelShell({
         <NavTecnico items={items} />
         {/* STORY-1007: el rol es solo para la UI (chips) — el server deriva el
             suyo de la sesión; inyectar otro acá no cambia nada. */}
-        <Walter rol={usuario.rol} nombre={usuario.nombre} />
+        <Walter rol={usuario.rol} nombre={usuario.nombre} usuarioId={usuario.id} />
       </div>
     );
   }
@@ -116,7 +116,7 @@ export async function PanelShell({
       <main className="flex-1 min-w-0 px-4 md:px-8 py-6">
         {anchoCompleto ? children : <div className="max-w-6xl mx-auto">{children}</div>}
       </main>
-      <Walter rol={usuario.rol} nombre={usuario.nombre} />
+      <Walter rol={usuario.rol} nombre={usuario.nombre} usuarioId={usuario.id} />
     </div>
   );
 }
