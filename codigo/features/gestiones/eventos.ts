@@ -65,6 +65,10 @@ export function detalleLegible(detalle: Record<string, unknown> | null): string 
   // STORY-977 v1.1: si el adelanto de materiales superó lo debido al
   // liquidar, queda documentado como sobrante en el evento.
   if (detalle.sobrante != null) partes.push(`Sobrante: ${plataD(detalle.sobrante)}`);
+  // STORY-1018: adelanto confirmado por encima del techo autorizado de
+  // materiales — la Auditoría responde "quién autorizó dar de más".
+  if (detalle.excedente_tope != null)
+    partes.push(`Excedió lo autorizado en ${plataD(detalle.excedente_tope)}`);
   if (detalle.plazo_dias != null) partes.push(`Plazo: ${detalle.plazo_dias} día${Number(detalle.plazo_dias) === 1 ? "" : "s"}`);
   if (detalle.pagador) partes.push(`Paga: ${detalle.pagador}`);
   if (detalle.medio) partes.push(`Medio: ${MEDIO_LABEL[String(detalle.medio)] ?? detalle.medio}`);

@@ -204,6 +204,11 @@ function FormCobro({
 // referencia para decidir cuánto adelantar) y exige el comprobante de la
 // entrega (recibo firmado o transferencia) — el archivo se captura en estado
 // al pasar al paso de confirmación porque el form se desmonta.
+// STORY-1018: aviso ámbar (NUNCA bloqueo — el tope duro fue removido en la
+// v1.1 por romper casos legítimos) cuando el acumulado supera el techo
+// autorizado de materiales: presupuesto vigente + ampliaciones aprobadas del
+// técnico actual. La fórmula lee el presupuesto vigente, así el límite
+// acompaña solo la re-presupuestación tras una desasignación.
 function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
   const [monto, setMonto] = useState("");
   const [comprobante, setComprobante] = useState<File | null>(null);
@@ -217,6 +222,17 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
     .filter((p) => p.estado === "aprobado")
     .sort((a, b) => b.creado_en.localeCompare(a.creado_en))[0];
   const presupuestado = aprobado ? Number(aprobado.monto_materiales) : 0;
+  // STORY-1018: la ampliación suma ENTERA al techo (no tiene split
+  // materiales/mano de obra — decisión consciente, 15ª sesión). Solo las del
+  // técnico actual (las de un saliente son historial, patrón STORY-983).
+  const ampliadoAdelanto = gestion.ampliaciones
+    .filter((a) => a.estado === "aprobada" && a.tecnico_id === gestion.tecnico_id)
+    .reduce((s, a) => s + Number(a.monto), 0);
+  const topeAdelanto = aprobado ? presupuestado + ampliadoAdelanto : null;
+  const excedenteTope =
+    topeAdelanto != null && yaAdelantado + montoNum > topeAdelanto
+      ? yaAdelantado + montoNum - topeAdelanto
+      : 0;
 
   async function confirmar() {
     setError(null);
@@ -238,6 +254,22 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
   if (confirmando) {
     return (
       <div className="flex flex-col gap-2">
+        {excedenteTope > 0 && (
+          <div
+            className="max-w-md rounded-md border border-urgente-soft-border bg-urgente-soft px-4 py-3"
+            role="alert"
+          >
+            <p className="text-sm font-semibold text-urgente-fuerte">
+              Con este adelanto le habrás entregado{" "}
+              {plata(yaAdelantado + montoNum)} — son {plata(excedenteTope)} más
+              que los materiales autorizados ({plata(topeAdelanto ?? 0)}).
+            </p>
+            <p className="text-[13px] text-muted mt-1">
+              Podés confirmarlo igual — el excedente queda registrado en el
+              historial de la gestión.
+            </p>
+          </div>
+        )}
         <p className="text-[13px] text-muted">
           Vas a cargar un adelanto de{" "}
           <span className="font-semibold">{plata(montoNum)}</span> con su

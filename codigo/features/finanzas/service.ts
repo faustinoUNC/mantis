@@ -717,18 +717,45 @@ export async function registrarAdelantoMateriales(
   const supabase = await createClient();
   const { data: g } = await supabase
     .from("gestiones")
-    .select("etapa, adelanto_materiales")
+    .select("etapa, adelanto_materiales, tecnico_id")
     .eq("id", gestionId)
     .single();
   type Fila = {
     etapa: string;
     adelanto_materiales: number | null;
+    tecnico_id: string | null;
   };
   const fila = g as unknown as Fila | null;
   if (!fila || fila.etapa !== "en_ejecucion") {
     return { ok: false, error: "El adelanto solo se puede cargar en ejecución." };
   }
   const total = Number(fila.adelanto_materiales ?? 0) + monto;
+
+  // STORY-1018: mismo techo que muestra la UI (materiales del presupuesto
+  // vigente + ampliaciones aprobadas del técnico actual). Si el acumulado lo
+  // supera, el excedente queda CONGELADO en el evento — un aviso que no deja
+  // huella es cortesía, no control (la Auditoría responde "quién autorizó dar
+  // de más"). Sigue sin ser un tope: no bloquea nada (doctrina v1.1).
+  let excedenteTope = 0;
+  const { data: presAprobado } = await supabase
+    .from("presupuestos")
+    .select("monto_materiales")
+    .eq("gestion_id", gestionId)
+    .eq("estado", "aprobado")
+    .order("creado_en", { ascending: false })
+    .limit(1);
+  if (presAprobado?.length && fila.tecnico_id) {
+    const { data: amps } = await supabase
+      .from("ampliaciones")
+      .select("monto")
+      .eq("gestion_id", gestionId)
+      .eq("estado", "aprobada")
+      .eq("tecnico_id", fila.tecnico_id);
+    const tope =
+      Number(presAprobado[0].monto_materiales) +
+      (amps ?? []).reduce((s, a) => s + Number(a.monto), 0);
+    if (total > tope) excedenteTope = total - tope;
+  }
 
   const path = `${gestionId}/adelanto-comprobante-${Date.now()}.${ext}`;
   const admin = createAdminClient();
@@ -748,7 +775,12 @@ export async function registrarAdelantoMateriales(
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo guardar el adelanto." };
 
-  await registrarEvento(gestionId, "adelanto_materiales_registrado", actual.id, { monto, total, comprobante_path: path });
+  await registrarEvento(gestionId, "adelanto_materiales_registrado", actual.id, {
+    monto,
+    total,
+    comprobante_path: path,
+    ...(excedenteTope > 0 ? { excedente_tope: excedenteTope } : {}),
+  });
   revalidatePath(`/gestiones/${gestionId}`);
   return { ok: true };
 }
