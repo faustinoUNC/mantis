@@ -16,11 +16,13 @@ import { errorCuil, normalizarCuil } from "@/shared/utils/cuil";
 import { duplicadoPersona, ERROR_DUPLICADO_DB } from "@/shared/utils/duplicados";
 import { errorNombre } from "@/shared/utils/nombre";
 import { errorTelefono, normalizarTelefono } from "@/shared/utils/telefono";
-import type {
-  EstadoTecnico,
-  Franja,
-  TecnicoDetalle,
-  TecnicoResumen,
+import {
+  errorFranja,
+  type EstadoTecnico,
+  type Franja,
+  type FranjaNueva,
+  type TecnicoDetalle,
+  type TecnicoResumen,
 } from "./types";
 
 const BUCKET = "documentacion-tecnicos";
@@ -72,6 +74,36 @@ async function subirDoc(
     .from(BUCKET)
     .upload(path, archivo, { upsert: true, contentType: archivo.type });
   return error ? null : path;
+}
+
+// STORY-1025: las franjas del alta viajan como JSON en el campo "franjas".
+// Se re-valida todo en server (forma, rango y solapamientos) — el form es público.
+const HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function leerFranjas(form: FormData): FranjaNueva[] | string {
+  let crudas: unknown;
+  try {
+    crudas = JSON.parse(String(form.get("franjas") ?? "[]"));
+  } catch {
+    return "Los horarios llegaron mal formados: recargá y probá de nuevo.";
+  }
+  if (!Array.isArray(crudas) || crudas.length === 0) {
+    return "Cargá al menos un horario de trabajo.";
+  }
+  const franjas: FranjaNueva[] = [];
+  for (const cruda of crudas) {
+    const f = cruda as Partial<FranjaNueva>;
+    const dia = Number(f?.dia_semana);
+    const desde = String(f?.hora_desde ?? "");
+    const hasta = String(f?.hora_hasta ?? "");
+    if (!Number.isInteger(dia) || dia < 0 || dia > 6 || !HORA_RE.test(desde) || !HORA_RE.test(hasta)) {
+      return "Los horarios llegaron mal formados: recargá y probá de nuevo.";
+    }
+    const err = errorFranja({ dia_semana: dia, hora_desde: desde, hora_hasta: hasta }, franjas);
+    if (err) return err;
+    franjas.push({ dia_semana: dia, hora_desde: desde, hora_hasta: hasta });
+  }
+  return franjas;
 }
 
 interface DatosAlta {
@@ -135,6 +167,11 @@ async function altaTecnico(
     const errMatricula = errorArchivo(`La matrícula "${m.name}"`, m);
     if (errMatricula) return { ok: false, error: errMatricula };
   }
+
+  // STORY-1025: horarios obligatorios desde el alta — el técnico nace con su
+  // disponibilidad visible en el picker de asignación, sin paso posterior.
+  const franjas = leerFranjas(form);
+  if (typeof franjas === "string") return { ok: false, error: franjas };
 
   const admin = createAdminClient();
 
@@ -297,6 +334,11 @@ async function altaTecnico(
         especialidad_id,
       }))
     );
+    // STORY-1025: el reintento trae horarios nuevos — pisan los del intento previo.
+    await admin.from("franjas_disponibilidad").delete().eq("tecnico_id", reabrir.id);
+    await admin.from("franjas_disponibilidad").insert(
+      franjas.map((f) => ({ ...f, tecnico_id: reabrir!.id }))
+    );
     await emailVerificacionTecnico(
       { nombre: datos.nombre, email: datos.email },
       `${baseUrl()}/registro-tecnico/verificar?token=${tokenReintento}`
@@ -362,6 +404,11 @@ async function altaTecnico(
       tecnico_id: id,
       especialidad_id,
     }))
+  );
+
+  // STORY-1025: los horarios del form entran con el alta.
+  await admin.from("franjas_disponibilidad").insert(
+    franjas.map((f) => ({ ...f, tecnico_id: id }))
   );
 
   // Aprobado directo (alta manual) → fila en usuarios con acceso
@@ -1009,10 +1056,14 @@ export async function miPerfilTecnico() {
 // ── Agenda ──
 
 export async function misFranjas(): Promise<Franja[]> {
+  // STORY-1025: filtro explícito además de la RLS (defensa en profundidad).
+  const actual = await obtenerUsuarioActual();
+  if (!actual) return [];
   const supabase = await createClient();
   const { data } = await supabase
     .from("franjas_disponibilidad")
     .select("id, dia_semana, hora_desde, hora_hasta")
+    .eq("tecnico_id", actual.id)
     .order("dia_semana")
     .order("hora_desde");
   return (data ?? []) as Franja[];
@@ -1026,6 +1077,15 @@ export async function agregarFranja(datos: {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
   const supabase = await createClient();
+  // STORY-1025: sin solapamientos — el unique de la tabla solo frena el
+  // choque exacto de hora de inicio, no un 10:00–12:00 dentro de un 09:00–18:00.
+  const { data: existentes } = await supabase
+    .from("franjas_disponibilidad")
+    .select("dia_semana, hora_desde, hora_hasta")
+    .eq("tecnico_id", actual.id)
+    .eq("dia_semana", datos.dia_semana);
+  const errSolapa = errorFranja(datos, (existentes ?? []) as FranjaNueva[]);
+  if (errSolapa) return { ok: false, error: errSolapa };
   const { error } = await supabase
     .from("franjas_disponibilidad")
     .insert({ ...datos, tecnico_id: actual.id });

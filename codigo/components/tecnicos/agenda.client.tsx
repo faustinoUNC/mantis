@@ -15,6 +15,17 @@ function hora(h: string) {
 export function Agenda({ franjas }: { franjas: Franja[] }) {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // STORY-1025: el borrado deja de ser "disparar y rezar" — estado + error visible.
+  const [borrando, setBorrando] = useState<string | null>(null);
+  const [errorLista, setErrorLista] = useState<string | null>(null);
+
+  async function onBorrar(id: string) {
+    setErrorLista(null);
+    setBorrando(id);
+    const r = await borrarFranja(id);
+    setBorrando(null);
+    if (!r.ok) setErrorLista(r.error);
+  }
 
   async function onAgregar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -66,6 +77,12 @@ export function Agenda({ franjas }: { franjas: Franja[] }) {
         )}
       </Card>
 
+      {errorLista && (
+        <p role="alert" className="mb-3 text-sm font-medium text-error">
+          {errorLista}
+        </p>
+      )}
+
       {franjas.length === 0 ? (
         <p className="text-sm text-muted">
           Todavía no cargaste horarios — agregá el primero arriba.
@@ -93,9 +110,10 @@ export function Agenda({ franjas }: { franjas: Franja[] }) {
                         <Button
                           variante="fantasma"
                           className="min-h-tap px-3 text-sm text-error hover:text-error"
-                          onClick={() => borrarFranja(f.id)}
+                          disabled={borrando === f.id}
+                          onClick={() => onBorrar(f.id)}
                         >
-                          Borrar
+                          {borrando === f.id ? "…" : "Borrar"}
                         </Button>
                       </Card>
                     ))}
