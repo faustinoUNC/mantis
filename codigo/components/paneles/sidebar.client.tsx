@@ -79,7 +79,7 @@ export function SidebarStaff({
           {/* STORY-989 v1.1: tooltip estético en el rail (reemplaza el title
               nativo) — aparece a la derecha del ícono al hacer hover. */}
           {rail && (
-            <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-[12px] font-medium text-background opacity-0 shadow-overlay transition-opacity duration-150 group-hover/nav:opacity-100">
+            <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-[12px] font-medium text-background opacity-0 shadow-overlay transition-opacity duration-150 group-hover/nav:opacity-100 [@media(max-height:50rem)]:hidden">
               {item.label}
             </span>
           )}
@@ -106,12 +106,17 @@ export function SidebarStaff({
           {!colapsado && marca}
           {campana}
         </div>
-        {/* Rail angosto: sin scroll (los ítems del staff entran de sobra) para
-            que los tooltips a la derecha no queden recortados por el overflow. */}
+        {/* Rail angosto: sin scroll para que los tooltips a la derecha no
+            queden recortados por el overflow. STORY-1028: en ventanas bajas
+            los ítems no entran y sin scroll empujan el pie y el chevron fuera
+            del viewport (el rail quedaba sin botón para expandir) — ahí el nav
+            scrollea y los tooltips se ocultan. */}
         <nav
           className={cn(
             "flex flex-col gap-1 flex-1",
-            colapsado ? "overflow-visible" : "overflow-y-auto"
+            colapsado
+              ? "overflow-visible [@media(max-height:50rem)]:min-h-0 [@media(max-height:50rem)]:overflow-y-auto"
+              : "overflow-y-auto"
           )}
         >
           {enlaces("desktop")}
