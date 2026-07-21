@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -100,14 +101,19 @@ export function Finanzas({
   liquidaciones: LiquidacionesData;
   adelantos: AdelantosData;
 }) {
-  const [tab, setTab] = useState<Tab>("cobros");
+  // STORY-1020: la pestaña vive en la URL (?tab=), no en estado — así el
+  // "← Volver" del detalle de gestión devuelve a esta misma pestaña (el back
+  // restaura la URL y con ella la pestaña). Cobros = URL limpia de siempre.
+  const tabParam = useSearchParams().get("tab");
+  const tab: Tab =
+    tabParam === "liquidaciones" || tabParam === "adelantos" ? tabParam : "cobros";
   const [busqueda, setBusqueda] = useState("");
   const [campo, setCampo] = useState("todo");
   const [orden, setOrden] = useState<OrdenPendientes>("antiguedad");
   // Al cambiar de pestaña el campo elegido puede no existir (Pagador/Técnico).
   const irATab = (t: Tab) => {
-    setTab(t);
     setCampo("todo");
+    window.history.replaceState(null, "", t === "cobros" ? "/finanzas" : `/finanzas?tab=${t}`);
   };
   // Congelado al montar: define el "mes en curso" de las cards de resumen.
   const [ahoraIso] = useState(() => new Date().toISOString());

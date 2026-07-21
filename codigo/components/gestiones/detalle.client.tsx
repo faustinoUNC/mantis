@@ -2147,9 +2147,14 @@ export function DetalleGestion({
   // (las server actions también lo rechazan; esto es el espejo visual).
   const tecnicoEnPausa = esTecnicoAsignado && Boolean(gestion.aviso_no_continua_en);
 
-  // STORY-916: se vuelve al lugar de origen (el tablero, de donde se abren las
-  // gestiones), no al Inicio. El técnico vuelve a su home (su lista de trabajos).
-  const volver = usuario.rol === "tecnico" ? "/tecnico" : "/tablero";
+  // STORY-1020: se vuelve a la pantalla desde la que se abrió la gestión
+  // (tablero, Finanzas, cartera, técnico, auditoría…), no siempre al tablero.
+  // Sin historial en la pestaña (deep link) → tablero; el técnico, a su home.
+  const router = useRouter();
+  const volver = () => {
+    if (window.history.length > 1) router.back();
+    else router.push(usuario.rol === "tecnico" ? "/tecnico" : "/tablero");
+  };
 
   return (
     <div className="animate-aparecer max-w-3xl">
@@ -2173,9 +2178,13 @@ export function DetalleGestion({
       )}
 
       <div className="flex items-center justify-between gap-3">
-        <Link href={volver} className="text-sm font-medium text-muted hover:text-foreground">
+        <button
+          type="button"
+          onClick={volver}
+          className="text-sm font-medium text-muted hover:text-foreground"
+        >
           ← Volver
-        </Link>
+        </button>
         {/* STORY-1009: número secuencial legible (antes: prefijo del UUID) */}
         <span className="font-mono text-[12px] text-muted">
           Gestión #{gestion.numero}
