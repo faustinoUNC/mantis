@@ -46,6 +46,6 @@ En el server, `resolverPresupuesto` al aprobar **re-escribe** `pagador/pct/cargo
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente — a commitear cuando Fausti dé el OK)_.
+- **Commit:** `ccb924b` (2026-07-22).
 - **Archivos:** `codigo/features/gestiones/service.ts` (`resolverPresupuesto`: al aprobar lee `pagador/pagador_pct_inquilino/cargo_admin` ya persistidos y valida sobre esos; se eliminó la re-escritura desde el cliente; firma de `opciones` reducida a `{ motivo? }`); `codigo/components/gestiones/detalle.client.tsx` (`EvaluacionPresupuesto`: `terminosCambiados`, gate del botón "Aprobar y ejecutar", aviso de reenvío, llamada `resolverPresupuesto(..., true)` sin términos). `types.ts` sin cambios (la firma de opciones es inline en el service).
 - **Verificación:** `tsc --noEmit` y `eslint` verdes sobre los dos archivos. E2E navegador (admin, dev server) en la gestión #200 (presupuesto, compartido 50/50, ya enviada): estado inicial con "Aprobar y ejecutar" habilitado (términos = enviados); cambiar "Paga" a Inquilino → botón deshabilitado + aviso "Cambiaste los términos después de enviar — reenviá el presupuesto para poder aprobar"; volver a Compartido 50 → se re-habilita y el aviso desaparece; cambiar el fee (50000→60000) → deshabilitado + aviso; cambiar el % (50→40) → deshabilitado + aviso. Sin escrituras en la base durante la prueba (solo estado local). Consola sin errores. Criterio 3 (bypass de UI) queda cubierto estructuralmente: el server ya no acepta términos del cliente al aprobar.
