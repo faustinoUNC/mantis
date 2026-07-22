@@ -889,7 +889,7 @@
     z-index: 10000;
     backdrop-filter: blur(4px);
   }
-  #techModal, #flowModal { z-index: 10002; }
+  #techModal, #flowModal, #waiModal, #pollModal { z-index: 10002; }
   .tech-modal.open { display: flex; }
   .tech-modal-inner {
     background: var(--paper);
@@ -1886,6 +1886,190 @@
     font-weight: 800;
     color: var(--mantis);
   }
+
+  /* ─────────── Organigrama ISBA ─────────── */
+  .org-tree { display: flex; flex-direction: column; }
+  .org-root-wrap { display: flex; justify-content: center; }
+  .org-node {
+    background: white;
+    border: 1.5px solid var(--ink);
+    padding: 14px 20px 14px;
+    position: relative;
+  }
+  .org-node .org-area {
+    font-family: var(--display);
+    font-size: 19px; font-weight: 700;
+    color: var(--ink); line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .org-node .org-sub { font-size: 12px; color: var(--ink-soft); line-height: 1.4; }
+  .org-role {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 10px; padding: 4px 10px;
+    font-family: var(--mono);
+    font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: white; background: var(--ink);
+  }
+  .org-role.mantis { background: var(--mantis); }
+  .org-role.violet { background: var(--violet); }
+  .org-role.warm   { background: var(--warm); }
+  .org-role.ghost  { background: transparent; color: var(--ink-faded); border: 1px dashed var(--ink-faded); }
+  .org-node.dim { background: var(--paper-2); border-style: dashed; border-color: var(--ink-faded); }
+  .org-node.dim .org-area { color: var(--ink-soft); }
+  .org-node.hot { border-width: 2px; box-shadow: 6px 6px 0 var(--mantis); }
+  .org-node.ext { border-style: dashed; }
+  .org-vline { width: 1.5px; height: 22px; background: var(--ink); margin: 0 auto; opacity: 0.5; }
+  .org-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    position: relative; padding-top: 22px;
+  }
+  .org-row::before {
+    content: '';
+    position: absolute; top: 0;
+    left: calc((100% - 40px) / 6);
+    right: calc((100% - 40px) / 6);
+    height: 1.5px; background: var(--ink); opacity: 0.5;
+  }
+  .org-branch { position: relative; display: flex; flex-direction: column; }
+  .org-branch::before {
+    content: '';
+    position: absolute; top: -22px; left: 50%;
+    width: 1.5px; height: 22px;
+    background: var(--ink); opacity: 0.5;
+  }
+  .org-ext-band { margin-top: 24px; border-top: 1px dashed var(--ink-faded); padding-top: 14px; }
+  .org-ext-label {
+    font-family: var(--mono);
+    font-size: 9.5px; letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--ink-faded); margin-bottom: 12px;
+  }
+  .org-ext-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* ─────────── Mapa del sistema (grafo D3) ─────────── */
+  .sysmap-wrap {
+    display: grid; grid-template-columns: 420px 1fr; gap: 36px;
+    flex: 1; min-height: 0; align-items: stretch;
+  }
+  .sysmap-panel { display: flex; flex-direction: column; min-height: 0; }
+  .sysmap-info {
+    background: white; border: 1.5px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--ink);
+    padding: 24px 26px;
+    flex: 1; min-height: 0; overflow-y: auto;
+  }
+  .sysmap-info .si-kicker {
+    font-family: var(--mono);
+    font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--mantis); margin-bottom: 10px;
+  }
+  .sysmap-info h3 {
+    font-family: var(--display);
+    font-size: 30px; font-weight: 700;
+    line-height: 1; margin-bottom: 12px;
+  }
+  .sysmap-info .si-desc { font-size: 14.5px; line-height: 1.55; color: var(--ink-soft); }
+  .sysmap-conns { margin-top: 16px; padding-top: 13px; border-top: 1px solid rgba(0,0,0,0.12); }
+  .sysmap-conns .sc-label {
+    font-family: var(--mono);
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--ink-faded); margin-bottom: 8px;
+  }
+  .sysmap-conn {
+    font-size: 12.5px; color: var(--ink-soft); line-height: 1.45;
+    padding: 5px 0 5px 12px;
+    border-left: 2.5px solid var(--mantis);
+    margin-bottom: 5px;
+  }
+  .sysmap-conn strong { color: var(--ink); }
+  .sysmap-hint {
+    margin-top: 12px; flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faded);
+  }
+  .sysmap-svg-wrap { position: relative; background: white; border: 1px solid rgba(0,0,0,0.15); min-height: 0; }
+  #sysmapSvg { width: 100%; height: 100%; display: block; }
+  #sysmapSvg .sm-node { cursor: grab; transition: opacity 0.25s; }
+  #sysmapSvg .sm-node:active { cursor: grabbing; }
+  #sysmapSvg .sm-link { transition: opacity 0.25s, stroke 0.25s; }
+  #sysmapSvg text { pointer-events: none; user-select: none; }
+  .sysmap-legend {
+    position: absolute; bottom: 10px; left: 14px;
+    font-family: var(--mono);
+    font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-faded);
+  }
+
+  /* ─────────── Walter · slide del asistente ─────────── */
+  .wai-tab {
+    font-family: var(--body);
+    font-size: 14px; font-weight: 600;
+    padding: 9px 16px;
+    background: white; color: var(--ink);
+    border: 1px solid var(--ink);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .wai-tab:hover { background: var(--paper-2); }
+  .wai-tab.active { background: var(--ink); color: var(--paper); }
+  .wai-q {
+    align-self: flex-end; max-width: 78%;
+    background: var(--mantis); color: white;
+    padding: 11px 17px; border-radius: 14px 14px 2px 14px;
+    font-size: 15.5px; line-height: 1.4;
+  }
+  .wai-tools {
+    align-self: center; text-align: center;
+    font-family: var(--mono);
+    font-size: 11px; font-weight: 700;
+    color: var(--mantis-deep);
+    background: var(--mantis-soft); border: 1px solid var(--mantis);
+    padding: 4px 14px; letter-spacing: 0.04em;
+  }
+  .wai-a {
+    align-self: flex-start; max-width: 88%;
+    background: var(--paper-2); border: 1px solid var(--ink-faded);
+    color: var(--ink);
+    padding: 12px 17px; border-radius: 14px 14px 14px 2px;
+    font-size: 15px; line-height: 1.45;
+  }
+  .wai-chart { display: flex; align-items: flex-end; gap: 7px; height: 88px; margin: 12px 2px 4px; }
+  .wai-bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; height: 100%; }
+  .wai-bar .bar { width: 100%; background: rgba(5,150,105,0.35); }
+  .wai-bar.hot .bar { background: var(--mantis); }
+  .wai-bar .lbl { font-family: var(--mono); font-size: 8.5px; color: var(--ink-faded); text-transform: uppercase; }
+  .wai-btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .wai-btn {
+    font-family: var(--body);
+    font-size: 12px; font-weight: 600;
+    padding: 6px 12px;
+    background: white; border: 1px solid var(--mantis);
+    color: var(--mantis-deep);
+  }
+  #waiWhyBtn:hover { background: var(--mantis-soft); }
+  .wai-modal-inner {
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: 12px 12px 0 var(--ink);
+    max-width: 640px; width: 90%;
+    padding: 36px 40px 32px;
+    position: relative;
+    animation: modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
+  .wai-dot { width: 16px; height: 16px; border: 1.5px solid var(--ink-faded); background: white; }
+  .wai-dot.hot { background: var(--mantis); border-color: var(--mantis-deep); }
+  #pollBtn:hover { background: var(--paper-2); box-shadow: 3px 3px 0 var(--ink); }
+  .poll-modal-inner {
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: 12px 12px 0 var(--ink);
+    max-width: 720px; width: 92%;
+    padding: 34px 40px 30px;
+    position: relative;
+    animation: modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
 </style>
 </head>
 
@@ -1905,7 +2089,7 @@
       <span class="line"></span>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 280px; gap: 60px; align-items: end; flex: 1; padding-top: 40px;">
+    <div style="display: grid; grid-template-columns: 1fr 280px; gap: 60px; align-items: end; flex: 1; padding-top: 40px; padding-bottom: 64px;">
       <div>
         <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 30px;">
           <span style="font-family: var(--mono); font-size: 11px; letter-spacing: 0.3em; color: #34D399;">PRÁCTICA PROFESIONAL · ESCMB · 2026</span>
@@ -1967,16 +2151,16 @@
       </div>
 
       <div class="stagger" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 32px;">
-        <div class="process-step"><div class="ps-num">02</div><div><div class="ps-title">El caso · ISBA</div><div class="ps-desc">Quién es y por qué la elegimos</div></div></div>
+        <div class="process-step"><div class="ps-num">02</div><div><div class="ps-title">El caso · ISBA</div><div class="ps-desc">Quién es, cómo se organiza y por qué la elegimos</div></div></div>
         <div class="process-step"><div class="ps-num">08</div><div><div class="ps-title">Seguimiento</div><div class="ps-desc">Problema → mandato → modelación → sistema → valor</div></div></div>
         <div class="process-step"><div class="ps-num">03</div><div><div class="ps-title">Diagnóstico</div><div class="ps-desc">Los problemas, lo que estaba en juego y por qué digitalizar no alcanzaba</div></div></div>
         <div class="process-step"><div class="ps-num">09</div><div><div class="ps-title">Metodología</div><div class="ps-desc">Cascada para definir, Scrum para construir</div></div></div>
         <div class="process-step"><div class="ps-num">04</div><div><div class="ps-title">FODA</div><div class="ps-desc">Análisis interno · fortalezas, debilidades, oportunidades y amenazas</div></div></div>
-        <div class="process-step"><div class="ps-num">10</div><div><div class="ps-title">Conocé a Mantis</div><div class="ps-desc">Estructura + demo guiada del funnel completo</div></div></div>
+        <div class="process-step"><div class="ps-num">10</div><div><div class="ps-title">Conocé a Mantis</div><div class="ps-desc">Estructura + Walter (el asistente IA) + demo guiada del funnel</div></div></div>
         <div class="process-step"><div class="ps-num">05</div><div><div class="ps-title">Mandato</div><div class="ps-desc">Objetivo, alcance, límites y actores</div></div></div>
-        <div class="process-step"><div class="ps-num">11</div><div><div class="ps-title">Indicadores</div><div class="ps-desc">Métricas operativas en vivo</div></div></div>
+        <div class="process-step"><div class="ps-num">11</div><div><div class="ps-title">Valor agregado + cierre</div><div class="ps-desc">Aporte concreto a ISBA</div></div></div>
         <div class="process-step"><div class="ps-num">06</div><div><div class="ps-title">Casos de uso</div><div class="ps-desc">Los casos de uso principales en diagrama UML</div></div></div>
-        <div class="process-step"><div class="ps-num">12</div><div><div class="ps-title">Valor agregado + cierre</div><div class="ps-desc">Aporte concreto a ISBA</div></div></div>
+        <div class="process-step" style="visibility: hidden;"></div>
         <div class="process-step"><div class="ps-num">07</div><div><div class="ps-title">Flujos del proceso</div><div class="ps-desc">9 flujos modelados · 5 en demo</div></div></div>
       </div>
     </div>
@@ -2035,6 +2219,91 @@
     </div>
 
     <div class="slide-footer"><span>02 · EL CASO</span><span>ISBA PROPIEDADES</span></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     03b — ORGANIGRAMA ISBA · dónde se inserta el sistema
+     ═══════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="slide-pad">
+    <div class="slide-corner">
+      <span class="dot"></span>
+      <span>02 · El caso</span>
+      <span class="line"></span>
+    </div>
+
+    <div style="padding-top: 56px; margin-bottom: 20px;">
+      <div class="eyebrow">Análisis organizacional · la estructura de ISBA</div>
+      <h2 class="display-lg">Dónde se inserta el sistema<span class="mark-blue dot-end"></span></h2>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.45fr 400px; gap: 52px; flex: 1; align-items: start;">
+
+      <!-- Organigrama -->
+      <div class="org-tree">
+        <div class="org-root-wrap">
+          <div class="org-node" style="min-width: 340px;">
+            <div class="org-area">Gerencia general</div>
+            <div class="org-sub">Dirección de la inmobiliaria: define las reglas y controla toda la operación.</div>
+            <span class="org-role">En Mantis → Administrador</span>
+          </div>
+        </div>
+        <div class="org-vline"></div>
+
+        <div class="org-row">
+          <div class="org-branch">
+            <div class="org-node dim" style="flex: 1;">
+              <div class="org-area">Comercial</div>
+              <div class="org-sub">Venta y alquiler de propiedades. Acá no estaba el problema.</div>
+              <span class="org-role ghost">Fuera del alcance</span>
+            </div>
+          </div>
+          <div class="org-branch">
+            <div class="org-node hot" style="flex: 1;">
+              <div class="org-area">Mantenimiento</div>
+              <div class="org-sub">Recibe los reclamos, coordina técnicos y responde a inquilinos y propietarios. <strong>El eje del proyecto.</strong></div>
+              <span class="org-role mantis">En Mantis → Gestor comercial</span>
+            </div>
+          </div>
+          <div class="org-branch">
+            <div class="org-node" style="flex: 1;">
+              <div class="org-area">Administración y finanzas</div>
+              <div class="org-sub">Cobra las obras a inquilinos y propietarios, y paga a los técnicos.</div>
+              <span class="org-role violet">En Mantis → Gestor financiero</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="org-ext-band">
+          <div class="org-ext-label">Fuera de la estructura interna · el ecosistema del área</div>
+          <div class="org-ext-row">
+            <div class="org-node ext">
+              <div class="org-area">Red de técnicos externos</div>
+              <div class="org-sub">Contratistas por especialidad (plomería, electricidad, gas…). No son empleados de ISBA.</div>
+              <span class="org-role warm">En Mantis → Técnico · desde el celular</span>
+            </div>
+            <div class="org-node ext">
+              <div class="org-area">Inquilinos y propietarios</div>
+              <div class="org-sub">Los clientes de la administración. Reportan por los canales de siempre.</div>
+              <span class="org-role ghost">Sin usuario · reciben todo por email</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- La lectura del analista -->
+      <div>
+        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin-bottom: 4px;">La lectura del analista</p>
+        <div class="stagger">
+          <div class="process-step"><div class="ps-num">01</div><div><div class="ps-title">El sistema no inventa un área nueva</div><div class="ps-desc">Mantis se calza sobre la estructura que ya existía: cada puesto real recibe un rol con exactamente los permisos de su función.</div></div></div>
+          <div class="process-step"><div class="ps-num">02</div><div><div class="ps-title">Mantenimiento es el eje</div><div class="ps-desc">Ahí estaba el caos del diagnóstico y ahí apunta el sistema: todo el funnel vive dentro de esa área.</div></div></div>
+          <div class="process-step"><div class="ps-num">03</div><div><div class="ps-title">Los límites son parte del diseño</div><div class="ps-desc">Comercial queda afuera a propósito, y los clientes no acceden: menos usuarios que educar, cero fricción para adoptar.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer"><span>02 · EL CASO</span><span>ORGANIGRAMA · ROLES DEL SISTEMA</span></div>
   </div>
 </section>
 
@@ -2295,7 +2564,7 @@
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <span style="border: 1.5px solid var(--success); background: #ECFDF5; color: #14532D; font-family: var(--display); font-weight: 700; font-size: 15px; padding: 9px 16px;">Inbox Gmail</span>
         <span style="border: 2px solid var(--success); background: #ECFDF5; color: #14532D; font-family: var(--display); font-weight: 700; font-size: 15px; padding: 9px 16px; box-shadow: 3px 3px 0 var(--success);">Tablero de gestiones <span style="font-family: var(--mono); font-size: 9px; background: #14532D; color: white; padding: 2px 5px; vertical-align: 2px;">CORE</span></span>
-        <span style="border: 1.5px solid var(--success); background: #ECFDF5; color: #14532D; font-family: var(--display); font-weight: 700; font-size: 15px; padding: 9px 16px;">Cartera y legajos</span>
+        <span style="border: 1.5px solid var(--success); background: #ECFDF5; color: #14532D; font-family: var(--display); font-weight: 700; font-size: 15px; padding: 9px 16px;">Administraciones y legajos</span>
         <span style="border: 1.5px solid var(--success); background: #ECFDF5; color: #14532D; font-family: var(--display); font-weight: 700; font-size: 15px; padding: 9px 16px;">Técnicos</span>
         <span style="border: 1.5px solid var(--success); background: #ECFDF5; color: #14532D; font-family: var(--display); font-weight: 700; font-size: 15px; padding: 9px 16px;">Finanzas</span>
         <span style="border: 1.5px solid var(--success); background: #ECFDF5; color: #14532D; font-family: var(--display); font-weight: 700; font-size: 15px; padding: 9px 16px;">Informes y auditoría</span>
@@ -2684,7 +2953,7 @@
       <!-- Flujo 1 -->
       <div style="border: 1px solid var(--ink); background: var(--paper-2); padding: 14px 16px; display: flex; gap: 12px; align-items: start;" data-flow="flow-01"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--ink-faded); letter-spacing: -0.04em; min-width: 36px;">01</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.2; margin: 0 0 4px;">Cartera y legajos</p>
+          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.2; margin: 0 0 4px;">Administraciones y legajos</p>
         </div>
       </div>
 
@@ -2810,7 +3079,7 @@
         <div class="cell"><strong>Comunicación sin rastro</strong> entre las partes</div>
         <div class="cell">Cada evento del funnel avisa al rol que debe accionar</div>
         <div class="cell">Flujo 6 · UC Asignar técnico</div>
-        <div class="cell">Notificaciones en tiempo real + emails automáticos al inquilino</div>
+        <div class="cell">Notificaciones en tiempo real + emails automáticos a inquilino y propietario</div>
         <div class="cell cell-valor">Un solo canal auditable</div>
       </div>
       <div class="traza traza-clickable" data-trace="04">
@@ -2932,7 +3201,7 @@
           <div style="border: 1px solid rgba(52,211,153,0.5); padding: 18px 20px; background: rgba(255,255,255,0.04);">
             <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: #34D399; margin-bottom: 8px; font-weight: 700;">PARTE 1</p>
             <h3 style="font-family: var(--display); font-size: 22px; color: white; line-height: 1.1; margin-bottom: 6px;">Estructura</h3>
-            <p style="font-size: 12.5px; color: rgba(255,255,255,0.65); line-height: 1.4;">Stack tecnológico, arquitectura, roles e Inbox.</p>
+            <p style="font-size: 12.5px; color: rgba(255,255,255,0.65); line-height: 1.4;">Stack, arquitectura, el mapa del sistema, roles, Inbox y Walter (el asistente IA).</p>
           </div>
           <div style="border: 1px solid rgba(52,211,153,0.5); padding: 18px 20px; background: rgba(255,255,255,0.04);">
             <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: #34D399; margin-bottom: 8px; font-weight: 700;">PARTE 2</p>
@@ -2969,7 +3238,7 @@
     <div style="padding-top: 90px; margin-bottom: 22px;">
       <div class="eyebrow">Cómo está construido</div>
       <h2 class="display-lg">Stack tecnológico<span class="mark-blue dot-end"></span></h2>
-      <p class="text-body" style="margin-top: 10px; max-width: 680px;">12 piezas conectadas. Cliqueá cada una para ver su rol exacto en Mantis.</p>
+      <p class="text-body" style="margin-top: 10px; max-width: 680px;">13 piezas conectadas. Cliqueá cada una para ver su rol exacto en Mantis.</p>
     </div>
 
     <div class="stack-grid-12 stagger">
@@ -3061,7 +3330,15 @@
         <div class="name">Resend</div>
       </div>
 
-      <!-- 12 Vercel -->
+      <!-- 12 Anthropic API -->
+      <div class="stack-card-i" data-tech="anthropic">
+        <span class="info-dot">+</span>
+        <div class="logo-wrap"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#D97757" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="5.6" y2="18.4"/></svg></div>
+        <div class="layer">IA · Walter</div>
+        <div class="name">Anthropic API</div>
+      </div>
+
+      <!-- 13 Vercel -->
       <div class="stack-card-i" data-tech="vercel">
         <span class="info-dot">+</span>
         <div class="logo-wrap"><svg viewBox="0 0 256 222" xmlns="http://www.w3.org/2000/svg"><path d="M128 0l128 221.705H0z" fill="#000"/></svg></div>
@@ -3088,7 +3365,7 @@
     <div style="padding-top: 80px; margin-bottom: 12px;">
       <div class="eyebrow">Patrón cliente–servidor en 3 capas</div>
       <h2 class="display-lg">Arquitectura<span class="mark-blue dot-end"></span></h2>
-      <p class="text-body" style="margin-top: 6px; max-width: 720px;">Cliqueá cada componente para ver qué hace en Mantis.</p>
+      <p class="text-body" style="margin-top: 6px; max-width: 860px;">La separación clásica en tres capas: <strong style="color: var(--ink);">el cliente muestra</strong>, <strong style="color: var(--ink);">el servidor decide</strong> y <strong style="color: var(--ink);">los datos persisten</strong>. Cada capa solo habla con la siguiente — por eso ninguna regla del negocio puede saltearse. Cliqueá cualquier pieza para el detalle.</p>
     </div>
 
     <div class="arch-v2 stagger">
@@ -3097,27 +3374,27 @@
         <div class="arch-l-label">
           <div class="step">01</div>
           <div class="name">Cliente</div>
-          <div class="sub">capa de<br>presentación</div>
+          <div class="sub">muestra —<br>no decide nada</div>
         </div>
         <div class="arch-l-content">
           <div class="arch-comp" data-arch="page">
             <div class="arch-comp-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             </div>
-            <div class="arch-comp-text"><strong>page.tsx</strong><span>RSC · render en servidor</span></div>
+            <div class="arch-comp-text"><strong>Las pantallas de cada rol</strong><span>tablero, inbox, finanzas, portal del técnico</span></div>
           </div>
           <div class="arch-comp" data-arch="client">
             <div class="arch-comp-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <div class="arch-comp-text"><strong>*.client.tsx</strong><span>Interactividad + estado</span></div>
+            <div class="arch-comp-text"><strong>Actualización en vivo</strong><span>la pantalla se refresca sola, sin recargar</span></div>
           </div>
         </div>
       </div>
 
       <div class="arch-conn">
         <span class="arch-conn-line"></span>
-        <span class="arch-conn-label">Server Actions</span>
+        <span class="arch-conn-label">pide y recibe · Server Actions</span>
         <span class="arch-conn-line"></span>
       </div>
 
@@ -3126,33 +3403,33 @@
         <div class="arch-l-label">
           <div class="step">02</div>
           <div class="name">Servidor</div>
-          <div class="sub">lógica de<br>negocio</div>
+          <div class="sub">acá viven<br>las reglas</div>
         </div>
         <div class="arch-l-content">
           <div class="arch-comp" data-arch="middleware">
             <div class="arch-comp-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </div>
-            <div class="arch-comp-text"><strong>middleware.ts</strong><span>Auth + control de acceso</span></div>
+            <div class="arch-comp-text"><strong>¿Quién sos?</strong><span>verifica usuario y rol en cada pedido</span></div>
           </div>
           <div class="arch-comp" data-arch="service-actions">
             <div class="arch-comp-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             </div>
-            <div class="arch-comp-text"><strong>features/*/service.ts</strong><span>Server Actions ('use server')</span></div>
+            <div class="arch-comp-text"><strong>La lógica del negocio</strong><span>un módulo por área: gestiones, finanzas, técnicos…</span></div>
           </div>
           <div class="arch-comp" data-arch="avanzar-etapa">
             <div class="arch-comp-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             </div>
-            <div class="arch-comp-text"><strong>avanzar_etapa()</strong><span>Transiciones del funnel</span></div>
+            <div class="arch-comp-text"><strong>El control del funnel</strong><span>valida cada paso de etapa y lo deja registrado</span></div>
           </div>
         </div>
       </div>
 
       <div class="arch-conn">
         <span class="arch-conn-line"></span>
-        <span class="arch-conn-label">SDK / SQL / SMTP</span>
+        <span class="arch-conn-label">guarda y consulta · SDK / SQL</span>
         <span class="arch-conn-line"></span>
       </div>
 
@@ -3161,7 +3438,7 @@
         <div class="arch-l-label">
           <div class="step">03</div>
           <div class="name">Datos +<br>servicios</div>
-          <div class="sub">infraestructura<br>externa</div>
+          <div class="sub">guarda la verdad<br>y conecta afuera</div>
         </div>
         <div class="arch-l-content" style="flex-direction: column; gap: 8px;">
           <!-- Row Supabase -->
@@ -3169,11 +3446,11 @@
             <div style="background: #15803D; color: white; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; font-weight: 700; padding: 8px;">SUPABASE</div>
             <div class="arch-comp" data-arch="postgresql">
               <div class="arch-comp-icon" style="background: #15803D;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg></div>
-              <div class="arch-comp-text"><strong>PostgreSQL</strong><span>base relacional</span></div>
+              <div class="arch-comp-text"><strong>PostgreSQL</strong><span>la única fuente de verdad</span></div>
             </div>
             <div class="arch-comp" data-arch="auth-rls">
               <div class="arch-comp-icon" style="background: #15803D;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-              <div class="arch-comp-text"><strong>Auth + RLS</strong><span>login + policies</span></div>
+              <div class="arch-comp-text"><strong>Auth + RLS</strong><span>cada uno ve solo lo suyo</span></div>
             </div>
             <div class="arch-comp" data-arch="storage">
               <div class="arch-comp-icon" style="background: #15803D;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
@@ -3184,16 +3461,20 @@
               <div class="arch-comp-text"><strong>Realtime</strong><span>notificaciones en vivo</span></div>
             </div>
           </div>
-          <!-- Row Gmail + Resend -->
-          <div style="display: grid; grid-template-columns: 110px 1.5fr 1.5fr; gap: 8px; align-items: stretch;">
+          <!-- Row Gmail + Resend + Anthropic -->
+          <div style="display: grid; grid-template-columns: 110px 1fr 1fr 1fr; gap: 8px; align-items: stretch;">
             <div style="background: var(--ink); color: var(--paper); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; font-weight: 700; padding: 8px;">SAAS</div>
             <div class="arch-comp" data-arch="gmail-api">
               <div class="arch-comp-icon" style="background: #EA580C;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-              <div class="arch-comp-text"><strong>Gmail API</strong><span>reclamos entrantes · cada 1 min</span></div>
+              <div class="arch-comp-text"><strong>Gmail API</strong><span>reclamos que entran</span></div>
             </div>
             <div class="arch-comp" data-arch="smtp">
               <div class="arch-comp-icon" style="background: var(--mantis);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
-              <div class="arch-comp-text"><strong>Resend</strong><span>emails y documentos salientes</span></div>
+              <div class="arch-comp-text"><strong>Resend</strong><span>emails y PDFs que salen</span></div>
+            </div>
+            <div class="arch-comp" data-arch="anthropic-api">
+              <div class="arch-comp-icon" style="background: #D97757;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="6.3" y1="6.3" x2="17.7" y2="17.7"/><line x1="17.7" y1="6.3" x2="6.3" y2="17.7"/></svg></div>
+              <div class="arch-comp-text"><strong>Anthropic API</strong><span>la IA de Walter · solo lectura</span></div>
             </div>
           </div>
         </div>
@@ -3209,6 +3490,46 @@
     </div>
 
     <div class="slide-footer"><span>10 · ESTRUCTURA</span><span>ARQUITECTURA EN CAPAS</span></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     12b — MAPA DEL SISTEMA · grafo de módulos (D3)
+     ═══════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="slide-pad">
+    <div class="slide-corner">
+      <span class="dot"></span>
+      <span>10 · Conocé a Mantis · Estructura</span>
+      <span class="line"></span>
+    </div>
+
+    <div style="padding-top: 56px; margin-bottom: 18px;">
+      <div class="eyebrow">El sistema de un vistazo</div>
+      <h2 class="display-lg">El mapa de Mantis<span class="mark-blue dot-end"></span></h2>
+    </div>
+
+    <div class="sysmap-wrap">
+      <div class="sysmap-panel">
+        <div class="sysmap-info" id="sysmapInfo">
+          <div class="si-kicker">9 módulos · un solo flujo</div>
+          <h3>Todo conectado</h3>
+          <p class="si-desc">Cada nodo es un módulo real del sistema; su tamaño refleja el peso que tiene en la operación diaria. Las líneas son información que fluye: un reclamo entra por el Inbox, se vuelve gestión, moviliza técnicos y dinero — y cada movimiento queda registrado.</p>
+          <div class="sysmap-conns">
+            <div class="sc-label">Para explorar</div>
+            <div class="sysmap-conn">Pasá el mouse por un nodo para ver <strong>qué hace y con quién se conecta</strong>.</div>
+          </div>
+        </div>
+        <p class="sysmap-hint">Tocá o arrastrá un nodo — vuelve solo a su lugar</p>
+      </div>
+
+      <div class="sysmap-svg-wrap">
+        <svg id="sysmapSvg" viewBox="0 0 960 640" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="sysmap-legend">Tamaño = peso en la operación · línea = flujo de información</div>
+      </div>
+    </div>
+
+    <div class="slide-footer"><span>10 · ESTRUCTURA</span><span>EL MAPA DEL SISTEMA</span></div>
   </div>
 </section>
 
@@ -3256,7 +3577,7 @@
             <li>→ Validar o rechazar conformidades</li>
             <li>→ Calificar al técnico al finalizar</li>
             <li>→ Enrolar y evaluar técnicos</li>
-            <li>→ Cartera: propiedades, personas y legajos</li>
+            <li>→ Administraciones: propiedades, personas y legajos</li>
           </ul>
         </div>
       </div>
@@ -3360,9 +3681,14 @@
           Una casilla de mail exclusiva de mantenimiento, sincronizada sola con el sistema. Ningún reclamo depende de que alguien lo anote.
         </p>
       </div>
-      <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.25em; color: var(--ink-faded); text-transform: uppercase; text-align: right; align-self: flex-end;">
-        Gmail API · sync cada 1 min<br>Realtime
-      </p>
+      <div id="pollBtn" style="align-self: flex-end; cursor: pointer; border: 1px solid var(--ink); background: white; padding: 10px 14px; transition: all 0.15s;">
+        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--ink-faded); text-transform: uppercase; text-align: right; margin: 0 0 4px;">
+          Gmail API · sync cada 1 min · Realtime
+        </p>
+        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--mantis-deep); text-transform: uppercase; text-align: right; margin: 0; font-weight: 700;">
+          ¿Por qué sondeo y no push? +
+        </p>
+      </div>
     </div>
 
     <!-- Sistema de tabs por paso del circuito -->
@@ -3407,6 +3733,68 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════
+     18 — WALTER · el asistente IA del sistema
+     ═══════════════════════════════════════════════════════════════ -->
+<section>
+  <div class="slide-pad">
+    <div class="slide-corner">
+      <span class="dot"></span>
+      <span>10 · Conocé a Mantis · Walter</span>
+      <span class="line"></span>
+    </div>
+
+    <div style="padding-top: 52px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: end; gap: 40px;">
+      <div>
+        <div class="eyebrow">El quinto integrante del equipo · IA con límites claros</div>
+        <h2 class="display-lg">Walter, el asistente<span class="mark-blue dot-end"></span></h2>
+        <p class="text-body" style="margin-top: 10px; max-width: 780px;">
+          Un asistente con <strong style="color: var(--ink);">inteligencia artificial adentro del sistema</strong>: cada usuario le pregunta en su idioma — <em>"¿cuánto hay por cobrar?"</em> — y Walter responde con los datos reales de su rol. Lo incluimos porque un sistema de gestión vale por las respuestas que da: <strong style="color: var(--ink);">Walter elimina la distancia entre la pregunta del día a día y el dato que ya está en la base</strong>.
+        </p>
+      </div>
+      <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--ink-faded); text-transform: uppercase; text-align: right; flex-shrink: 0;">
+        Claude (Anthropic) · patrón tool use<br>solo lectura · nunca inventa datos
+      </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 44px; flex: 1; min-height: 0; align-items: stretch;">
+
+      <!-- Chat interactivo con ejemplos -->
+      <div style="display: flex; flex-direction: column; min-height: 0;">
+        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.25em; color: var(--ink-faded); text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">Probá una pregunta · Cliqueá:</p>
+        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+          <button class="wai-tab active" data-wai="negocio">¿Cómo viene el negocio?</button>
+          <button class="wai-tab" data-wai="tecnico-top">¿El mejor técnico?</button>
+          <button class="wai-tab" data-wai="como-hago">¿Cómo subo la conformidad?</button>
+        </div>
+        <div class="ed-card with-shadow" id="waiChat" style="flex: 1; min-height: 0; padding: 24px 26px; display: flex; flex-direction: column; gap: 12px; justify-content: center; overflow-y: auto;"></div>
+      </div>
+
+      <!-- Cómo funciona por adentro -->
+      <div style="display: flex; flex-direction: column;">
+        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.25em; color: var(--ink-faded); text-transform: uppercase; margin-bottom: 4px;">Cómo funciona por adentro</p>
+        <div class="stagger">
+          <div class="process-step"><div class="ps-num">01</div><div><div class="ps-title">Entiende la pregunta</div><div class="ps-desc">El modelo de IA — Claude, de Anthropic — lee lenguaje natural sabiendo quién pregunta y qué rol tiene.</div></div></div>
+          <div class="process-step"><div class="ps-num">02</div><div><div class="ps-title">Elige sus herramientas</div><div class="ps-desc">No consulta la base libremente: elige de un catálogo de <strong>18 consultas predefinidas</strong> — el patrón se llama <em>tool use</em> (function calling). Cada rol recibe solo las suyas.</div></div></div>
+          <div class="process-step"><div class="ps-num">03</div><div><div class="ps-title">El servidor ejecuta</div><div class="ps-desc">Cada consulta corre en el servidor con los permisos del usuario — los mismos que las pantallas. La IA nunca toca la base de datos directo.</div></div></div>
+          <div class="process-step"><div class="ps-num">04</div><div><div class="ps-title">Responde con evidencia</div><div class="ps-desc">Texto + gráfico calculado por el servidor + botones a la pantalla justa. Todo número sale de una herramienta: si no lo tiene, lo dice.</div></div></div>
+        </div>
+
+        <div id="waiWhyBtn" style="margin-top: 14px; padding: 13px 16px; background: var(--paper-2); border-left: 4px solid var(--mantis); font-size: 14.5px; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; transition: background 0.15s;">
+          <strong>¿Y no alcanza con los informes?</strong>
+          <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--mantis-deep); text-transform: uppercase; white-space: nowrap;">Cliqueá +</span>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top: 12px; font-family: var(--mono); font-size: 10px; color: var(--ink-faded); letter-spacing: 0.12em; text-transform: uppercase; text-align: center;">
+      Solo lectura: para actuar te lleva a la pantalla · catálogo por rol · rutas de lista blanca · máx. 5 consultas por respuesta · 30 mensajes/hora
+    </p>
+
+    <div class="slide-footer"><span>10 · WALTER</span><span>ASISTENTE IA · TOOL USE · SOLO LECTURA</span></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
      XX — DEMO GUIADA · INTRO (4 flujos en vivo)
      ═══════════════════════════════════════════════════════════════ -->
 <section class="slide-hero">
@@ -3444,8 +3832,8 @@
         </div>
 
         <!-- Slide 3/5 = Flujo 7 -->
-        <div style="background: rgba(52,211,153,0.12); border: 1.5px solid #34D399; padding: 16px;">
-          <p style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: #34D399; margin-bottom: 10px; font-weight: 700; display: flex; justify-content: space-between;"><span>3 / 5</span><span style="color: rgba(255,255,255,0.7);">Flujo 7</span></p>
+        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
+          <p style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: #34D399; margin-bottom: 10px; font-weight: 700; display: flex; justify-content: space-between;"><span>3 / 5</span><span style="color: rgba(255,255,255,0.4);">Flujo 7</span></p>
           <h3 style="font-family: var(--display); font-size: 18px; color: white; margin-bottom: 6px; line-height: 1.1;">Inspección y presupuesto</h3>
           <p style="font-size: 12px; color: rgba(255,255,255,0.85); line-height: 1.4;">Inspección obligatoria, presupuesto y quién paga.</p>
           <p style="margin-top: 12px; font-family: var(--mono); font-size: 10.5px; color: rgba(255,255,255,0.65); letter-spacing: 0.12em; text-transform: uppercase;">Técnico + Gestor</p>
@@ -3496,17 +3884,17 @@
       <!-- BPMN -->
       <div class="diagram-host" style="flex-direction: column; align-items: stretch; justify-content: center;">
         <div class="bpmn-v" style="justify-content: center; gap: 0;">
-          <div class="bn bn-start">El inquilino escribe a la<br>casilla de mantenimiento</div>
+          <div class="bn bn-start">Inquilino o propietario escriben<br>a la casilla de mantenimiento</div>
           <div class="bn-vbar"></div>
           <div class="bn bn-sys">Sincronización automática<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">Gmail API · cada 1 minuto</span></div>
           <div class="bn-vbar"></div>
-          <div class="bn bn-sys">El reporte aparece en el Inbox<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">en tiempo real · sin duplicados</span></div>
+          <div class="bn bn-sys">El reporte aparece en el Inbox<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">en tiempo real · sin duplicados · con sus fotos adjuntas</span></div>
           <div class="bn-vbar"></div>
           <div class="bn bn-proc">El gestor abre el reporte<br>(formulario precargado)</div>
           <div class="bn-vbar"></div>
           <div class="bn bn-proc">Vincula propiedad y legajo ·<br>especialidad · urgencia</div>
           <div class="bn-vbar"></div>
-          <div class="bn bn-sys">Nace la tarjeta en Ingresado<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">+ email "recibimos tu reporte" al inquilino</span></div>
+          <div class="bn bn-sys">Nace la tarjeta en Ingresado<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">+ email "gestión registrada" a inquilino y propietario · texto neutro, no da por hecho quién reportó (desocupada: solo al propietario)</span></div>
           <div class="bn-vbar"></div>
           <div class="bn bn-end">Gestión creada,<br>lista para asignar técnico</div>
         </div>
@@ -3521,7 +3909,7 @@
         <h3>El reclamo entra solo</h3>
         <div class="demo-steps">
           <div class="demo-step"><span class="num">01</span><p>Enviar un <strong>mail real</strong> a la casilla de mantenimiento con el reclamo.</p></div>
-          <div class="demo-step"><span class="num">02</span><p>Como <strong>gestor</strong>, mostrar el <strong>Inbox</strong>: el reporte aparece solo, con remitente y asunto.</p></div>
+          <div class="demo-step"><span class="num">02</span><p>Como <strong>gestor</strong>, mostrar el <strong>Inbox</strong>: el reporte aparece solo, con remitente, asunto y las fotos adjuntas.</p></div>
           <div class="demo-step"><span class="num">03</span><p>Abrir el reporte: <strong>formulario precargado</strong> con el contenido del mail.</p></div>
           <div class="demo-step"><span class="num">04</span><p>Vincular <strong>propiedad</strong>, clasificar <strong>especialidad</strong> y marcar <strong>urgencia</strong>. Crear.</p></div>
           <div class="demo-step"><span class="num">05</span><p>Mostrar la tarjeta en <strong>Ingresado</strong> y el <strong>descarte con motivo</strong> con otro reporte.</p></div>
@@ -3567,7 +3955,7 @@
             <div class="bn-fork-leg">
               <div class="bn-vbar"></div>
               <span style="font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.2em; color: var(--success); margin: 4px 0;">SÍ</span>
-              <div class="bn bn-sys">Notificación al gestor<br>+ email "técnico asignado" al inquilino</div>
+              <div class="bn bn-sys">Notificación al gestor<br>+ email "técnico asignado" a inquilino y propietario</div>
               <div class="bn-vbar"></div>
               <div class="bn bn-end">Gestión avanza<br>a Presupuesto</div>
             </div>
@@ -3765,7 +4153,7 @@
           <div class="bn-vbar"><span class="bn-vbar-label">Liquidación</span></div>
           <div class="bn bn-proc">Liquida al técnico<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.7;">descuenta adelantos de materiales</span></div>
           <div class="bn-vbar"></div>
-          <div class="bn bn-sys">Comprobante de liquidación (PDF)<br>por email al técnico<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">+ email "resuelto" al inquilino</span></div>
+          <div class="bn bn-sys">Comprobante de liquidación (PDF)<br>por email al técnico<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">+ email "resuelto" a inquilino y propietario</span></div>
           <div class="bn-vbar"></div>
           <div class="bn bn-end">Finalizado · queda en el legajo<br>el gestor califica al técnico (1-5★)</div>
         </div>
@@ -3793,75 +4181,13 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     18 — INDICADORES con gráficos
-     ═══════════════════════════════════════════════════════════════ -->
-<section>
-  <div class="slide-pad">
-    <div class="slide-corner">
-      <span class="dot"></span>
-      <span>11 · Indicadores</span>
-      <span class="line"></span>
-    </div>
-
-    <div style="padding-top: 56px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: end;">
-      <div>
-        <div class="eyebrow">Informes · cada gestor ve su cartera — admin y financiero, todo el negocio</div>
-        <h2 class="display-lg">Un proceso que<br>se mide solo<span class="mark-blue dot-end"></span></h2>
-      </div>
-      <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--ink-faded); text-transform: uppercase; text-align: right;">
-        Nada se carga a mano ·<br>los históricos no cambian
-      </p>
-    </div>
-
-    <div class="stagger" style="flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: auto 1fr; gap: 16px;">
-      <div class="ed-card with-shadow" style="padding: 22px;">
-        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin-bottom: 8px;">En curso</p>
-        <div class="big-stat" style="color: var(--mantis);">72</div>
-        <p style="font-size: 13.5px; margin-top: 6px;">Gestiones activas en el funnel</p>
-      </div>
-      <div class="ed-card with-shadow" style="padding: 22px; border-left: 4px solid var(--success);">
-        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--success); text-transform: uppercase; margin-bottom: 8px;">Por cobrar</p>
-        <div class="big-stat" style="color: var(--success); font-size: 56px;">$6,3<span style="font-size: 22px; color: var(--ink-faded); font-weight: 500;"> M</span></div>
-        <p style="font-size: 13.5px; margin-top: 6px;">15 gestiones esperando cobro, con la antigüedad de cada una</p>
-      </div>
-      <div class="ed-card with-shadow" style="padding: 22px;">
-        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 8px;">Orden por valor</p>
-        <div class="big-stat" style="color: var(--mantis); font-size: 56px;">$3,9<span style="font-size: 22px; color: var(--ink-faded); font-weight: 500;"> M</span></div>
-        <p style="font-size: 13.5px; margin-top: 6px;">De fee en juego en 32 gestiones activas, de mayor a menor</p>
-      </div>
-      <div class="ed-card with-shadow" style="padding: 22px;">
-        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin-bottom: 8px;">Tiempo de ciclo</p>
-        <div class="big-stat" style="font-size: 56px;">18<span style="font-size: 22px; color: var(--ink-faded); font-weight: 500;"> días</span></div>
-        <p style="font-size: 13.5px; margin-top: 6px;">De ingreso a finalización, sin contar la obra: mide el circuito, no el tamaño del trabajo</p>
-      </div>
-
-      <div class="ed-card with-shadow" style="padding: 22px; grid-column: span 2;">
-        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 12px;">Embudo de gestiones · 173 ingresadas, 11 canceladas en el camino</p>
-        <div style="height: 245px;"><canvas id="chartEmbudo"></canvas></div>
-      </div>
-
-      <div class="ed-card with-shadow" style="padding: 22px; grid-column: span 2;">
-        <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--mantis); text-transform: uppercase; margin-bottom: 12px;">Ingresos cobrados · fee de la casa vs. pago al técnico</p>
-        <div style="height: 245px;"><canvas id="chartIngresos"></canvas></div>
-      </div>
-    </div>
-
-    <p style="margin-top: 12px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-faded); letter-spacing: 0.12em; text-transform: uppercase; text-align: center;">
-      Y también: gestiones estancadas · cuellos de botella · presión por especialidad · desempeño por técnico
-    </p>
-
-    <div class="slide-footer"><span>11 · INDICADORES</span><span>MÓDULO INFORMES · NÚMEROS REALES DE LA BASE DEMO</span></div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════
      19 — VALOR AGREGADO APORTADO A ISBA (tema claro + matriz)
      ═══════════════════════════════════════════════════════════════ -->
 <section>
   <div class="slide-pad">
     <div class="slide-corner">
       <span class="dot"></span>
-      <span>12 · Valor agregado</span>
+      <span>11 · Valor agregado</span>
       <span class="line"></span>
     </div>
 
@@ -3916,7 +4242,7 @@
       <div class="val-card">
         <div class="val-card-cat">Relación con propietarios</div>
         <h3 class="val-card-title">La propiedad cuenta su historia</h3>
-        <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Legajos por período de ocupación + PDF "Resumen de obras" + emails de estado automáticos al inquilino.</p></div>
+        <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Legajos por período de ocupación + PDF "Resumen de obras" + emails de estado automáticos a inquilino y propietario.</p></div>
         <div class="val-card-kpi"><span class="kpi-label">KPI</span> retención de propiedades administradas</div>
       </div>
 
@@ -3929,7 +4255,7 @@
       </div>
     </div>
 
-    <div class="slide-footer"><span>12 · VALOR AGREGADO</span><span>DE OPERAR POR MEMORIA · A OPERAR POR PROCESO Y DATOS</span></div>
+    <div class="slide-footer"><span>11 · VALOR AGREGADO</span><span>DE OPERAR POR MEMORIA · A OPERAR POR PROCESO Y DATOS</span></div>
   </div>
 </section>
 
@@ -3999,6 +4325,83 @@
   </div>
 </div>
 
+<!-- ───────── Modal Walter · ¿no alcanza con los informes? ───────── -->
+<div class="tech-modal" id="waiModal" role="dialog" aria-modal="true">
+  <div class="wai-modal-inner">
+    <button class="tech-modal-close" id="waiModalClose" aria-label="Cerrar">×</button>
+    <div class="foda-modal-title" style="font-size: 24px; font-family: var(--display); margin-bottom: 22px;">¿Y no alcanza con los informes?</div>
+
+    <!-- Comparación visual -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div style="border: 1.5px solid var(--ink); background: white; padding: 18px 20px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"><line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="18" y1="20" x2="18" y2="15"/></svg>
+          <span style="font-family: var(--display); font-size: 19px; font-weight: 700;">Informes</span>
+        </div>
+        <p style="font-size: 14px; line-height: 1.45; color: var(--ink-soft); margin: 0;">Responden <strong style="color: var(--ink);">las preguntas de siempre</strong>: un tablero fijo, definido al diseñar el sistema.</p>
+      </div>
+      <div style="border: 1.5px solid var(--mantis); background: var(--mantis-soft); padding: 18px 20px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--mantis-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          <span style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--mantis-deep);">Walter</span>
+        </div>
+        <p style="font-size: 14px; line-height: 1.45; color: var(--ink-soft); margin: 0;">Responde <strong style="color: var(--mantis-deep);">la pregunta de hoy</strong>: arma el cruce en el momento y te lleva a la pantalla justa.</p>
+      </div>
+    </div>
+
+    <!-- Convergencia: mismas fuentes -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; height: 26px;">
+      <div style="width: 1.5px; height: 100%; background: var(--ink); margin: 0 auto; opacity: 0.5;"></div>
+      <div style="width: 1.5px; height: 100%; background: var(--mantis); margin: 0 auto;"></div>
+    </div>
+    <div style="border: 1.5px solid var(--ink); background: var(--ink); color: var(--paper); padding: 14px 20px; display: flex; align-items: center; justify-content: center; gap: 12px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+      <span style="font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;"><strong style="color: #34D399;">Las mismas fuentes</strong> · a propósito — no pueden contradecirse</span>
+    </div>
+
+    <!-- 18 herramientas: solo 2 de métricas -->
+    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.12);">
+      <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+        <span class="wai-dot hot"></span><span class="wai-dot hot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span><span class="wai-dot"></span>
+      </div>
+      <p style="font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); margin: 0;">De las <strong style="color: var(--ink);">18 herramientas</strong> de Walter, <strong style="color: var(--mantis-deep);">solo 2 son de métricas</strong>. Las otras 16 responden lo que ningún informe muestra: pendientes del día, buscar una gestión, la agenda del técnico, y la guía de uso — <em>"¿cómo registro un cobro?"</em> no lo responde ningún gráfico.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ───────── Modal Inbox · ¿por qué sondeo y no push? ───────── -->
+<div class="tech-modal" id="pollModal" role="dialog" aria-modal="true">
+  <div class="poll-modal-inner">
+    <button class="tech-modal-close" id="pollModalClose" aria-label="Cerrar">×</button>
+    <div class="foda-modal-title" style="font-size: 24px; font-family: var(--display); margin-bottom: 24px;">¿Por qué preguntar cada minuto y no avisar al llegar el mail?</div>
+
+    <!-- Dos caminos enfrentados, una idea cada uno -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <!-- PUSH -->
+      <div style="border: 1.5px solid var(--ink-faded); background: white; padding: 20px 22px;">
+        <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 12px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faded)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span style="font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--ink-soft);">Avisar al llegar <span style="font-family: var(--mono); font-size: 10px; color: var(--ink-faded);">(push)</span></span>
+        </div>
+        <p style="font-size: 14px; line-height: 1.5; color: var(--ink-soft); margin: 0;">Suma un servicio aparte que hay que montar y mantener — y si el sistema está caído, el aviso <strong style="color: var(--ink);">se pierde</strong>.</p>
+      </div>
+      <!-- POLLING -->
+      <div style="border: 1.5px solid var(--mantis); background: var(--mantis-soft); padding: 20px 22px;">
+        <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 12px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--mantis-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+          <span style="font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--mantis-deep);">Preguntar cada 1 min <span style="font-family: var(--mono); font-size: 10px; color: var(--mantis-deep);">(lo nuestro)</span></span>
+        </div>
+        <p style="font-size: 14px; line-height: 1.5; color: var(--ink-soft); margin: 0;">Una sola tarea, sin nada extra. Y <strong style="color: var(--mantis-deep);">se auto-repara</strong>: si estuvo caído, el próximo chequeo levanta todo.</p>
+      </div>
+    </div>
+
+    <!-- Cierra la objeción de procesamiento en una línea -->
+    <div style="margin-top: 18px; background: var(--ink); color: var(--paper); padding: 18px 24px; text-align: center;">
+      <p style="font-size: 15px; line-height: 1.5; margin: 0; color: rgba(255,255,255,0.92);">El chequeo no recorre toda la casilla: mira solo los correos recientes con un <strong style="color: #34D399;">tope fijo</strong>, así que no se agranda aunque haya miles. El trabajo pesado — bajar y guardar — corre <strong style="color: white;">solo con uno nuevo, igual que con push</strong>.</p>
+    </div>
+  </div>
+</div>
+
 <!-- ───────── Modal Flujo · mini BPMN gráfico ───────── -->
 <div class="tech-modal" id="flowModal" role="dialog" aria-modal="true">
   <div class="flow-modal-shell">
@@ -4037,6 +4440,7 @@
 <!-- GSAP para animaciones de alto impacto -->
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/SplitText.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 
 <script>
   const deck = new Reveal({
@@ -4161,7 +4565,8 @@
     'supabase-storage': { layer: 'ARCHIVOS', name: 'Supabase Storage', desc: 'Almacenamiento en la nube para los archivos del sistema: fotos de inspección y avances, conformidades firmadas, comprobantes de materiales y documentación del enrolamiento de técnicos, con acceso restringido por rol.' },
     'supabase-realtime': { layer: 'TIEMPO REAL', name: 'Supabase Realtime', desc: 'El canal de tiempo real del sistema. Cada evento del funnel notifica al instante al rol que debe accionar (badge + centro de notificaciones), el inbox muestra los reclamos apenas llegan, y si el admin inhabilita a un usuario, su sesión se corta en segundos.' },
     'gmail':    { layer: 'INGESTA DE RECLAMOS', name: 'Gmail API', desc: 'La puerta de entrada de los reclamos. Una casilla exclusiva de mantenimiento se sincroniza automáticamente cada 1 minuto: cada mail entrante aparece en el Inbox del sistema, sin duplicados, listo para convertirse en gestión o descartarse con motivo.' },
-    'resend':   { layer: 'EMAIL SALIENTE', name: 'Resend', desc: 'El servicio de envío de mails del sistema. Por acá salen los emails de estado al inquilino (reporte recibido, técnico asignado, resuelto), las credenciales del técnico y los documentos PDF: nota de cobro, comprobante de liquidación y resumen de obras. Cada envío queda logueado para su seguimiento.' },
+    'resend':   { layer: 'EMAIL SALIENTE', name: 'Resend', desc: 'El servicio de envío de mails del sistema. Por acá salen los emails de estado a inquilino y propietario (gestión registrada, técnico asignado, resuelto), las credenciales del técnico y los documentos PDF: nota de cobro, comprobante de liquidación y resumen de obras. Cada envío queda logueado para su seguimiento.' },
+    'anthropic': { layer: 'IA · WALTER', name: 'Anthropic API (Claude)', desc: 'El modelo de IA detrás de Walter, el asistente del sistema. El servidor le pasa la pregunta del usuario y un catálogo de consultas predefinidas de solo lectura (patrón tool use): el modelo elige qué consultar, el servidor lo ejecuta con los permisos del rol, y la respuesta vuelve con datos reales — nunca inventados. No puede escribir en la base ni ejecutar acciones.' },
     'vercel':   { layer: 'DEPLOY + CDN', name: 'Vercel', desc: 'Plataforma donde vive la aplicación en internet. Cada cambio en el código se despliega automáticamente y se sirve desde servidores globales, cerca del usuario.' },
   };
 
@@ -4200,7 +4605,8 @@
     'storage':         { layer: 'CAPA 03 · DATOS', name: 'Storage', desc: 'El repositorio en la nube para los archivos: fotos de inspección y avances, conformidades firmadas, comprobantes de materiales y documentación del enrolamiento (DNI, matrículas). Acceso restringido según el rol.' },
     'realtime':        { layer: 'CAPA 03 · TIEMPO REAL', name: 'Supabase Realtime', desc: 'El canal en vivo del sistema. Un trigger sobre el event log inserta las notificaciones en la misma transacción que cada evento (cero eventos perdidos) y Realtime las entrega al instante al rol que debe accionar. También corta la sesión en segundos si el admin inhabilita a un usuario.' },
     'gmail-api':       { layer: 'CAPA 03 · INGESTA', name: 'Gmail API', desc: 'La fuente de los reclamos. Un cron sincroniza cada 1 minuto la casilla exclusiva de mantenimiento: cada mail nuevo se inserta en el Inbox sin duplicados y aparece al instante en la pantalla del gestor.' },
-    'smtp':            { layer: 'CAPA 03 · EMAIL', name: 'Resend', desc: 'La infraestructura de mails salientes. Emails de estado al inquilino, credenciales del técnico y documentos PDF (nota de cobro, comprobante de liquidación, resumen de obras). Cada envío queda registrado en la base para su seguimiento.' },
+    'smtp':            { layer: 'CAPA 03 · EMAIL', name: 'Resend', desc: 'La infraestructura de mails salientes. Emails de estado a inquilino y propietario, credenciales del técnico y documentos PDF (nota de cobro, comprobante de liquidación, resumen de obras). Cada envío queda registrado en la base para su seguimiento.' },
+    'anthropic-api':   { layer: 'CAPA 03 · IA', name: 'Anthropic API (Claude)', desc: 'El modelo de IA que responde detrás de Walter. El servidor le pasa la pregunta y un catálogo de consultas predefinidas de solo lectura (patrón tool use): el modelo elige qué consultar, el servidor lo ejecuta con los permisos del rol del usuario, y la respuesta vuelve con datos reales. No puede escribir en la base ni ejecutar acciones — para actuar, sugiere la pantalla.' },
   };
 
   document.querySelectorAll('.arch-comp').forEach(comp => {
@@ -4325,7 +4731,7 @@
   //  footer: cita de fuente
   const FLOW_INFO = {
     'flow-01': {
-      eyebrow: 'Flujo 1 de 9 · Soporte', title: 'Cartera y legajos',
+      eyebrow: 'Flujo 1 de 9 · Soporte', title: 'Administraciones y legajos',
       sub: 'El staff administra propiedades, propietarios e inquilinos. Cada período de ocupación abre un legajo — y toda gestión queda asentada en el legajo vigente al momento del reclamo.',
       bpmn: [
         {type:'start', text:'Staff en Administración'},
@@ -4344,7 +4750,7 @@
       sub: 'El técnico se postula desde una página pública con su documentación. El staff evalúa antes de darle acceso — nadie entra al padrón sin verificación.',
       bpmn: [
         {type:'start', text:'Técnico abre /registro-tecnico<br>(página pública)'},
-        {type:'proc',  text:'Completa datos, CUIL, foto del DNI,<br>especialidades y matrículas si aplican'},
+        {type:'proc',  text:'Completa datos, CUIL, foto del DNI,<br>especialidades, matrículas y sus horarios de trabajo'},
         {type:'sys',   text:'Verifica su email —<br>recién ahí la solicitud llega al staff'},
         {type:'dec',   text:'¿El staff aprueba?',
           yesText:'SÍ', yesNodes:[
@@ -4385,9 +4791,9 @@
       eyebrow: 'Flujo 4 de 9 · Soporte', title: 'Ingesta Gmail → Inbox',
       sub: 'La casilla exclusiva de mantenimiento se sincroniza sola con el sistema. Ningún reclamo depende de que alguien lo anote.',
       bpmn: [
-        {type:'start', text:'El inquilino escribe<br>a la casilla de mantenimiento'},
+        {type:'start', text:'Inquilino o propietario escriben<br>a la casilla de mantenimiento'},
         {type:'sys',   text:'Cron consulta la Gmail API<br>cada 1 minuto'},
-        {type:'sys',   text:'Inserta el reporte en el Inbox<br>(sin duplicados, idempotente)'},
+        {type:'sys',   text:'Inserta el reporte con sus fotos adjuntas<br>(sin duplicados, idempotente)'},
         {type:'sys',   text:'Aparece al instante en pantalla<br>(Realtime) + notificación al gestor'},
         {type:'end',   text:'Reporte pendiente,<br>listo para procesarse'},
       ],
@@ -4400,10 +4806,10 @@
       sub: 'Del reporte del inbox (o desde cero) a la tarjeta en el tablero: propiedad, especialidad y urgencia. El gestor que la crea queda como responsable.',
       bpmn: [
         {type:'start', text:'Reporte pendiente en el Inbox'},
-        {type:'proc',  text:'El gestor abre el reporte<br>(formulario precargado con el mail)'},
+        {type:'proc',  text:'El gestor abre el reporte<br>(formulario precargado: texto y fotos del mail)'},
         {type:'proc',  text:'Vincula propiedad y legajo ·<br>clasifica especialidad · define urgencia'},
         {type:'sys',   text:'Nace la tarjeta en Ingresado<br>gestor_id = quien la creó'},
-        {type:'sys',   text:'Email automático al inquilino:<br>"recibimos tu reporte"'},
+        {type:'sys',   text:'Email automático a inquilino y propietario:<br>"gestión de mantenimiento registrada"'},
         {type:'end',   text:'Gestión lista para asignar técnico'},
       ],
       actores: ['Gestor comercial'],
@@ -4419,7 +4825,7 @@
         {type:'sys',   text:'avanzar_etapa() → Asignación<br>+ notificación al técnico en tiempo real'},
         {type:'dec',   text:'¿El técnico acepta?',
           yesText:'SÍ', yesNodes:[
-            {type:'sys',  text:'Notificación al gestor ·<br>email "técnico asignado" al inquilino'},
+            {type:'sys',  text:'Notificación al gestor ·<br>email "técnico asignado" a inquilino y propietario'},
             {type:'end',  text:'Gestión avanza a Presupuesto'},
           ],
           noText:'NO', noNodes:[
@@ -4472,7 +4878,7 @@
       ],
       actores: ['Técnico', 'Gestor comercial'],
       estados: ['en_ejecucion', 'conformidad', 'facturacion_cobro'],
-      footer: 'Si el técnico no puede continuar, avisa con motivo y la obra queda pausada para él',
+      footer: 'Si el técnico no puede continuar, avisa con motivo y la obra queda pausada — el reloj de su plazo se frena mientras tanto',
     },
     'flow-09': {
       eyebrow: 'Flujo 9 de 9 · CORE · Demo 5 de 5', title: 'Cobro y liquidación',
@@ -4483,7 +4889,7 @@
         {type:'sys',   text:'Registra el cobro ·<br>monto y fee quedan congelados'},
         {type:'proc',  text:'Liquida al técnico<br>(descuenta adelantos de materiales)'},
         {type:'sys',   text:'Comprobante de liquidación (PDF)<br>por email al técnico'},
-        {type:'sys',   text:'Email "resuelto" al inquilino ·<br>la obra queda en el legajo'},
+        {type:'sys',   text:'Email "resuelto" a inquilino y propietario ·<br>la obra queda en el legajo'},
         {type:'end',   text:'Finalizado ·<br>el gestor califica al técnico (1-5★)'},
       ],
       actores: ['Gestor financiero', 'Gestor comercial'],
@@ -4765,14 +5171,14 @@
     'paso-mail': {
       eyebrow: 'Paso 01 · Ingesta automática',
       title: 'El reclamo llega solo',
-      desc: 'El inquilino escribe a la casilla exclusiva de mantenimiento, como escribiría cualquier mail. No tiene que aprender ningún sistema: la puerta de entrada es la de siempre.',
-      chat: { q: 'Asunto: Mantenimiento — Se rompió el calefón · Urquiza 1550', tool: 'sincronización automática · cada 1 minuto', a: 'El reporte aparece en el Inbox del gestor al instante, sin duplicados, con remitente, asunto y cuerpo completos.' },
+      desc: 'Inquilino o propietario escriben a la casilla exclusiva de mantenimiento, como escribirían cualquier mail. No tienen que aprender ningún sistema: la puerta de entrada es la de siempre.',
+      chat: { q: 'Asunto: Mantenimiento — Se rompió el calefón · Urquiza 1550 · 📎 2 fotos', tool: 'sincronización automática · cada 1 minuto', a: 'El reporte aparece en el Inbox del gestor al instante, sin duplicados, con remitente, asunto, cuerpo y las fotos adjuntas — que después viajan a la gestión y las ve hasta el técnico.' },
     },
     'paso-gestion': {
       eyebrow: 'Paso 02 · Del reporte a la tarjeta',
       title: 'Se convierte en gestión',
       desc: 'El gestor abre el reporte y crea la gestión con un formulario que ya viene precargado con los datos del mail. Solo completa lo que el sistema no puede saber solo.',
-      chat: { q: 'Reporte #58 · "Se rompió el calefón" · de Marta Suárez', tool: 'crear gestión · formulario precargado', a: 'Gestión creada en la columna Ingresado: Urquiza 1550 · Plomería · Urgente. El inquilino recibe el email "recibimos tu reporte".' },
+      chat: { q: 'Reporte #58 · "Se rompió el calefón" · de Marta Suárez', tool: 'crear gestión · formulario precargado', a: 'Gestión creada en la columna Ingresado: Urquiza 1550 · Plomería · Urgente. Inquilino y propietario reciben el email "gestión de mantenimiento registrada".' },
     },
     'paso-destino': {
       eyebrow: 'Paso 03 · La regla del inbox',
@@ -4812,6 +5218,84 @@
       renderWalterPanel(tab.dataset.feat);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════
+  // WALTER · slide del asistente — chat de ejemplo por pregunta
+  // ═══════════════════════════════════════════════════════════════
+  const WAI_EJEMPLOS = {
+    'negocio': {
+      rol: 'Pregunta el administrador',
+      q: '¿Cómo viene el negocio este mes?',
+      tools: 'eligió 2 herramientas → metricas_negocio · graficar',
+      a: 'Julio es el mejor mes del año: <strong>$2,5 M de fee cobrado</strong> y 72 gestiones activas en el funnel. Ojo: 15 esperan cobro hace más de una semana.',
+      chart: { labels: ['dic','ene','feb','mar','abr','may','jun','jul'], values: [0.33,0.68,0.40,0.67,0.60,0.72,1.79,2.50] },
+      btns: ['Ver informes'],
+    },
+    'tecnico-top': {
+      rol: 'Pregunta un gestor comercial',
+      q: '¿Cuál es el técnico mejor calificado?',
+      tools: 'eligió 1 herramienta → ranking_tecnicos',
+      a: '<strong>Carlos Giménez</strong>, con 4,8★ en 23 trabajos terminados — y cumple el plazo que promete en 9 de cada 10 obras. Le siguen Ana Ruiz (4,6★) y Jorge Peralta (4,5★).',
+      btns: ['Ver su ficha', 'Ranking completo'],
+    },
+    'como-hago': {
+      rol: 'Pregunta un técnico, desde el celular',
+      q: '¿Cómo subo la conformidad?',
+      tools: 'sin datos: responde con la guía de su rol',
+      a: 'Abrí el trabajo en etapa <strong>Conformidad</strong> y tocá "Subir conformidad": es una foto del documento firmado por el cliente. Si el gestor la rechaza, la resubís corregida desde el mismo lugar.',
+      btns: ['Ir a mis trabajos'],
+    },
+  };
+
+  const waiChat = document.getElementById('waiChat');
+  function renderWai(key) {
+    if (!waiChat) return;
+    const d = WAI_EJEMPLOS[key];
+    if (!d) return;
+    const max = d.chart ? Math.max(...d.chart.values) : 0;
+    const chartHTML = d.chart ? `
+      <div class="wai-chart">${d.chart.values.map((v, i) => `
+        <div class="wai-bar${v === max ? ' hot' : ''}">
+          <div class="bar" style="height: ${Math.round(v / max * 100)}%;"></div>
+          <span class="lbl">${d.chart.labels[i]}</span>
+        </div>`).join('')}
+      </div>` : '';
+    waiChat.innerHTML = `
+      <p style="font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.2em; color: var(--ink-faded); text-transform: uppercase; margin: 0;">${d.rol}</p>
+      <div class="wai-q">${d.q}</div>
+      <div class="wai-tools">${d.tools}</div>
+      <div class="wai-a"><strong style="color: var(--mantis-deep);">Walter:</strong> ${d.a}${chartHTML}
+        <div class="wai-btns">${d.btns.map(b => `<span class="wai-btn">${b} →</span>`).join('')}</div>
+      </div>
+    `;
+  }
+  renderWai('negocio');
+  document.querySelectorAll('.wai-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.wai-tab').forEach(t => t.classList.toggle('active', t === tab));
+      renderWai(tab.dataset.wai);
+    });
+  });
+
+  // Modal "¿no alcanza con los informes?"
+  const waiModal = document.getElementById('waiModal');
+  const waiWhyBtn = document.getElementById('waiWhyBtn');
+  if (waiWhyBtn && waiModal) {
+    waiWhyBtn.addEventListener('click', () => waiModal.classList.add('open'));
+    document.getElementById('waiModalClose').addEventListener('click', () => waiModal.classList.remove('open'));
+    waiModal.addEventListener('click', e => { if (e.target === waiModal) waiModal.classList.remove('open'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') waiModal.classList.remove('open'); });
+  }
+
+  // Modal "¿por qué sondeo y no push?"
+  const pollModal = document.getElementById('pollModal');
+  const pollBtn = document.getElementById('pollBtn');
+  if (pollBtn && pollModal) {
+    pollBtn.addEventListener('click', () => pollModal.classList.add('open'));
+    document.getElementById('pollModalClose').addEventListener('click', () => pollModal.classList.remove('open'));
+    pollModal.addEventListener('click', e => { if (e.target === pollModal) pollModal.classList.remove('open'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') pollModal.classList.remove('open'); });
+  }
 
   // Por defecto: paso 1 (es el primer tab)
   if (walterPanel) renderWalterPanel('paso-mail');
@@ -4965,7 +5449,7 @@
         { num:'F1', name:'Infraestructura y seguridad',       dur:'Base del sistema',
           actividades:['Proyecto Next.js + Supabase con RLS en todas las tablas desde la primera migración','Roles y permisos por función Postgres','Bloqueo de usuarios en tiempo real'],
           entregable:'Login por rol, seguridad a nivel de base de datos' },
-        { num:'F2', name:'Cartera y legajos',          dur:'El dominio',
+        { num:'F2', name:'Administraciones y legajos', dur:'El dominio',
           actividades:['ABM de propiedades, propietarios e inquilinos','Legajos por período de ocupación de cada propiedad','Vinculación propiedad ↔ propietario ↔ inquilino'],
           entregable:'Toda gestión queda asentada en el legajo vigente' },
         { num:'F3', name:'Técnicos y enrolamiento',             dur:'La red de trabajo',
@@ -5004,7 +5488,7 @@
       actividades:['Diseñar arquitectura del sistema — Next.js App Router + Supabase (virtual, 120 min)','Diseñar esquema de reportes e indicadores clave (virtual, 360 min)','Diseñar vistas de usuario por rol — wireframes (virtual, 360 min)','Diseñar flujo de documentación y destinatarios'],
       entregable:'Arquitectura técnica · Wireframes por rol · Esquema de indicadores' },
     '06': { eyebrow:'Etapa 06 · Scrum', title:'Desarrollo por frentes',  dur:'Construcción iterativa',
-      actividades:['F1: Infraestructura y seguridad (RLS desde la primera migración)','F2: Cartera de propiedades y legajos','F3: Técnicos, enrolamiento y especialidades','F4: Motor de gestiones — funnel + event log + tablero','F5: Inbox Gmail — ingesta automática de reclamos','F6: Portal técnico mobile + notificaciones en tiempo real','F7: Finanzas — cobros y liquidaciones','F8: Informes, auditoría y estabilización'],
+      actividades:['F1: Infraestructura y seguridad (RLS desde la primera migración)','F2: Administraciones de propiedades y legajos','F3: Técnicos, enrolamiento y especialidades','F4: Motor de gestiones — funnel + event log + tablero','F5: Inbox Gmail — ingesta automática de reclamos','F6: Portal técnico mobile + notificaciones en tiempo real','F7: Finanzas — cobros y liquidaciones','F8: Informes, auditoría y estabilización'],
       entregable:'Sistema completo en producción (Vercel)' },
     '07': { eyebrow:'Etapa 07 · Pruebas (integradas en sprints)', title:'Pruebas', dur:'Integradas en cada frente de desarrollo',
       actividades:['Cada frente se probó end-to-end sobre el sistema desplegado antes de darse por cerrado','Pruebas de RLS y permisos por rol sobre datos sensibles','Seed de datos de prueba para validar métricas y flujos con volumen realista','Pruebas del flujo completo con usuarios de cada rol','Rondas de corrección y re-testing continuo'],
@@ -5185,6 +5669,174 @@
       openFodaModal(li.dataset.foda);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════
+  // MAPA DEL SISTEMA · grafo de módulos con D3 anclado
+  // Física solo para la sensación (drag + deriva sutil); las posiciones
+  // son deterministicas — cada nodo tiene su ancla fija.
+  // ═══════════════════════════════════════════════════════════════
+  if (window.d3 && document.getElementById('sysmapSvg')) {
+
+    const SM_NODES = [
+      { id: 'gestiones', label: 'Gestiones', sub: 'el funnel · 8 etapas', r: 96, ax: 480, ay: 320, core: true,
+        desc: 'El corazón del sistema. Cada reclamo vive acá como una gestión que avanza por un funnel explícito de 8 etapas — de Ingresado a Finalizado — sin poder saltear el orden ni perder el rastro.' },
+      { id: 'inbox', label: 'Inbox', sub: 'entrada de reclamos', r: 60, ax: 175, ay: 130,
+        desc: 'La puerta de entrada. Los mails a la casilla de mantenimiento se sincronizan solos y esperan acá: cada uno termina convertido en gestión o descartado con motivo. Cero mails sin destino.' },
+      { id: 'tecnicos', label: 'Técnicos', sub: 'red de especialistas', r: 64, ax: 760, ay: 120,
+        desc: 'La red de contratistas externos: enrolamiento con matrícula, especialidades, agenda de disponibilidad y desempeño (calificaciones, cumplimiento de plazo y de presupuesto).' },
+      { id: 'finanzas', label: 'Finanzas', sub: 'cobro y liquidación', r: 64, ax: 820, ay: 350,
+        desc: 'El circuito económico: nota de cobro en PDF, registro del cobro, adelantos de materiales y liquidación al técnico. Los montos quedan congelados como hechos históricos.' },
+      { id: 'administraciones', label: 'Administraciones', sub: 'propiedades y legajos', subShort: 'propiedades', labelSize: 12.5, r: 56, ax: 150, ay: 420,
+        desc: 'El contexto del negocio: las propiedades administradas, sus propietarios, inquilinos y legajos vigentes. Cada gestión nace anclada a una administración real.' },
+      { id: 'informes', label: 'Informes', sub: 'métricas en vivo', r: 54, ax: 700, ay: 545,
+        desc: 'Las métricas operativas calculadas en vivo sobre los hechos: embudo, tiempos de ciclo, cuellos de botella, desempeño de técnicos e ingresos.' },
+      { id: 'eventos', label: 'Eventos', sub: 'historial · auditoría', r: 48, ax: 450, ay: 560,
+        desc: 'La columna vertebral silenciosa: cada acción inserta un evento inmutable, en la misma transacción. De acá salen la auditoría, las notificaciones y los informes.' },
+      { id: 'notificaciones', label: 'Avisos', sub: 'tiempo real', r: 46, ax: 230, ay: 560,
+        desc: 'Cada evento dispara avisos en tiempo real al rol que tiene que actuar — en el navegador del gestor o en el celular del técnico.' },
+      { id: 'email', label: 'Email', sub: 'hacia afuera', r: 42, ax: 90, ay: 265,
+        desc: 'La voz del sistema hacia afuera: avisos, notas de cobro y comprobantes llegan por email a inquilinos, propietarios y técnicos — los clientes no necesitan usuario.' },
+    ];
+
+    const SM_LINKS = [
+      { s: 'inbox', t: 'gestiones', w: 2.5, text: 'un reporte del inbox se convierte en gestión (o se descarta con motivo)' },
+      { s: 'administraciones', t: 'gestiones', w: 1.5, text: 'cada gestión se ancla a una propiedad administrada y su legajo vigente' },
+      { s: 'tecnicos', t: 'gestiones', w: 2.5, text: 'asignación, inspección, presupuesto y ejecución' },
+      { s: 'finanzas', t: 'gestiones', w: 2.5, text: 'conformidad validada → cobro y liquidación' },
+      { s: 'tecnicos', t: 'finanzas', w: 1.5, text: 'la liquidación paga el trabajo del técnico' },
+      { s: 'eventos', t: 'gestiones', w: 2.5, text: 'cada transición de etapa queda registrada' },
+      { s: 'eventos', t: 'informes', w: 1.5, text: 'las métricas se calculan sobre los hechos registrados' },
+      { s: 'eventos', t: 'notificaciones', w: 1.5, text: 'cada evento avisa al rol que tiene que actuar' },
+      { s: 'gestiones', t: 'email', w: 1.5, text: 'avisos automáticos a inquilinos y propietarios en cada hito' },
+      { s: 'finanzas', t: 'email', w: 1.5, text: 'notas de cobro y comprobantes de liquidación en PDF' },
+    ];
+
+    const smById = Object.fromEntries(SM_NODES.map(n => [n.id, n]));
+    const smLinks = SM_LINKS.map(l => ({ ...l, source: smById[l.s], target: smById[l.t] }));
+
+    const smSvg = d3.select('#sysmapSvg');
+    const INK = '#0A0A0A', MANTIS = '#059669', FADED = '#737373';
+
+    const linkSel = smSvg.append('g').selectAll('line')
+      .data(smLinks).join('line')
+      .attr('class', 'sm-link')
+      .attr('stroke', INK)
+      .attr('stroke-opacity', 0.22)
+      .attr('stroke-width', d => d.w);
+
+    const nodeSel = smSvg.append('g').selectAll('g')
+      .data(SM_NODES).join('g')
+      .attr('class', 'sm-node');
+
+    nodeSel.append('circle')
+      .attr('class', 'sm-halo')
+      .attr('r', d => d.r + 7)
+      .attr('fill', 'none')
+      .attr('stroke', MANTIS)
+      .attr('stroke-width', 2)
+      .attr('stroke-opacity', 0);
+
+    nodeSel.append('circle')
+      .attr('class', 'sm-circle')
+      .attr('r', d => d.r)
+      .attr('fill', d => d.core ? MANTIS : 'white')
+      .attr('stroke', INK)
+      .attr('stroke-width', d => d.core ? 2.5 : 1.5);
+
+    nodeSel.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', d => d.r >= 54 ? '-0.05em' : '0.1em')
+      .attr('font-family', "'Fraunces', serif")
+      .attr('font-weight', 700)
+      .attr('font-size', d => d.labelSize || Math.max(13, Math.round(d.r * 0.3)))
+      .attr('fill', d => d.core ? 'white' : INK)
+      .text(d => d.label);
+
+    nodeSel.filter(d => d.r >= 54).append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '1.5em')
+      .attr('font-family', "'JetBrains Mono', monospace")
+      .attr('font-size', d => Math.max(9, Math.round(d.r * 0.15)))
+      .attr('fill', d => d.core ? 'rgba(255,255,255,0.75)' : FADED)
+      .text(d => d.subShort || d.sub);
+
+    // ── Simulación: anclas fijas + colisión. Nada de layout aleatorio. ──
+    SM_NODES.forEach(n => { n.x = n.ax; n.y = n.ay; });
+    const smSim = d3.forceSimulation(SM_NODES)
+      .force('x', d3.forceX(d => d.ax).strength(0.16))
+      .force('y', d3.forceY(d => d.ay).strength(0.16))
+      .force('collide', d3.forceCollide(d => d.r + 6).strength(0.9))
+      .alphaDecay(0.06)
+      .on('tick', smRender);
+
+    // Deriva senoidal sutil (puramente visual, no toca la física)
+    let smElapsed = 0;
+    d3.timer(e => { smElapsed = e; smRender(); });
+
+    function smOff(d, i) {
+      if (d.dragging) return { x: 0, y: 0 };
+      return {
+        x: Math.sin(smElapsed / 1600 + i * 1.7) * 3.5,
+        y: Math.cos(smElapsed / 1900 + i * 2.3) * 3.5,
+      };
+    }
+
+    function smRender() {
+      nodeSel.attr('transform', (d, i) => {
+        const o = smOff(d, i);
+        return `translate(${d.x + o.x}, ${d.y + o.y})`;
+      });
+      linkSel
+        .attr('x1', d => d.source.x + smOff(d.source, SM_NODES.indexOf(d.source)).x)
+        .attr('y1', d => d.source.y + smOff(d.source, SM_NODES.indexOf(d.source)).y)
+        .attr('x2', d => d.target.x + smOff(d.target, SM_NODES.indexOf(d.target)).x)
+        .attr('y2', d => d.target.y + smOff(d.target, SM_NODES.indexOf(d.target)).y);
+    }
+
+    // ── Drag con retorno al ancla ──
+    nodeSel.call(d3.drag()
+      .on('start', (ev, d) => { d.dragging = true; smSim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+      .on('end', (ev, d) => { d.dragging = false; smSim.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+    // ── Hover/click → panel + resaltado ──
+    const smInfo = document.getElementById('sysmapInfo');
+    const smInfoDefault = smInfo.innerHTML;
+
+    function smActivate(d) {
+      const conns = smLinks.filter(l => l.source === d || l.target === d);
+      nodeSel.style('opacity', n => (n === d || conns.some(l => l.source === n || l.target === n)) ? 1 : 0.18);
+      linkSel
+        .style('opacity', l => conns.includes(l) ? 1 : 0.08)
+        .attr('stroke', l => conns.includes(l) ? MANTIS : INK)
+        .attr('stroke-opacity', l => conns.includes(l) ? 0.8 : 0.22);
+      nodeSel.select('.sm-halo').attr('stroke-opacity', n => n === d ? 0.9 : 0);
+
+      smInfo.innerHTML =
+        `<div class="si-kicker">Módulo · ${d.sub}</div>` +
+        `<h3>${d.label}</h3>` +
+        `<p class="si-desc">${d.desc}</p>` +
+        `<div class="sysmap-conns"><div class="sc-label">Se conecta con</div>` +
+        conns.map(l => {
+          const other = l.source === d ? l.target : l.source;
+          return `<div class="sysmap-conn"><strong>${other.label}</strong> — ${l.text}</div>`;
+        }).join('') +
+        `</div>`;
+    }
+
+    function smReset() {
+      nodeSel.style('opacity', 1);
+      linkSel.style('opacity', 1).attr('stroke', INK).attr('stroke-opacity', 0.22);
+      nodeSel.select('.sm-halo').attr('stroke-opacity', 0);
+      smInfo.innerHTML = smInfoDefault;
+    }
+
+    nodeSel
+      .on('mouseenter', (ev, d) => smActivate(d))
+      .on('mouseleave', smReset)
+      .on('click', (ev, d) => { ev.stopPropagation(); smActivate(d); });
+    smSvg.on('click', smReset);
+  }
 
 </script>
 
