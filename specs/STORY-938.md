@@ -1,6 +1,6 @@
-# STORY-938 — Bug: el técnico no ve quién es el gestor ni el contacto del cliente en el detalle de su gestión (v1.0)
+# STORY-938 — Bug: el técnico no ve quién es el gestor ni el contacto del cliente en el detalle de su gestión (v1.1)
 
-**Estado:** 🚧 en desarrollo (código + RLS aplicados, falta verificación visual) · **Origen:** Giuliano — reporte con captura de la vista mobile del técnico (`/gestiones/[id]`, gestión "Inodoro pierde agua 2"): el campo **Gestor** muestra "—" en vez del nombre, y no hay ningún dato de contacto del cliente para coordinar la visita. Alcance acordado en el chat: (1) el técnico debe ver el nombre del gestor de sus gestiones asignadas; (2) debe ver el contacto (teléfono/email) del inquilino si la gestión tiene uno, y si no (propiedad sin legajo vigente), el del propietario como respaldo.
+**Estado:** ✅ resuelta (v1.1 cierra el hueco de RLS que dejaba al técnico viendo el propietario en propiedades ocupadas) · **Origen:** Giuliano — reporte con captura de la vista mobile del técnico (`/gestiones/[id]`, gestión "Inodoro pierde agua 2"): el campo **Gestor** muestra "—" en vez del nombre, y no hay ningún dato de contacto del cliente para coordinar la visita. Alcance acordado en el chat: (1) el técnico debe ver el nombre del gestor de sus gestiones asignadas; (2) debe ver el contacto (teléfono/email) del inquilino si la gestión tiene uno, y si no (propiedad sin legajo vigente), el del propietario como respaldo.
 
 > Renombrada de STORY-931 a STORY-938 al mergear: el número 931 ya lo había usado Faustino para otra story ("Especialidades del técnico en el scorecard de asignación", no relacionada) que se pusheó mientras esta se desarrollaba en paralelo. Contenido sin cambios, solo la numeración.
 
@@ -86,3 +86,30 @@ using (
 ```
 
 Falta también: confirmar contra la base viva si `propietario_nombre`/`inquilino_nombre` de `GestionResumen` ya son legibles por el técnico hoy (nota del Diagnóstico §2) — no impacta esta story (usa columnas propias, no esos campos), pero quedaba como duda abierta.
+
+## v1.1 — 2026-07-21 — Faltaba la policy de `legajos`: el técnico veía el propietario aunque la propiedad estuviera ocupada
+
+**Reporte de Fausti:** en propiedades ocupadas el detalle de la card le mostraba al técnico los datos del propietario en vez de los del inquilino (que es con quien debe coordinar la visita).
+
+**Causa raíz:** las 3 policies de v1.0 (`usuarios`, `propietarios`, `inquilinos`) se aplicaron bien, pero **el embed del detalle pasa por `legajos`** (`SELECT_DETALLE`: `legajos(fecha_fin, inquilinos(...))`) y `legajos` quedó staff-only — no se creó policy de técnico. Efecto doble:
+1. El embed `legajos` volvía `null` para el técnico → `resolverContacto()` caía al fallback propietario.
+2. La propia policy `tecnico_lee_inquilinos_asignados` hace `join legajos` en su `using`, y ese join también respeta la RLS de `legajos` → nunca matcheaba: el técnico tampoco podía leer `inquilinos` directamente, pese a tener la policy.
+
+**Fix (solo DB, sin cambios de código):** migración `story_938_tecnico_lee_legajos_asignados` —
+
+```sql
+create policy tecnico_lee_legajos_asignados
+on legajos for select
+to authenticated
+using (
+  exists (
+    select 1 from gestiones g
+    where g.legajo_id = legajos.id
+      and g.tecnico_id = (select auth.uid())
+  )
+);
+```
+
+**Verificado en la base viva** (simulación de sesión del técnico vía `set local role authenticated` + claims JWT):
+- Antes: 0 filas visibles de `legajos` e `inquilinos`. Después: ve exactamente los legajos/inquilinos de SUS gestiones (4 de 26 legajos, 4 de 17 inquilinos) — acceso acotado, criterio de aceptación 4 intacto.
+- La resolución del contacto de una gestión asignada (legajo vigente, `fecha_fin` null) devuelve al inquilino con teléfono y email → `resolverContacto()` ahora muestra "Inquilino" en el detalle del técnico.

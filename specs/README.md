@@ -124,7 +124,7 @@ Los archivos `STORY-XXX.md` (fuente de verdad para el hook spec-first) se genera
 | [STORY-941](STORY-941.md) | "Cobro" en vez de "Facturación" + sección "Administración"/"Administraciones"; fuera los ABMs sueltos de personas — alta/edición/cambio de propietario e inquilino desde la propiedad | ✅ done |
 | [STORY-940](STORY-940.md) | Bug: el "comprobante de liquidación" que recibe el técnico por email es en realidad un detalle genérico (falta confirmación de pago + fecha real de pago) | ✅ done |
 | [STORY-939](STORY-939.md) | Bug: los dos botones "Vista previa" al finalizar no distinguen nota de cobro de comprobante de liquidación | ✅ done |
-| [STORY-938](STORY-938.md) | Bug: el técnico no ve quién es el gestor ni el contacto del cliente en el detalle de su gestión (RLS acotada + UI) | 🚧 en desarrollo |
+| [STORY-938](STORY-938.md) | Bug: el técnico no ve quién es el gestor ni el contacto del cliente en el detalle de su gestión (RLS acotada + UI) | ✅ resuelta (v1.1) |
 | [STORY-937](STORY-937.md) | Desvío de presupuesto medido SOLO sobre materiales (reales vs presupuestados, fallback costo_final − mano de obra) y ponderado por plata — scorecard de asignación + card de Informes | ✅ done |
 | [STORY-936](STORY-936.md) | Terminar la obra: al menos una nota de avance obligatoria y el exceso de materiales rendidos sobre lo presupuestado se justifica con gastos imprevistos (bloqueo UI + server, sin migración) | ✅ done |
 | [STORY-935](STORY-935.md) | Validaciones de flujo + archivo: no crear gestión sin técnico de la especialidad; email del presupuesto obligatorio antes de aprobar (`presupuesto_enviado_en`); saludo por nombre en el resumen de obras; archivar finalizadas + vista "Archivo" con división por roles | ✅ done |
