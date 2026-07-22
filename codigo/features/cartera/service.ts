@@ -522,6 +522,36 @@ async function obrasDe(
   const filas = (data ?? []) as unknown as FilaObra[];
   if (filas.length === 0) return [];
 
+  // STORY-1038: ampliaciones aprobadas con pagador propio (obras compartidas)
+  // — se imputan a su pagador en el reparto por parte del historial.
+  const ampliacionesPorGestion = new Map<
+    string,
+    import("./historial").ObraHistorial["ampliaciones"]
+  >();
+  const compartidas = filas.filter((f) => f.pagador === "compartido").map((f) => f.id);
+  if (compartidas.length > 0) {
+    const { data: amps } = await admin
+      .from("ampliaciones")
+      .select("gestion_id, monto, pagador, pagador_pct_inquilino")
+      .in("gestion_id", compartidas)
+      .eq("estado", "aprobada")
+      .not("pagador", "is", null);
+    for (const a of (amps ?? []) as {
+      gestion_id: string;
+      monto: number;
+      pagador: "inquilino" | "propietario" | "compartido" | null;
+      pagador_pct_inquilino: number | null;
+    }[]) {
+      const lista = ampliacionesPorGestion.get(a.gestion_id) ?? [];
+      lista!.push({
+        monto: Number(a.monto),
+        pagador: a.pagador,
+        pagadorPctInquilino: a.pagador_pct_inquilino,
+      });
+      ampliacionesPorGestion.set(a.gestion_id, lista);
+    }
+  }
+
   // Fecha de terminación real: última salida de obra a Conformidad (criterio
   // STORY-984) — lo que sigue es circuito de plata, no obra.
   const { data: eventos } = await admin
@@ -552,6 +582,7 @@ async function obrasDe(
       costo: costoObra(g),
       pagador: g.pagador,
       pagador_pct_inquilino: g.pagador_pct_inquilino,
+      ampliaciones: ampliacionesPorGestion.get(g.id) ?? [],
       reportada_en: g.creado_en,
       terminada_en: estado === "terminada" ? (terminadaEn.get(g.id) ?? null) : null,
     };

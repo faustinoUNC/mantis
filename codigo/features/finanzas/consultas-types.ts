@@ -1,6 +1,67 @@
 // Tipos y helpers puros del módulo Finanzas (vista de consolidación de
 // cobros y liquidaciones). Sin "use server": exporta tipos y funciones puras.
 
+// ── Reparto de un pago compartido (STORY-1031 + STORY-1038) ──────────────
+// UN solo cálculo del "cuánto paga cada parte", usado por la nota/PDF, la card
+// de facturación, el cobro por partes (STORY-1036) y el historial de cartera
+// (regla del PRD: no derivar el mismo cálculo en cada componente).
+//
+// STORY-1038: cada ampliación aprobada puede tener SU pagador (solo en obras
+// compartidas). Se imputa a su pagador por su monto autorizado; el resto del
+// total (base) se reparte por el % de la obra. Redondeo a centavos, el
+// propietario absorbe el resto → la suma da exacto el total.
+export interface AmpliacionReparto {
+  monto: number;
+  // pagador propio de la ampliación; null = hereda el de la obra (no se aparta)
+  pagador: "inquilino" | "propietario" | "compartido" | null;
+  pagadorPctInquilino: number | null;
+}
+
+// Porción del inquilino de UN monto según un pagador/%.
+function porcionInquilino(
+  monto: number,
+  pagador: "inquilino" | "propietario" | "compartido",
+  pctInquilino: number
+): number {
+  if (pagador === "inquilino") return monto;
+  if (pagador === "propietario") return 0;
+  return Math.round(monto * pctInquilino) / 100;
+}
+
+export interface RepartoCompartido {
+  montoInquilino: number;
+  montoPropietario: number;
+}
+
+// total = lo que se cobra (costo_final + fee, o cargo de cancelación).
+// pctObra = % del inquilino anclado en la gestión compartida.
+export function repartoCompartido(
+  total: number,
+  pctObra: number,
+  ampliaciones: AmpliacionReparto[] = []
+): RepartoCompartido {
+  // Ampliaciones con pagador PROPIO seteado (las heredadas = null caen en la
+  // base y se reparten por pctObra, dando idéntico).
+  const propias = ampliaciones.filter((a) => a.pagador != null && a.monto > 0);
+  const totalPropias = propias.reduce((s, a) => s + a.monto, 0);
+  const base = total - totalPropias;
+
+  // Corner (STORY-1038): rindió menos que solo las ampliaciones propias
+  // (base < 0, extremo casi imposible) → reparto plano por % de obra, no rompe.
+  if (base < 0) {
+    const montoInquilino = Math.round(total * pctObra) / 100;
+    return { montoInquilino, montoPropietario: total - montoInquilino };
+  }
+
+  const inqBase = Math.round(base * pctObra) / 100;
+  const inqAmpliaciones = propias.reduce(
+    (s, a) => s + porcionInquilino(a.monto, a.pagador!, a.pagadorPctInquilino ?? 50),
+    0
+  );
+  const montoInquilino = inqBase + inqAmpliaciones;
+  return { montoInquilino, montoPropietario: total - montoInquilino };
+}
+
 // ── Filas de COBROS ──────────────────────────────────────────────────────
 // STORY-1036: en un pago compartido cada parte se cobra por separado y en
 // momentos distintos — la "parte" identifica cada cobro.

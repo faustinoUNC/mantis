@@ -341,7 +341,7 @@ export async function obtenerGestion(
       // STORY-1017: ampliaciones de presupuesto pedidas a mitad de obra
       supabase
         .from("ampliaciones")
-        .select("id, tecnico_id, monto, motivo, estado, motivo_rechazo, enviada_pagador_en, creado_en")
+        .select("id, tecnico_id, monto, motivo, estado, motivo_rechazo, enviada_pagador_en, pagador, pagador_pct_inquilino, creado_en")
         .eq("gestion_id", id)
         .order("creado_en", { ascending: false }),
       supabase

@@ -133,6 +133,10 @@ export interface Ampliacion {
   motivo_rechazo: string | null;
   // Gate espejo de STORY-935: sin email al pagador no se registra autorización.
   enviada_pagador_en: string | null;
+  // STORY-1038: pagador propio de la ampliación (solo obras compartidas) —
+  // null = hereda el de la gestión. El % del inquilino cuando es "compartido".
+  pagador: Pagador | null;
+  pagador_pct_inquilino: number | null;
   creado_en: string;
 }
 

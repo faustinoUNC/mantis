@@ -9,7 +9,11 @@ import type { Pagador } from "@/features/gestiones/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
 import { adelantosAResolverDeTecnico } from "./consultas";
-import { claveDeuda } from "./consultas-types";
+import {
+  claveDeuda,
+  repartoCompartido,
+  type AmpliacionReparto,
+} from "./consultas-types";
 import {
   MEDIO_LIQUIDACION_LABEL,
   MEDIOS_COBRO,
@@ -113,7 +117,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, numero, descripcion, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, materiales_total, adelanto_materiales, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, numero, descripcion, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, materiales_total, adelanto_materiales, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, tecnico_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -248,18 +252,29 @@ async function datosDocumento(
 
   // STORY-1031: montos por parte, siempre derivados del total (redondeo a
   // centavos; el propietario absorbe el resto — la suma da exacto el total).
+  // STORY-1038: en la NOTA de cobro el reparto considera las ampliaciones con
+  // pagador propio (se imputan a su pagador); en el presupuesto no (aún no hay
+  // cobro ni ampliaciones ejecutadas).
   const pctInquilino =
     overrides?.pctInquilino ?? g.pagador_pct_inquilino ?? null;
+  const ampliacionesReparto =
+    tipo === "nota"
+      ? await ampliacionesRepartoDeGestion(admin, gestionId, g.tecnico_id ?? null)
+      : [];
   const split =
     splitInquilino && pctInquilino != null && total > 0
       ? (() => {
-          const montoInquilino = Math.round(total * pctInquilino) / 100;
+          const { montoInquilino, montoPropietario } = repartoCompartido(
+            total,
+            pctInquilino,
+            ampliacionesReparto
+          );
           return {
             pctInquilino,
             inquilinoNombre: splitInquilino.nombre,
             montoInquilino,
             propietarioNombre: propietario.nombre,
-            montoPropietario: total - montoInquilino,
+            montoPropietario,
           };
         })()
       : null;
@@ -332,6 +347,34 @@ async function datosDocumento(
       descuentosDeuda: descuentosDeuda.length > 0 ? descuentosDeuda : null,
     },
   };
+}
+
+// STORY-1038: ampliaciones aprobadas con pagador PROPIO del técnico actual —
+// componen el costo_final que se cobra, así que su pagador cuenta en el
+// reparto compartido. Las de un saliente son historial (STORY-983) y no se
+// cobran acá; las heredadas (pagador null) caen en la base por % de obra.
+async function ampliacionesRepartoDeGestion(
+  admin: ReturnType<typeof createAdminClient>,
+  gestionId: string,
+  tecnicoId: string | null
+): Promise<AmpliacionReparto[]> {
+  if (!tecnicoId) return [];
+  const { data } = await admin
+    .from("ampliaciones")
+    .select("monto, pagador, pagador_pct_inquilino")
+    .eq("gestion_id", gestionId)
+    .eq("estado", "aprobada")
+    .eq("tecnico_id", tecnicoId)
+    .not("pagador", "is", null);
+  return ((data ?? []) as {
+    monto: number;
+    pagador: "inquilino" | "propietario" | "compartido" | null;
+    pagador_pct_inquilino: number | null;
+  }[]).map((a) => ({
+    monto: Number(a.monto),
+    pagador: a.pagador,
+    pagadorPctInquilino: a.pagador_pct_inquilino,
+  }));
 }
 
 async function registrarEvento(
@@ -654,7 +697,11 @@ export async function enviarPresupuestoEmail(
 // autorización (espejo de presupuesto_enviado_en, STORY-935).
 export async function enviarAmpliacionEmail(
   gestionId: string,
-  ampliacionId: string
+  ampliacionId: string,
+  // STORY-1038: en obras compartidas el gestor puede re-elegir quién paga la
+  // ampliación (una parte o ambas con %); default heredado en la UI. Ignorado
+  // en obras de pagador único (la ampliación la paga el mismo pagador).
+  pagadorAmpliacion?: { pagador: Pagador; pctInquilino?: number }
 ): Promise<ActionResult> {
   const actual = await exigirMantenimiento(gestionId);
   if (!actual) return { ok: false, error: "No tenés permiso." };
@@ -684,22 +731,40 @@ export async function enviarAmpliacionEmail(
   }
   const { data: g } = await admin
     .from("gestiones")
-    .select("cargo_admin")
+    .select("cargo_admin, pagador, pagador_pct_inquilino")
     .eq("id", gestionId)
     .single();
 
-  // Mismo resolutor de destinatario que la nota (pagador anclado; con legajo
-  // cerrado cae al propietario — defensa STORY-962).
-  const doc = await datosDocumento(gestionId, "presupuesto");
+  // STORY-1038: el pagador de la ampliación solo se re-elige si la obra es
+  // compartida; en cualquier otro caso hereda el de la gestión (se guarda
+  // null → el reparto usa el % de la obra).
+  const esObraCompartida = g?.pagador === "compartido";
+  const pagAmp: Pagador = esObraCompartida
+    ? pagadorAmpliacion?.pagador ?? "compartido"
+    : (g?.pagador as Pagador) ?? "propietario";
+  const pctAmp =
+    pagAmp === "compartido"
+      ? pagadorAmpliacion?.pctInquilino ??
+        Number(g?.pagador_pct_inquilino ?? 50)
+      : null;
+  const errPct = errorPctInquilino(pagAmp, pctAmp ?? undefined);
+  if (esObraCompartida && errPct) return { ok: false, error: errPct };
+
+  // Destinatarios según el pagador de la AMPLIACIÓN (no el de la obra):
+  // datosDocumento con override resuelve envios[] (1 con parte única, 2 con
+  // compartido, orden [inquilino, propietario]) y la dirección.
+  const doc = await datosDocumento(gestionId, "presupuesto", {
+    pagador: pagAmp,
+    pctInquilino: pctAmp ?? undefined,
+  });
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
-  // STORY-1031: con pago compartido el aviso va a los DOS.
   if (doc.envios.some((e) => !e.email)) {
     return {
       ok: false,
       error:
         doc.envios.length > 1
-          ? "Falta el email del inquilino o del propietario — con pago compartido la ampliación va a los dos."
-          : "El pagador no tiene email cargado.",
+          ? "Falta el email del inquilino o del propietario — con ampliación compartida el aviso va a los dos."
+          : "El pagador de la ampliación no tiene email cargado.",
     };
   }
 
@@ -710,7 +775,22 @@ export async function enviarAmpliacionEmail(
     Number(g?.cargo_admin ?? 0);
   const plata = (v: number) => `$ ${v.toLocaleString("es-AR")}`;
 
-  for (const destino of doc.envios) {
+  // Monto que le toca a cada destino de la ampliación (compartido: reparto por
+  // %; parte única: el monto entero).
+  const montosPorDestino =
+    pagAmp === "compartido" && pctAmp != null
+      ? (() => {
+          const r = repartoCompartido(monto, pctAmp);
+          return [r.montoInquilino, r.montoPropietario];
+        })()
+      : [monto];
+
+  for (const [i, destino] of doc.envios.entries()) {
+    const tuParte = montosPorDestino[i] ?? monto;
+    const detalleParte =
+      doc.envios.length > 1
+        ? `De ese gasto extra, la parte que te corresponde es ${plata(tuParte)}. `
+        : "";
     await enviarEmailDocumento({
       para: destino.email!,
       destinatario: destino.nombre,
@@ -718,8 +798,8 @@ export async function enviarAmpliacionEmail(
       titulo: "Ampliación del presupuesto aprobado",
       cuerpo:
         `Durante el trabajo en ${doc.datos.direccion} surgieron gastos no previstos: ${amp.motivo}. ` +
-        `El presupuesto que aprobaste fue de ${plata(aprobadoTotal)}; la ampliación solicitada es de ${plata(monto)} ` +
-        `y, si la autorizás, el nuevo total será ${plata(aprobadoTotal + monto)}. ` +
+        `El presupuesto que aprobaste fue de ${plata(aprobadoTotal)}; la ampliación solicitada es de ${plata(monto)}. ` +
+        detalleParte +
         `Confirmá tu decisión con la inmobiliaria — el gasto extra no se realiza sin tu autorización.`,
       tipo: "ampliacion",
       gestion_id: gestionId,
@@ -729,7 +809,13 @@ export async function enviarAmpliacionEmail(
 
   await admin
     .from("ampliaciones")
-    .update({ enviada_pagador_en: new Date().toISOString() })
+    .update({
+      enviada_pagador_en: new Date().toISOString(),
+      // STORY-1038: se ancla el pagador de la ampliación al enviar (espejo del
+      // pagador de la obra en el presupuesto). null si la obra no es compartida.
+      pagador: esObraCompartida ? pagAmp : null,
+      pagador_pct_inquilino: esObraCompartida && pagAmp === "compartido" ? pctAmp : null,
+    })
     .eq("id", ampliacionId);
 
   await registrarEvento(gestionId, "ampliacion_enviada_pagador", actual.id, {
@@ -772,7 +858,7 @@ export async function registrarCobro(
   // posterior de costo_final/cargo_admin no reescribe el pasado.
   const { data: g } = await supabase
     .from("gestiones")
-    .select("costo_final, cargo_admin, cargo_cancelacion, pagador, pagador_pct_inquilino")
+    .select("costo_final, cargo_admin, cargo_cancelacion, pagador, pagador_pct_inquilino, tecnico_id")
     .eq("id", gestionId)
     .single();
   // STORY-967: una cancelación con cargo se cobra por este mismo circuito —
@@ -796,11 +882,22 @@ export async function registrarCobro(
   let baseParte = total;
   let cobroPrevio: { total: number } | null = null;
   if (esCompartido && datos.parte) {
-    const pct = Number(g?.pagador_pct_inquilino ?? 50);
-    const montoInquilino = Math.round(total * pct) / 100;
-    baseParte = datos.parte === "inquilino" ? montoInquilino : total - montoInquilino;
-
     const admin = createAdminClient();
+    // STORY-1038: el monto de la parte considera las ampliaciones con pagador
+    // propio (mismo reparto que la nota) — un cargo extra 100% del propietario
+    // no se le reparte al inquilino.
+    const ampliaciones = await ampliacionesRepartoDeGestion(
+      admin,
+      gestionId,
+      (g?.tecnico_id as string | null) ?? null
+    );
+    const reparto = repartoCompartido(
+      total,
+      Number(g?.pagador_pct_inquilino ?? 50),
+      ampliaciones
+    );
+    baseParte = datos.parte === "inquilino" ? reparto.montoInquilino : reparto.montoPropietario;
+
     const { data: previos } = await admin
       .from("eventos_gestion")
       .select("detalle")

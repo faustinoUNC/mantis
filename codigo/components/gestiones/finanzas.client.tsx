@@ -17,9 +17,30 @@ import {
 import {
   claveDeuda,
   PARTE_COBRO_LABEL,
+  repartoCompartido,
+  type AmpliacionReparto,
   type CobroParcial,
   type ParteCobro,
 } from "@/features/finanzas/consultas-types";
+// STORY-1038: ampliaciones aprobadas del técnico actual con pagador propio —
+// las que inciden en el reparto del cobro compartido (el costo_final las
+// incluye). Mismo criterio que el server (ampliacionesRepartoDeGestion).
+function ampliacionesReparto(
+  gestion: import("@/features/gestiones/types").GestionDetalle
+): AmpliacionReparto[] {
+  return gestion.ampliaciones
+    .filter(
+      (a) =>
+        a.estado === "aprobada" &&
+        a.tecnico_id === gestion.tecnico_id &&
+        a.pagador != null
+    )
+    .map((a) => ({
+      monto: Number(a.monto),
+      pagador: a.pagador as AmpliacionReparto["pagador"],
+      pagadorPctInquilino: a.pagador_pct_inquilino,
+    }));
+}
 import {
   descargarDocumento,
   emitirNotaCobro,
@@ -313,7 +334,20 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
         <p className="text-[13px] text-muted">
           El técnico presupuestó{" "}
           <span className="font-semibold text-foreground">{plata(presupuestado)}</span>{" "}
-          en materiales.
+          en materiales
+          {/* STORY-1036: la referencia debe incluir las ampliaciones ya
+              autorizadas — el techo del adelanto sube con ellas (topeAdelanto)
+              y el texto mostraba solo el presupuesto original. */}
+          {ampliadoAdelanto > 0 ? (
+            <>
+              {" "}+{" "}
+              <span className="font-semibold text-foreground">{plata(ampliadoAdelanto)}</span>{" "}
+              de ampliación autorizada ={" "}
+              <span className="font-semibold text-foreground">{plata(topeAdelanto ?? presupuestado)}</span>.
+            </>
+          ) : (
+            "."
+          )}
         </p>
       )}
       <form
@@ -379,13 +413,18 @@ function CobroPorPartes({
   ) => Promise<boolean>;
   ctaFinal: string;
 }) {
-  // Mismo redondeo que la nota y el server (1031): el propietario absorbe el
-  // resto — las dos partes suman exacto el total.
+  // Mismo redondeo que la nota y el server (1031/1038): el propietario absorbe
+  // el resto — las dos partes suman exacto el total; las ampliaciones con
+  // pagador propio se imputan a su pagador.
   const pct = gestion.pagador_pct_inquilino ?? 50;
-  const montoInquilino = Math.round(total * pct) / 100;
+  const { montoInquilino, montoPropietario } = repartoCompartido(
+    total,
+    pct,
+    ampliacionesReparto(gestion)
+  );
   const partes: { parte: ParteCobro; pct: number; monto: number }[] = [
     { parte: "inquilino", pct, monto: montoInquilino },
-    { parte: "propietario", pct: 100 - pct, monto: total - montoInquilino },
+    { parte: "propietario", pct: 100 - pct, monto: montoPropietario },
   ];
   const cobradas = new Map(cobrosParciales.map((c) => [c.parte, c]));
   const faltaUna = cobradas.size === 1;
@@ -618,26 +657,27 @@ export function FinanzasAcciones({
               <span className="font-mono">{plata(trabajo + cargoAdmin)}</span>
             </div>
             {/* STORY-1031: con pago compartido, el reparto a la vista del
-                administrativo (mismo redondeo que la nota). */}
-            {gestion.pagador === "compartido" && (
-              <div className="flex flex-col gap-0.5 text-[13px] text-muted">
-                <div className="flex justify-between">
-                  <span>Inquilino ({gestion.pagador_pct_inquilino ?? 50}%)</span>
-                  <span className="font-mono">
-                    {plata(Math.round((trabajo + cargoAdmin) * (gestion.pagador_pct_inquilino ?? 50)) / 100)}
-                  </span>
+                administrativo (mismo redondeo que la nota). STORY-1038: las
+                ampliaciones con pagador propio se imputan a su pagador. */}
+            {gestion.pagador === "compartido" && (() => {
+              const { montoInquilino, montoPropietario } = repartoCompartido(
+                trabajo + cargoAdmin,
+                gestion.pagador_pct_inquilino ?? 50,
+                ampliacionesReparto(gestion)
+              );
+              return (
+                <div className="flex flex-col gap-0.5 text-[13px] text-muted">
+                  <div className="flex justify-between">
+                    <span>Inquilino ({gestion.pagador_pct_inquilino ?? 50}%)</span>
+                    <span className="font-mono">{plata(montoInquilino)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Propietario ({100 - (gestion.pagador_pct_inquilino ?? 50)}%)</span>
+                    <span className="font-mono">{plata(montoPropietario)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Propietario ({100 - (gestion.pagador_pct_inquilino ?? 50)}%)</span>
-                  <span className="font-mono">
-                    {plata(
-                      trabajo + cargoAdmin -
-                        Math.round((trabajo + cargoAdmin) * (gestion.pagador_pct_inquilino ?? 50)) / 100
-                    )}
-                  </span>
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         </div>
 

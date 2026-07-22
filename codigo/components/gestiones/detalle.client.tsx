@@ -1309,6 +1309,13 @@ function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
   // Un envío local vale aunque el refresh vivo tarde en confirmarlo (patrón
   // mailEnviado de EvaluacionPresupuesto).
   const [mailEnviado, setMailEnviado] = useState(false);
+  // STORY-1038: en obras compartidas el gestor re-elige quién paga la
+  // ampliación — arranca heredando el pagador/% de la obra (default de Fausti).
+  const esObraCompartida = gestion.pagador === "compartido";
+  const [pagAmp, setPagAmp] = useState<Pagador>(
+    esObraCompartida ? "compartido" : (gestion.pagador ?? "propietario")
+  );
+  const [pctAmp, setPctAmp] = useState(String(gestion.pagador_pct_inquilino ?? 50));
   const enviada = gestion.ampliaciones.find((a) => a.estado === "enviada");
   if (!enviada) return null;
   const enviadaPagador = mailEnviado || Boolean(enviada.enviada_pagador_en);
@@ -1349,12 +1356,48 @@ function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
         <p className="text-sm leading-relaxed">“{enviada.motivo}”</p>
       </div>
 
+      {/* STORY-1038: solo en obras compartidas — quién paga ESTA ampliación
+          (default: el pagador de la obra). En pagador único no se re-elige. */}
+      {esObraCompartida && (
+        <div className="flex flex-wrap items-end gap-3 max-w-md">
+          <div className="min-w-48">
+            <Select
+              label="¿Quién paga esta ampliación?"
+              value={pagAmp}
+              onChange={(e) => setPagAmp(e.target.value as Pagador)}
+            >
+              <option value="compartido">Compartido (inquilino y propietario)</option>
+              <option value="inquilino">Solo el inquilino</option>
+              <option value="propietario">Solo el propietario</option>
+            </Select>
+          </div>
+          {pagAmp === "compartido" && (
+            <div className="w-32">
+              <InputNumerico
+                label="% del inquilino"
+                value={pctAmp}
+                onChange={(e) => setPctAmp(e.currentTarget.value)}
+                decimales={false}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
         <Button
           variante="secundario"
           disabled={cargando}
           onClick={async () => {
-            const ok = await correr(() => enviarAmpliacionEmail(gestion.id, enviada.id));
+            const ok = await correr(() =>
+              enviarAmpliacionEmail(
+                gestion.id,
+                enviada.id,
+                esObraCompartida
+                  ? { pagador: pagAmp, pctInquilino: Number(pctAmp) || undefined }
+                  : undefined
+              )
+            );
             if (ok) setMailEnviado(true);
           }}
         >

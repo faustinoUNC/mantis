@@ -2,6 +2,11 @@
 // leyendo el historial), derivados en UN solo lugar y compartidos por la vista
 // de la propiedad y el PDF "Resumen de obras". Módulo puro — sin 'use server'.
 
+import {
+  repartoCompartido,
+  type AmpliacionReparto,
+} from "@/features/finanzas/consultas-types";
+
 export type EstadoObra = "terminada" | "en_curso" | "cancelada";
 
 export const ESTADO_OBRA_LABEL: Record<EstadoObra, string> = {
@@ -43,15 +48,26 @@ export function costoObra(g: {
 // STORY-1031: cuánto de una obra pagó cada parte — con pago compartido el
 // costo se reparte por el % anclado (mismo redondeo que la nota: centavos,
 // el propietario absorbe el resto); con pagador único va entero a un balde.
+// STORY-1038: las ampliaciones con pagador propio se imputan a su pagador
+// (mismo helper único que la nota y el cobro).
 export function parteObra(
-  o: { costo: number | null; pagador: string | null; pagador_pct_inquilino: number | null },
+  o: {
+    costo: number | null;
+    pagador: string | null;
+    pagador_pct_inquilino: number | null;
+    ampliaciones?: import("@/features/finanzas/consultas-types").AmpliacionReparto[];
+  },
   parte: "inquilino" | "propietario"
 ): number {
   if (o.costo == null) return 0;
   if (o.pagador === parte) return o.costo;
   if (o.pagador === "compartido") {
-    const inquilino = Math.round(o.costo * (o.pagador_pct_inquilino ?? 50)) / 100;
-    return parte === "inquilino" ? inquilino : o.costo - inquilino;
+    const { montoInquilino, montoPropietario } = repartoCompartido(
+      o.costo,
+      o.pagador_pct_inquilino ?? 50,
+      o.ampliaciones ?? []
+    );
+    return parte === "inquilino" ? montoInquilino : montoPropietario;
   }
   return 0;
 }
@@ -69,6 +85,8 @@ export interface ObraHistorial {
   pagador: string | null;
   // STORY-1031: % del inquilino cuando pagador = "compartido"
   pagador_pct_inquilino: number | null;
+  // STORY-1038: ampliaciones con pagador propio (para el reparto por parte)
+  ampliaciones?: AmpliacionReparto[];
   reportada_en: string; // ISO
   terminada_en: string | null; // ISO — última salida de obra a Conformidad
 }
