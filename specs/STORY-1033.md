@@ -36,6 +36,6 @@ El resto del sistema ya usa el patrón correcto (texto + `inputMode` + filtro en
 
 ## Dev Agent Record
 
-- **Commit:** pendiente (espera OK de Fausti).
+- **Commit:** `ef16ff0` (2026-07-21).
 - **Archivos:** `codigo/components/ui/input-numerico.client.tsx` (nuevo — `InputNumerico`: `Input` de texto con `inputMode` y filtro en el tipeo, prop `decimales`); `codigo/components/gestiones/detalle.client.tsx` (los 8 `type="number"` pasan a `InputNumerico`; `cargoAdmin` pasa a estado string con derivado `cargoAdminNum` para poder tipear decimales en un input de texto).
 - **Verificación:** `tsc` y eslint verdes; no queda ningún `type="number"` en el código. E2E navegador (gestión [DEMO] con presupuesto enviado, admin): fee — tipear `1e+5-abc2,5.9` deja `152.59` y el resumen/total usan el valor saneado ($15.000 → total $368.000); % inquilino — tipear `e-5+a5` deja `55`; cargo por cancelación (camino FormData) — tipear `-1e9+.2.,3x` deja `19.23`. Consola sin errores ni warnings.
