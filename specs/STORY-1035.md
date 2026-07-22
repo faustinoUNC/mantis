@@ -31,6 +31,6 @@ Además nada en el tablero recuerda la deuda: la card en Finalizado se ve igual 
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente)_
+- **Commit:** `b8910b3` (2026-07-22).
 - **Archivos:** `codigo/features/gestiones/service.ts` (guard en `archivarGestion()` + embed `calificaciones(estrellas)` en `SELECT_RESUMEN` + `calificacion_pendiente` en `normalizarFila`); `codigo/features/gestiones/types.ts` (`GestionResumen.calificacion_pendiente`); `codigo/components/gestiones/tablero.client.tsx` (badge "Falta calificar"); `codigo/components/gestiones/detalle.client.tsx` (`ArchivarGestion`: botón deshabilitado + explicación).
 - **Verificación:** `tsc` y eslint verdes. E2E navegador (admin, dev server): el tablero muestra el badge "Falta calificar" exactamente en las 32 finalizadas sin calificación (y en ninguna otra columna); en el detalle de la #8 el botón Archivar aparece deshabilitado con la explicación; guard server-side probado invocando el server action con el botón forzado por JS en la #11 → respuesta "Falta calificar al técnico — calificalo y después archivá." y `archivada_en` sigue null en DB; flujo feliz en la #8: calificar ⭐5 → botón se habilita → archivar OK → desarchivar OK. Consola sin errores.
