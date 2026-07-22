@@ -416,28 +416,28 @@ function CobroPorPartes({
   // Mismo redondeo que la nota y el server (1031/1038): el propietario absorbe
   // el resto — las dos partes suman exacto el total; las ampliaciones con
   // pagador propio se imputan a su pagador.
-  const pct = gestion.pagador_pct_inquilino ?? 50;
+  // STORY-1038: se muestra el MONTO de cada parte, no el % — con una
+  // ampliación atribuida a una sola parte el % de la obra deja de describir el
+  // reparto real; el monto (que sí contempla la ampliación) es la verdad.
   const { montoInquilino, montoPropietario } = repartoCompartido(
     total,
-    pct,
+    gestion.pagador_pct_inquilino ?? 50,
     ampliacionesReparto(gestion)
   );
-  const partes: { parte: ParteCobro; pct: number; monto: number }[] = [
-    { parte: "inquilino", pct, monto: montoInquilino },
-    { parte: "propietario", pct: 100 - pct, monto: montoPropietario },
+  const partes: { parte: ParteCobro; monto: number }[] = [
+    { parte: "inquilino", monto: montoInquilino },
+    { parte: "propietario", monto: montoPropietario },
   ];
   const cobradas = new Map(cobrosParciales.map((c) => [c.parte, c]));
   const faltaUna = cobradas.size === 1;
   return (
     <div className="flex flex-col gap-4">
-      {partes.map(({ parte, pct: pctParte, monto }) => {
+      {partes.map(({ parte, monto }) => {
         const cobrada = cobradas.get(parte);
         return (
           <div key={parte} className="max-w-md rounded-md border border-border px-4 py-3">
             <div className="flex justify-between text-sm font-semibold">
-              <span>
-                Cobro del {PARTE_COBRO_LABEL[parte].toLowerCase()} ({pctParte}%)
-              </span>
+              <span>Cobro del {PARTE_COBRO_LABEL[parte].toLowerCase()}</span>
               <span className="font-mono">{plata(monto)}</span>
             </div>
             {cobrada ? (
@@ -658,7 +658,8 @@ export function FinanzasAcciones({
             </div>
             {/* STORY-1031: con pago compartido, el reparto a la vista del
                 administrativo (mismo redondeo que la nota). STORY-1038: las
-                ampliaciones con pagador propio se imputan a su pagador. */}
+                ampliaciones con pagador propio se imputan a su pagador — se
+                muestra el MONTO, no el %, que dejaría de describir el total. */}
             {gestion.pagador === "compartido" && (() => {
               const { montoInquilino, montoPropietario } = repartoCompartido(
                 trabajo + cargoAdmin,
@@ -668,11 +669,11 @@ export function FinanzasAcciones({
               return (
                 <div className="flex flex-col gap-0.5 text-[13px] text-muted">
                   <div className="flex justify-between">
-                    <span>Inquilino ({gestion.pagador_pct_inquilino ?? 50}%)</span>
+                    <span>Inquilino</span>
                     <span className="font-mono">{plata(montoInquilino)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Propietario ({100 - (gestion.pagador_pct_inquilino ?? 50)}%)</span>
+                    <span>Propietario</span>
                     <span className="font-mono">{plata(montoPropietario)}</span>
                   </div>
                 </div>

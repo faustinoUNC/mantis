@@ -35,6 +35,7 @@
 
 ## Dev Agent Record
 
+- **v1.1 (2026-07-22, refinamiento de display — pedido de Fausti):** los porcentajes del pago compartido dejan de mostrarse en las superficies de pago, porque una ampliación atribuida a UNA sola parte hace que el % de la obra deje de describir el reparto real (el monto, que sí contempla la ampliación, es la verdad). Se quitó el % de: campo "Paga" del detalle ("Compartido (inquilino y propietario)"), bloques de la pantalla de Cobro (`CobroPorPartes` + vista del reparto de la card), nota/PDF (total de la parte + bloque "Gasto compartido" — muestran solo montos) y la lista Finanzas → Cobros (`resolverPagador`). El % se conserva SOLO donde se decide (Presupuesto) y en el registro de aprobación de la Actividad. Verificado en navegador (#93). `tsc`/eslint verdes.
 - **Commit:** `2915712` (2026-07-22).
 - **Implementación (2026-07-22):** 8 archivos + 1 migración.
   - **DB:** migración `story_1038_ampliacion_pagador` — `ampliaciones` gana `pagador pagador_gestion NULL` + `pagador_pct_inquilino int NULL` (check 1–99).

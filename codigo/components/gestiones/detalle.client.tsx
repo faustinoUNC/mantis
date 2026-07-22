@@ -314,14 +314,18 @@ function DatosGestion({
         <Dato label="Gestor">{gestion.gestor_nombre}</Dato>
         <Dato label="Técnico">{gestion.tecnico_nombre ?? "Sin asignar"}</Dato>
         {/* STORY-943: "Paga" recién existe cuando la inmobiliaria lo decidió
-            en Presupuesto (con la inspección del técnico a la vista) */}
+            en Presupuesto (con la inspección del técnico a la vista).
+            STORY-1038: el % vive en la pantalla de Cobro y la nota (ahí el
+            reparto es el real, incluye ampliaciones con pagador propio). Acá
+            solo el "quién" — el % de la obra se volvía incompleto con una
+            ampliación de otro pagador. */}
         <Dato label="Paga" wrap={gestion.pagador === "compartido"}>
           {gestion.pagador
             ? gestion.pagador === "propietario"
               ? "Propietario"
               : gestion.pagador === "inquilino"
                 ? "Inquilino"
-                : `Compartido (inquilino ${gestion.pagador_pct_inquilino ?? 50}% / propietario ${100 - (gestion.pagador_pct_inquilino ?? 50)}%)`
+                : "Compartido (inquilino y propietario)"
             : <span className="text-muted font-normal">Se define al presupuestar</span>}
         </Dato>
         <Dato label={gestion.costo_final != null ? "Costo final" : "Creada"}>

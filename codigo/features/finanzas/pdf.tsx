@@ -175,12 +175,15 @@ function Documento({ datos }: { datos: DatosDocumento }) {
                 ? "Total presupuestado"
                 : esNota
                   ? datos.parteNota
-                    ? `Total a cobrar (su parte, ${datos.parteNota.pct}%)`
+                    ? "Total a cobrar (su parte)"
                     : "Total a cobrar"
                   : "Total liquidado al técnico"}
             </Text>
             <Text style={s.totalTexto}>{monto(datos.total)}</Text>
           </View>
+          {/* STORY-1038: se muestran los MONTOS por parte, sin %. Con una
+              ampliación atribuida a una sola parte, el % de la obra deja de
+              describir el reparto real; el monto es la verdad. */}
           {datos.split && (
             <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: "#e4e4e7" }}>
               <Text style={s.label}>
@@ -189,11 +192,11 @@ function Documento({ datos }: { datos: DatosDocumento }) {
                   : "Gasto compartido"}
               </Text>
               <View style={s.fila}>
-                <Text>Inquilino — {datos.split.inquilinoNombre} ({datos.split.pctInquilino}%)</Text>
+                <Text>Inquilino — {datos.split.inquilinoNombre}</Text>
                 <Text>{monto(datos.split.montoInquilino)}</Text>
               </View>
               <View style={s.fila}>
-                <Text>Propietario — {datos.split.propietarioNombre} ({100 - datos.split.pctInquilino}%)</Text>
+                <Text>Propietario — {datos.split.propietarioNombre}</Text>
                 <Text>{monto(datos.split.montoPropietario)}</Text>
               </View>
             </View>

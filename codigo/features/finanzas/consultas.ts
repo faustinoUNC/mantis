@@ -94,8 +94,7 @@ export async function cobrosParcialesDeGestion(
 function resolverPagador(
   pagador: "inquilino" | "propietario" | "compartido" | null,
   propiedades: { propietarios: { nombre: string } | null } | null,
-  legajos: { inquilinos: { nombre: string } | null } | null,
-  pctInquilino?: number | null
+  legajos: { inquilinos: { nombre: string } | null } | null
 ): { nombre: string; rotulo: string } {
   if (pagador === "propietario") {
     return { nombre: propiedades?.propietarios?.nombre ?? "—", rotulo: "Propietario" };
@@ -103,13 +102,13 @@ function resolverPagador(
   if (pagador === "inquilino") {
     return { nombre: legajos?.inquilinos?.nombre ?? "—", rotulo: "Inquilino" };
   }
-  // STORY-1031: pago compartido — ambos nombres con su % (el cobro sigue
-  // siendo uno solo; el reparto es informativo).
+  // STORY-1031/1038: pago compartido — ambos nombres, sin % (con una ampliación
+  // atribuida a una sola parte el % de la obra deja de describir el reparto
+  // real; la plata por parte se ve en la fila de cada cobro).
   if (pagador === "compartido") {
     const inq = legajos?.inquilinos?.nombre ?? "—";
     const prop = propiedades?.propietarios?.nombre ?? "—";
-    const pct = pctInquilino ?? 50;
-    return { nombre: `${inq} (${pct}%) + ${prop} (${100 - pct}%)`, rotulo: "Compartido" };
+    return { nombre: `${inq} + ${prop}`, rotulo: "Compartido" };
   }
   return { nombre: "—", rotulo: "—" };
 }
@@ -204,8 +203,7 @@ export async function listarCobros(): Promise<CobrosData> {
     const { nombre: pagadorNombre, rotulo: pagadorRotulo } = resolverPagador(
       g.pagador,
       g.propiedades,
-      g.legajos,
-      g.pagador_pct_inquilino
+      g.legajos
     );
     const entro = entroPorId.get(g.id);
     const partes = partesPorGestion.get(g.id) ?? [];
@@ -233,8 +231,7 @@ export async function listarCobros(): Promise<CobrosData> {
     const { nombre: pagadorNombre, rotulo: pagadorRotulo } = resolverPagador(
       g.pagador,
       g.propiedades,
-      g.legajos,
-      g.pagador_pct_inquilino
+      g.legajos
     );
     const base = {
       gestionId: g.id,
