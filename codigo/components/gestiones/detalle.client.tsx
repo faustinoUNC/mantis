@@ -94,13 +94,26 @@ function useAccion() {
 
 // ── Datos de la gestión (grid estructurado — rediseño STORY-902) ──
 
-function Dato({ label, children }: { label: string; children: React.ReactNode }) {
+function Dato({
+  label,
+  children,
+  // STORY-1036: por defecto el valor trunca (dirección/email largos), pero
+  // algunos textos deben poder cortar de línea — ej. "Paga" con el reparto
+  // del pago compartido, que se cortaba a la mitad ("Compartido (inquilino 20% / p…").
+  wrap = false,
+}: {
+  label: string;
+  children: React.ReactNode;
+  wrap?: boolean;
+}) {
   return (
     <div className="min-w-0">
       <p className="text-[13px] font-medium text-muted">
         {label}
       </p>
-      <div className="mt-0.5 text-[15px] font-medium truncate">{children}</div>
+      <div className={`mt-0.5 text-[15px] font-medium ${wrap ? "text-balance" : "truncate"}`}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -302,7 +315,7 @@ function DatosGestion({
         <Dato label="Técnico">{gestion.tecnico_nombre ?? "Sin asignar"}</Dato>
         {/* STORY-943: "Paga" recién existe cuando la inmobiliaria lo decidió
             en Presupuesto (con la inspección del técnico a la vista) */}
-        <Dato label="Paga">
+        <Dato label="Paga" wrap={gestion.pagador === "compartido"}>
           {gestion.pagador
             ? gestion.pagador === "propietario"
               ? "Propietario"
