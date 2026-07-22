@@ -35,6 +35,7 @@
 
 ## Dev Agent Record
 
+- **Commit:** `2915712` (2026-07-22).
 - **Implementación (2026-07-22):** 8 archivos + 1 migración.
   - **DB:** migración `story_1038_ampliacion_pagador` — `ampliaciones` gana `pagador pagador_gestion NULL` + `pagador_pct_inquilino int NULL` (check 1–99).
   - `features/finanzas/consultas-types.ts`: **helper único `repartoCompartido(total, pctObra, ampliaciones)`** (+ tipo `AmpliacionReparto`) — imputa cada ampliación de pagador propio a su pagador y reparte la base por el % de obra; corner `base<0` → reparto plano.
