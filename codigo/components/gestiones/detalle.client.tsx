@@ -1022,6 +1022,14 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
     (!Number.isInteger(pctInquilino) || pctInquilino < 1 || pctInquilino > 99);
   const pctParam = pagador === "compartido" ? pctInquilino : undefined;
   const cargoAdminNum = Number(cargoAdmin) || 0;
+  // STORY-1037: si tras enviar se cambió algún término (quién paga, % o fee),
+  // no se puede aprobar hasta reenviar — se aprueba exactamente lo que el
+  // pagador recibió por email.
+  const terminosCambiados =
+    mailEnviado &&
+    (pagador !== (gestion.pagador ?? "") ||
+      (pagador === "compartido" && pctInquilino !== gestion.pagador_pct_inquilino) ||
+      cargoAdminNum !== (Number(gestion.cargo_admin) || 0));
   const totalPrevisto =
     Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra) + cargoAdminNum;
 
@@ -1152,15 +1160,9 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
             </div>
           )}
           <Button
-            disabled={cargando || !mailEnviado || !pagador || pctInvalido}
+            disabled={cargando || !mailEnviado || !pagador || pctInvalido || terminosCambiados}
             onClick={() =>
-              correr(() =>
-                resolverPresupuesto(enviado.id, gestion.id, true, {
-                  pagador: pagador || undefined,
-                  pct_inquilino: pctParam,
-                  cargo_admin: cargoAdminNum,
-                })
-              )
+              correr(() => resolverPresupuesto(enviado.id, gestion.id, true))
             }
           >
             Aprobar y ejecutar →
@@ -1177,6 +1179,11 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
             <p className="w-full text-[12px] text-muted">
               Para aprobar, primero enviá el presupuesto al {etiqueta} por email
               — aprueba lo que recibió.
+            </p>
+          ) : terminosCambiados ? (
+            <p className="w-full text-[12px] text-muted">
+              Cambiaste los términos después de enviar — reenviá el presupuesto
+              para poder aprobar.
             </p>
           ) : null}
         </div>

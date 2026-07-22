@@ -1108,58 +1108,49 @@ export async function resolverPresupuesto(
   presupuestoId: string,
   gestionId: string,
   aprobar: boolean,
-  opciones: { pagador?: Pagador; pct_inquilino?: number; motivo?: string; cargo_admin?: number }
+  opciones: { motivo?: string } = {}
 ): Promise<ActionResult> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
 
-  // Validar TODO antes de escribir (evita estados a medias)
-  if (aprobar && !opciones.pagador) {
-    return { ok: false, error: "Confirmá quién paga la obra." };
-  }
-  // STORY-1031: compartido exige un % entero de inquilino entre 1 y 99.
-  const pctInquilino =
-    opciones.pagador === "compartido" ? opciones.pct_inquilino : null;
-  if (
-    aprobar &&
-    opciones.pagador === "compartido" &&
-    (!Number.isInteger(pctInquilino) || pctInquilino! < 1 || pctInquilino! > 99)
-  ) {
-    return { ok: false, error: "Indicá qué % paga el inquilino (entre 1 y 99)." };
-  }
-  const cargoAdmin = opciones.cargo_admin ?? 0;
-  if (aprobar && (!Number.isFinite(cargoAdmin) || cargoAdmin < 0)) {
-    return { ok: false, error: "El cargo administrativo no puede ser negativo." };
-  }
-
   const supabase = await createClient();
 
-  // STORY-935: el pagador aprueba lo que recibió — sin email enviado no hay
-  // aprobación (la UI deshabilita el botón; esto cubre refresh y carreras).
-  // STORY-943: y el pagador elegido tiene que existir — "inquilino" solo si
-  // la gestión tiene legajo.
+  // STORY-1037: al aprobar se usan los términos YA ENVIADOS (pagador, %, fee),
+  // anclados en la tabla `gestiones` al mandar el presupuesto — NUNCA lo que
+  // llegue del cliente. Así es imposible aprobar algo distinto a lo que el
+  // pagador recibió por email (la UI además bloquea "Aprobar" si se editó algo
+  // después de enviar).
+  let pagador: Pagador | null = null;
+  let pctInquilino: number | null = null;
+  let cargoAdmin = 0;
   if (aprobar) {
     const { data: g } = await supabase
       .from("gestiones")
-      .select("presupuesto_enviado_en, legajo_id, legajos(fecha_fin)")
+      .select(
+        "presupuesto_enviado_en, legajo_id, pagador, pagador_pct_inquilino, cargo_admin, legajos(fecha_fin)"
+      )
       .eq("id", gestionId)
       .single();
+    // STORY-935: sin email enviado no hay aprobación (cubre refresh y carreras).
     if (!g?.presupuesto_enviado_en) {
       return {
         ok: false,
         error: "Enviá el presupuesto al pagador por email antes de aprobar.",
       };
     }
-    // STORY-962: "inquilino" solo vale si el legajo está vigente (fecha_fin
-    // null). Un legajo cerrado = el inquilino se fue → paga el propietario.
+    if (!g.pagador) {
+      return { ok: false, error: "Confirmá quién paga la obra." };
+    }
+    pagador = g.pagador as Pagador;
+    pctInquilino = pagador === "compartido" ? g.pagador_pct_inquilino : null;
+    cargoAdmin = Number(g.cargo_admin) || 0;
+    // STORY-962: "inquilino"/"compartido" solo si el legajo está vigente
+    // (fecha_fin null). Se revalida acá porque el inquilino puede haberse ido
+    // entre el envío y la aprobación.
     const legajoVigente =
       g.legajo_id != null &&
       (g.legajos as unknown as { fecha_fin: string | null } | null)?.fecha_fin == null;
-    // STORY-1031: compartido también necesita un inquilino habitando.
-    if (
-      (opciones.pagador === "inquilino" || opciones.pagador === "compartido") &&
-      !legajoVigente
-    ) {
+    if ((pagador === "inquilino" || pagador === "compartido") && !legajoVigente) {
       return {
         ok: false,
         error: "La propiedad no tiene inquilino vigente — el pago solo puede ser del propietario.",
@@ -1183,18 +1174,9 @@ export async function resolverPresupuesto(
     return { ok: false, error: "No se pudo resolver el presupuesto (¿ya fue resuelto?)." };
   }
 
-  if (aprobar) {
-    // El fee queda ANCLADO en la aprobación: lo que se aprueba es lo que
-    // después factura el administrativo (FIN-1)
-    await supabase
-      .from("gestiones")
-      .update({
-        pagador: opciones.pagador,
-        pagador_pct_inquilino: pctInquilino ?? null,
-        cargo_admin: cargoAdmin,
-      })
-      .eq("id", gestionId);
-  }
+  // STORY-1037: el fee/pagador/% ya quedaron anclados al ENVIAR el presupuesto
+  // (finanzas/enviarPresupuestoEmail) — aprobar no los reescribe, solo confirma
+  // y mueve la etapa. Lo que se aprueba es exactamente lo que se envió.
 
   await supabase.from("eventos_gestion").insert({
     gestion_id: gestionId,
@@ -1202,7 +1184,7 @@ export async function resolverPresupuesto(
     actor_id: actual.id,
     detalle: aprobar
       ? {
-          pagador: opciones.pagador,
+          pagador,
           ...(pctInquilino != null && { pct_inquilino: pctInquilino }),
           cargo_admin: cargoAdmin,
         }
