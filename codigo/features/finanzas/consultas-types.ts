@@ -2,6 +2,24 @@
 // cobros y liquidaciones). Sin "use server": exporta tipos y funciones puras.
 
 // ── Filas de COBROS ──────────────────────────────────────────────────────
+// STORY-1036: en un pago compartido cada parte se cobra por separado y en
+// momentos distintos — la "parte" identifica cada cobro.
+export type ParteCobro = "inquilino" | "propietario";
+
+export const PARTE_COBRO_LABEL: Record<ParteCobro, string> = {
+  inquilino: "Inquilino",
+  propietario: "Propietario",
+};
+
+// Cobro parcial ya registrado de una gestión compartida (derivado de los
+// eventos congelados — la derivación vive SOLO en features/finanzas).
+export interface CobroParcial {
+  parte: ParteCobro;
+  fecha: string; // ISO
+  medioLabel: string;
+  monto: number; // total efectivo de la parte (recargo incluido)
+}
+
 export interface FilaCobroPendiente {
   id: string;
   descripcion: string;
@@ -10,17 +28,21 @@ export interface FilaCobroPendiente {
   pagadorRotulo: string; // "Propietario" | "Inquilino" | "Compartido" | "—"
   total: number;
   diasPendiente: number | null;
+  // STORY-1036: compartido con UNA parte ya cobrada — qué falta ("Falta el
+  // propietario"). null = sin cobros parciales.
+  parcialLabel?: string | null;
 }
 
 export interface FilaCobroCerrado {
-  id: string;
+  id: string; // clave única de la fila (`{gestion}` o `{gestion}:{parte}`)
+  gestionId: string;
   descripcion: string;
   direccion: string;
   pagadorNombre: string;
   pagadorRotulo: string; // "Propietario" | "Inquilino" | "Compartido" | "—"
   monto: number;
   medioLabel: string;
-  fecha: string; // ISO (cobrado_en)
+  fecha: string; // ISO (cobrado_en / evento de la parte)
 }
 
 export interface CobrosData {

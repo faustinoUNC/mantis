@@ -2,7 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { DetalleGestion } from "@/components/gestiones/detalle.client";
 import { obtenerUsuarioActual } from "@/features/auth/service";
 import { listarEmpleados } from "@/features/empleados/service";
-import { adelantosAResolverDeTecnico } from "@/features/finanzas/consultas";
+import {
+  adelantosAResolverDeTecnico,
+  cobrosParcialesDeGestion,
+} from "@/features/finanzas/consultas";
 import {
   obtenerGestion,
   tecnicosDisponibles,
@@ -33,10 +36,17 @@ export default async function GestionPage({
     gestion.etapa === "liquidacion_tecnico" &&
     gestion.tecnico_id != null &&
     (usuario.rol === "administrador" || usuario.rol === "gestor_administrativo");
-  const [tecnicos, empleados, deudasTecnico] = await Promise.all([
+  // STORY-1036: cobro compartido — qué partes ya se cobraron (derivado en el
+  // server desde los eventos, la card de cobro solo lo muestra).
+  const necesitaCobrosParciales =
+    gestion.etapa === "facturacion_cobro" &&
+    gestion.pagador === "compartido" &&
+    (usuario.rol === "administrador" || usuario.rol === "gestor_administrativo");
+  const [tecnicos, empleados, deudasTecnico, cobrosParciales] = await Promise.all([
     necesitaTecnicos ? tecnicosDisponibles(gestion.especialidad_id) : [],
     usuario.rol === "administrador" ? listarEmpleados() : [],
     necesitaDeudas ? adelantosAResolverDeTecnico(gestion.tecnico_id!) : [],
+    necesitaCobrosParciales ? cobrosParcialesDeGestion(gestion.id) : [],
   ]);
 
   return (
@@ -48,6 +58,7 @@ export default async function GestionPage({
         .filter((e) => e.rol === "gestor_mantenimiento" && e.esta_activo)
         .map((e) => ({ id: e.id, nombre: e.nombre }))}
       deudasTecnico={deudasTecnico}
+      cobrosParciales={cobrosParciales}
     />
   );
 }

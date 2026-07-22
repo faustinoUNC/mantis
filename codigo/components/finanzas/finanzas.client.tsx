@@ -565,7 +565,8 @@ function TabCobros({
               monto={f.total}
               descripcion={f.descripcion}
               direccion={f.direccion}
-              persona={`${f.pagadorRotulo}: ${f.pagadorNombre}`}
+              // STORY-1036: compartido con una parte ya cobrada — se dice qué falta
+              persona={`${f.pagadorRotulo}: ${f.pagadorNombre}${f.parcialLabel ? ` · ${f.parcialLabel}` : ""}`}
               antiguedad={antiguedadLegible(f.diasPendiente)}
               alerta={f.diasPendiente != null && f.diasPendiente >= DIAS_ALERTA}
             />
@@ -592,7 +593,9 @@ function TabCobros({
           tarjeta={(f) => (
             <TarjetaGestion
               key={f.id}
-              id={f.id}
+              // STORY-1036: una compartida cobrada por partes tiene una fila
+              // por parte — la clave es única por fila, el link va a la gestión
+              id={f.gestionId}
               monto={f.monto}
               descripcion={f.descripcion}
               direccion={f.direccion}

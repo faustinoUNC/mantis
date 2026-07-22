@@ -96,6 +96,9 @@ export function detalleLegible(detalle: Record<string, unknown> | null): string 
         : `Paga: ${detalle.pagador}`
     );
   }
+  // STORY-1036: cobro por parte de un pago compartido — quién pagó este cobro.
+  if (detalle.parte === "inquilino" || detalle.parte === "propietario")
+    partes.push(`Pagó: ${detalle.parte}`);
   if (detalle.medio) partes.push(`Medio: ${MEDIO_LABEL[String(detalle.medio)] ?? detalle.medio}`);
   // STORY-973: el cobro combinado (STORY-950) se cuenta completo.
   if (detalle.medio2) {

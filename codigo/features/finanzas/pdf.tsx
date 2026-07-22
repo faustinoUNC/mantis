@@ -63,6 +63,9 @@ export interface DatosDocumento {
     propietarioNombre: string;
     montoPropietario: number;
   } | null;
+  // STORY-1036: nota POR PARTE de un pago compartido — `total` es el monto de
+  // esa parte; acá viaja su % y el total de la obra como contexto.
+  parteNota?: { pct: number; totalObra: number } | null;
 }
 
 function monto(n: number) {
@@ -171,14 +174,20 @@ function Documento({ datos }: { datos: DatosDocumento }) {
               {datos.tipo === "presupuesto"
                 ? "Total presupuestado"
                 : esNota
-                  ? "Total a cobrar"
+                  ? datos.parteNota
+                    ? `Total a cobrar (su parte, ${datos.parteNota.pct}%)`
+                    : "Total a cobrar"
                   : "Total liquidado al técnico"}
             </Text>
             <Text style={s.totalTexto}>{monto(datos.total)}</Text>
           </View>
           {datos.split && (
             <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: "#e4e4e7" }}>
-              <Text style={s.label}>Gasto compartido</Text>
+              <Text style={s.label}>
+                {datos.parteNota
+                  ? `Gasto compartido — total de la obra: ${monto(datos.parteNota.totalObra)}`
+                  : "Gasto compartido"}
+              </Text>
               <View style={s.fila}>
                 <Text>Inquilino — {datos.split.inquilinoNombre} ({datos.split.pctInquilino}%)</Text>
                 <Text>{monto(datos.split.montoInquilino)}</Text>

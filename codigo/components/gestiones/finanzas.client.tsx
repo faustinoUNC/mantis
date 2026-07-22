@@ -14,7 +14,12 @@ import {
   MEDIOS_LIQUIDACION,
   type MedioCobro,
 } from "@/features/finanzas/medios";
-import { claveDeuda } from "@/features/finanzas/consultas-types";
+import {
+  claveDeuda,
+  PARTE_COBRO_LABEL,
+  type CobroParcial,
+  type ParteCobro,
+} from "@/features/finanzas/consultas-types";
 import {
   descargarDocumento,
   emitirNotaCobro,
@@ -350,9 +355,119 @@ function AdelantoMateriales({ gestion }: { gestion: GestionDetalle }) {
   );
 }
 
+// STORY-1036: cobro de un pago compartido — cada parte paga por separado y
+// cuando efectivamente entró la plata. La parte ya cobrada muestra su
+// constancia (fecha + medio, derivados en el server desde los eventos); la
+// gestión avanza de etapa recién al registrar el SEGUNDO cobro.
+function CobroPorPartes({
+  gestion,
+  total,
+  cobrosParciales,
+  cargando,
+  error,
+  correr,
+  ctaFinal,
+}: {
+  gestion: GestionDetalle;
+  total: number;
+  cobrosParciales: CobroParcial[];
+  cargando: string | null;
+  error: string | null;
+  correr: (
+    clave: string,
+    fn: () => Promise<{ ok: boolean; error?: string }>
+  ) => Promise<boolean>;
+  ctaFinal: string;
+}) {
+  // Mismo redondeo que la nota y el server (1031): el propietario absorbe el
+  // resto — las dos partes suman exacto el total.
+  const pct = gestion.pagador_pct_inquilino ?? 50;
+  const montoInquilino = Math.round(total * pct) / 100;
+  const partes: { parte: ParteCobro; pct: number; monto: number }[] = [
+    { parte: "inquilino", pct, monto: montoInquilino },
+    { parte: "propietario", pct: 100 - pct, monto: total - montoInquilino },
+  ];
+  const cobradas = new Map(cobrosParciales.map((c) => [c.parte, c]));
+  const faltaUna = cobradas.size === 1;
+  return (
+    <div className="flex flex-col gap-4">
+      {partes.map(({ parte, pct: pctParte, monto }) => {
+        const cobrada = cobradas.get(parte);
+        return (
+          <div key={parte} className="max-w-md rounded-md border border-border px-4 py-3">
+            <div className="flex justify-between text-sm font-semibold">
+              <span>
+                Cobro del {PARTE_COBRO_LABEL[parte].toLowerCase()} ({pctParte}%)
+              </span>
+              <span className="font-mono">{plata(monto)}</span>
+            </div>
+            {cobrada ? (
+              <p className="mt-1.5 inline-flex items-center gap-1.5 text-[13px] font-medium text-brand-active">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+                Cobrado el {new Date(cobrada.fecha).toLocaleDateString("es-AR")} —{" "}
+                {cobrada.medioLabel} ({plata(cobrada.monto)})
+              </p>
+            ) : (
+              <FormCobro
+                total={monto}
+                pagador={parte}
+                cargando={cargando}
+                error={error}
+                onSubmit={(datos) =>
+                  correr("cobro", () => registrarCobro(gestion.id, { ...datos, parte }))
+                }
+                cta={
+                  faltaUna
+                    ? ctaFinal
+                    : `Registrar cobro del ${PARTE_COBRO_LABEL[parte].toLowerCase()}`
+                }
+              />
+            )}
+          </div>
+        );
+      })}
+      {!faltaUna && (
+        <p className="max-w-md text-[13px] text-muted">
+          La gestión avanza de etapa cuando las dos partes estén cobradas — cada
+          cobro se registra cuando efectivamente se realizó.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// STORY-1036: con pago compartido hay DOS notas de cobro (una por parte, cada
+// una con su monto). "Enviar" manda las dos juntas — el gate de envío sigue
+// siendo uno solo.
+function NotasCobroCompartido({
+  gestion,
+}: {
+  gestion: GestionDetalle & { nota_emitida_en?: string | null };
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <EnvioDocumento
+        etiqueta="nota del inquilino"
+        etiquetaEnvio="las dos notas"
+        destinatarioEtiqueta="inquilino y propietario"
+        yaEnviado={Boolean(gestion.nota_emitida_en)}
+        generar={() => descargarDocumento(gestion.id, "nota", "inquilino")}
+        enviar={() => emitirNotaCobro(gestion.id)}
+      />
+      <EnvioDocumento
+        etiqueta="nota del propietario"
+        generar={() => descargarDocumento(gestion.id, "nota", "propietario")}
+      />
+    </div>
+  );
+}
+
 export function FinanzasAcciones({
   gestion,
   deudasTecnico = [],
+  cobrosParciales = [],
 }: {
   gestion: GestionDetalle & {
     nota_emitida_en?: string | null;
@@ -363,6 +478,9 @@ export function FinanzasAcciones({
   // en que el server descuenta). STORY-1032: se pueden tildar para retener
   // de la liquidación; si la plata no alcanza el descuento es parcial.
   deudasTecnico?: import("@/features/finanzas/consultas-types").ItemAdelantoAResolver[];
+  // STORY-1036: cobro compartido — partes ya cobradas (derivado en el server
+  // desde los eventos; acá solo se muestra).
+  cobrosParciales?: CobroParcial[];
 }) {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
@@ -411,23 +529,41 @@ export function FinanzasAcciones({
         </div>
 
         {/* STORY-972: el cargo también se respalda con la nota de cobro de
-            siempre (vista previa + envío por mail al pagador). */}
-        <EnvioDocumento
-          etiqueta="nota de cobro"
-          destinatarioEtiqueta={etiquetaPagador(gestion.pagador) ?? "pagador"}
-          yaEnviado={Boolean(gestion.nota_emitida_en)}
-          generar={() => descargarDocumento(gestion.id, "nota")}
-          enviar={() => emitirNotaCobro(gestion.id)}
-        />
+            siempre (vista previa + envío por mail al pagador). STORY-1036:
+            con pago compartido, una nota y un cobro por parte. */}
+        {gestion.pagador === "compartido" ? (
+          <>
+            <NotasCobroCompartido gestion={gestion} />
+            <CobroPorPartes
+              gestion={gestion}
+              total={cargo}
+              cobrosParciales={cobrosParciales}
+              cargando={cargando}
+              error={error}
+              correr={correr}
+              ctaFinal="Registrar cobro → Cancelada"
+            />
+          </>
+        ) : (
+          <>
+            <EnvioDocumento
+              etiqueta="nota de cobro"
+              destinatarioEtiqueta={etiquetaPagador(gestion.pagador) ?? "pagador"}
+              yaEnviado={Boolean(gestion.nota_emitida_en)}
+              generar={() => descargarDocumento(gestion.id, "nota")}
+              enviar={() => emitirNotaCobro(gestion.id)}
+            />
 
-        <FormCobro
-          total={cargo}
-          pagador={gestion.pagador}
-          cargando={cargando}
-          error={error}
-          onSubmit={(datos) => correr("cobro", () => registrarCobro(gestion.id, datos))}
-          cta="Registrar cobro → Cancelada"
-        />
+            <FormCobro
+              total={cargo}
+              pagador={gestion.pagador}
+              cargando={cargando}
+              error={error}
+              onSubmit={(datos) => correr("cobro", () => registrarCobro(gestion.id, datos))}
+              cta="Registrar cobro → Cancelada"
+            />
+          </>
+        )}
       </div>
     );
   }
@@ -505,21 +641,40 @@ export function FinanzasAcciones({
           </div>
         </div>
 
-        <EnvioDocumento
-          etiqueta="nota de cobro"
-          destinatarioEtiqueta={etiquetaPagador(gestion.pagador) ?? "pagador"}
-          yaEnviado={Boolean(gestion.nota_emitida_en)}
-          generar={() => descargarDocumento(gestion.id, "nota")}
-          enviar={() => emitirNotaCobro(gestion.id)}
-        />
+        {/* STORY-1036: compartido — una nota y un cobro por parte, cada uno
+            cuando efectivamente entra la plata. */}
+        {gestion.pagador === "compartido" ? (
+          <>
+            <NotasCobroCompartido gestion={gestion} />
+            <CobroPorPartes
+              gestion={gestion}
+              total={trabajo + cargoAdmin}
+              cobrosParciales={cobrosParciales}
+              cargando={cargando}
+              error={error}
+              correr={correr}
+              ctaFinal="Registrar cobro → Liquidación"
+            />
+          </>
+        ) : (
+          <>
+            <EnvioDocumento
+              etiqueta="nota de cobro"
+              destinatarioEtiqueta={etiquetaPagador(gestion.pagador) ?? "pagador"}
+              yaEnviado={Boolean(gestion.nota_emitida_en)}
+              generar={() => descargarDocumento(gestion.id, "nota")}
+              enviar={() => emitirNotaCobro(gestion.id)}
+            />
 
-        <FormCobro
-          total={trabajo + cargoAdmin}
-          pagador={gestion.pagador}
-          cargando={cargando}
-          error={error}
-          onSubmit={(datos) => correr("cobro", () => registrarCobro(gestion.id, datos))}
-        />
+            <FormCobro
+              total={trabajo + cargoAdmin}
+              pagador={gestion.pagador}
+              cargando={cargando}
+              error={error}
+              onSubmit={(datos) => correr("cobro", () => registrarCobro(gestion.id, datos))}
+            />
+          </>
+        )}
       </div>
     );
   }

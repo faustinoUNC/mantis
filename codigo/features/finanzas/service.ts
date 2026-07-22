@@ -91,7 +91,14 @@ async function exigirAdelanto(gestionId: string) {
 async function datosDocumento(
   gestionId: string,
   tipo: "nota" | "detalle" | "presupuesto",
-  overrides?: { cargoAdmin?: number; pagador?: Pagador; pctInquilino?: number }
+  overrides?: {
+    cargoAdmin?: number;
+    pagador?: Pagador;
+    pctInquilino?: number;
+    // STORY-1036: nota de cobro POR PARTE de un pago compartido — el
+    // documento cobra solo el monto de esa parte.
+    parteNota?: "inquilino" | "propietario";
+  }
 ): Promise<
   | {
       datos: DatosDocumento;
@@ -257,12 +264,30 @@ async function datosDocumento(
         })()
       : null;
 
+  // STORY-1036: nota por parte — el destinatario es ESA parte y el total del
+  // documento es SU monto; el total de la obra queda como contexto en el PDF.
+  let totalDoc = total;
+  let parteNota: { pct: number; totalObra: number } | null = null;
+  if (tipo === "nota" && overrides?.parteNota && split && splitInquilino) {
+    const esInq = overrides.parteNota === "inquilino";
+    destinatarioNombre = esInq ? splitInquilino.nombre : propietario.nombre;
+    destinatarioRotulo = esInq ? "Inquilino" : "Propietario";
+    emailDestinatario = esInq ? splitInquilino.email : propietario.email;
+    envios = [{ nombre: destinatarioNombre, email: emailDestinatario }];
+    totalDoc = esInq ? split.montoInquilino : split.montoPropietario;
+    parteNota = {
+      pct: esInq ? split.pctInquilino : 100 - split.pctInquilino,
+      totalObra: total,
+    };
+  }
+
   return {
     emailDestinatario,
     envios,
     datos: {
       tipo,
       split,
+      parteNota,
       // STORY-1009: el documento lleva el mismo número visible de la gestión
       numero: String(g.numero),
       // Detalle: la fecha del documento es la del pago real (no la de
@@ -291,7 +316,7 @@ async function datosDocumento(
             manoObra: Number((tipo === "presupuesto" ? vigente : aprobado)!.monto_mano_obra),
           }
         : null,
-      total,
+      total: totalDoc,
       facturaRef: tipo === "presupuesto" || esCancelacion ? null : g.liq_factura_ref,
       cancelacion: esCancelacion,
       medioPago:
@@ -388,29 +413,60 @@ export async function emitirNotaCobro(gestionId: string): Promise<ActionResult> 
     };
   }
 
-  const pdf = await generarPDF(doc.datos);
-  for (const destino of doc.envios) {
-    await enviarEmailDocumento({
-      para: destino.email!,
-      destinatario: destino.nombre,
-      asunto: doc.datos.cancelacion
-        ? `Cargo por cancelación — ${doc.datos.direccion}`
-        : `Nota de cobro — ${doc.datos.direccion}`,
-      titulo: doc.datos.cancelacion
-        ? "Nota de cobro por cancelación del trabajo"
-        : "Nota de cobro por trabajo de mantenimiento",
-      cuerpo: doc.datos.cancelacion
-        ? `Te enviamos el detalle del cargo por la cancelación del trabajo en ${doc.datos.direccion}. El documento adjunto tiene el importe acordado.`
-        : `Te enviamos el detalle del trabajo realizado en ${doc.datos.direccion}. El documento adjunto tiene el desglose completo.`,
-      tipo: "nota_cobro",
-      gestion_id: gestionId,
-      adjuntos: [
-        {
-          filename: `nota-cobro-${doc.datos.numero}.pdf`,
-          contentBase64: pdf,
-        },
-      ],
-    });
+  // STORY-1036: con pago compartido cada parte recibe SU nota — un PDF por
+  // parte, con su monto (antes iba el mismo documento a los dos).
+  if (doc.datos.split) {
+    for (const parte of ["inquilino", "propietario"] as const) {
+      const docParte = await datosDocumento(gestionId, "nota", { parteNota: parte });
+      if (!docParte || !docParte.emailDestinatario) continue; // ya validado arriba
+      const pdfParte = await generarPDF(docParte.datos);
+      await enviarEmailDocumento({
+        para: docParte.emailDestinatario,
+        destinatario: docParte.datos.destinatarioNombre,
+        asunto: docParte.datos.cancelacion
+          ? `Cargo por cancelación — ${docParte.datos.direccion}`
+          : `Nota de cobro — ${docParte.datos.direccion}`,
+        titulo: docParte.datos.cancelacion
+          ? "Nota de cobro por cancelación del trabajo"
+          : "Nota de cobro por trabajo de mantenimiento",
+        cuerpo: docParte.datos.cancelacion
+          ? `Te enviamos el detalle del cargo por la cancelación del trabajo en ${docParte.datos.direccion}. El cargo es compartido: la nota adjunta es por tu parte.`
+          : `Te enviamos el detalle del trabajo realizado en ${docParte.datos.direccion}. El gasto es compartido: la nota adjunta es por tu parte.`,
+        tipo: "nota_cobro",
+        gestion_id: gestionId,
+        adjuntos: [
+          {
+            filename: `nota-cobro-${docParte.datos.numero}-${parte}.pdf`,
+            contentBase64: pdfParte,
+          },
+        ],
+      });
+    }
+  } else {
+    const pdf = await generarPDF(doc.datos);
+    for (const destino of doc.envios) {
+      await enviarEmailDocumento({
+        para: destino.email!,
+        destinatario: destino.nombre,
+        asunto: doc.datos.cancelacion
+          ? `Cargo por cancelación — ${doc.datos.direccion}`
+          : `Nota de cobro — ${doc.datos.direccion}`,
+        titulo: doc.datos.cancelacion
+          ? "Nota de cobro por cancelación del trabajo"
+          : "Nota de cobro por trabajo de mantenimiento",
+        cuerpo: doc.datos.cancelacion
+          ? `Te enviamos el detalle del cargo por la cancelación del trabajo en ${doc.datos.direccion}. El documento adjunto tiene el importe acordado.`
+          : `Te enviamos el detalle del trabajo realizado en ${doc.datos.direccion}. El documento adjunto tiene el desglose completo.`,
+        tipo: "nota_cobro",
+        gestion_id: gestionId,
+        adjuntos: [
+          {
+            filename: `nota-cobro-${doc.datos.numero}.pdf`,
+            contentBase64: pdf,
+          },
+        ],
+      });
+    }
   }
 
   const supabase = await createClient();
@@ -438,12 +494,18 @@ export interface DocumentoGenerado {
 
 export async function descargarDocumento(
   gestionId: string,
-  tipo: "nota" | "detalle"
+  tipo: "nota" | "detalle",
+  // STORY-1036: nota de un pago compartido — vista previa/descarga POR PARTE
+  parte?: "inquilino" | "propietario"
 ): Promise<ActionResult<DocumentoGenerado>> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
 
-  const doc = await datosDocumento(gestionId, tipo);
+  const doc = await datosDocumento(
+    gestionId,
+    tipo,
+    parte ? { parteNota: parte } : undefined
+  );
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
 
   const base64 = await generarPDF(doc.datos);
@@ -451,7 +513,7 @@ export async function descargarDocumento(
     ok: true,
     data: {
       base64,
-      filename: `${tipo === "nota" ? "nota-cobro" : "detalle-liquidacion"}-${doc.datos.numero}.pdf`,
+      filename: `${tipo === "nota" ? "nota-cobro" : "detalle-liquidacion"}-${doc.datos.numero}${parte ? `-${parte}` : ""}.pdf`,
       destinatario: {
         nombre: doc.datos.destinatarioNombre,
         rotulo: doc.datos.destinatarioRotulo,
@@ -683,6 +745,11 @@ export async function enviarAmpliacionEmail(
 // mitad transferencia) en vez de forzar un único medio para el 100%. El
 // monto del segundo medio lo tipea la administración; el del primero es el
 // resto (se calcula acá, nunca confiando en lo que mande el cliente).
+// STORY-1036: con pagador compartido cada parte se cobra POR SEPARADO y en
+// momentos distintos — `parte` dice quién está pagando. Cada cobro parcial
+// queda como evento `cobro_registrado` con su parte (hecho congelado); los
+// snapshots de la gestión se congelan recién con el SEGUNDO cobro, y ahí la
+// etapa avanza como siempre.
 export async function registrarCobro(
   gestionId: string,
   datos: {
@@ -690,6 +757,7 @@ export async function registrarCobro(
     medio2?: MedioCobro;
     monto2?: number;
     recargoPct?: number;
+    parte?: "inquilino" | "propietario";
   }
 ): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
@@ -704,7 +772,7 @@ export async function registrarCobro(
   // posterior de costo_final/cargo_admin no reescribe el pasado.
   const { data: g } = await supabase
     .from("gestiones")
-    .select("costo_final, cargo_admin, cargo_cancelacion")
+    .select("costo_final, cargo_admin, cargo_cancelacion, pagador, pagador_pct_inquilino")
     .eq("id", gestionId)
     .single();
   // STORY-967: una cancelación con cargo se cobra por este mismo circuito —
@@ -714,6 +782,40 @@ export async function registrarCobro(
   const costoFinal = Number(g?.costo_final ?? 0);
   const cargoAdmin = cargoCancelacion ?? Number(g?.cargo_admin ?? 0);
   const total = cargoCancelacion ?? costoFinal + cargoAdmin;
+
+  // STORY-1036: en compartido el monto a cobrar es el de LA PARTE (mismo
+  // redondeo que la nota, 1031: el propietario absorbe el resto). La parte ya
+  // cobrada se valida contra los eventos — nunca dos veces la misma.
+  const esCompartido = g?.pagador === "compartido";
+  if (esCompartido && !datos.parte) {
+    return { ok: false, error: "Indicá qué parte está pagando." };
+  }
+  if (!esCompartido && datos.parte) {
+    return { ok: false, error: "Esta gestión no tiene pago compartido." };
+  }
+  let baseParte = total;
+  let cobroPrevio: { total: number } | null = null;
+  if (esCompartido && datos.parte) {
+    const pct = Number(g?.pagador_pct_inquilino ?? 50);
+    const montoInquilino = Math.round(total * pct) / 100;
+    baseParte = datos.parte === "inquilino" ? montoInquilino : total - montoInquilino;
+
+    const admin = createAdminClient();
+    const { data: previos } = await admin
+      .from("eventos_gestion")
+      .select("detalle")
+      .eq("gestion_id", gestionId)
+      .eq("tipo", "cobro_registrado");
+    for (const e of (previos ?? []) as { detalle: Record<string, unknown> | null }[]) {
+      const p = e.detalle?.parte;
+      if (p === datos.parte) {
+        return { ok: false, error: "Esa parte ya está cobrada." };
+      }
+      if (p === "inquilino" || p === "propietario") {
+        cobroPrevio = { total: Number(e.detalle?.total ?? 0) };
+      }
+    }
+  }
 
   let medioCobro2: string | null = null;
   let montoCobro2: number | null = null;
@@ -728,10 +830,10 @@ export async function registrarCobro(
     if (!Number.isFinite(monto2) || monto2 <= 0) {
       return { ok: false, error: "Ingresá el monto del segundo medio." };
     }
-    if (monto2 >= total) {
+    if (monto2 >= baseParte) {
       return {
         ok: false,
-        error: `El monto del segundo medio no puede ser mayor o igual al total a cobrar ($ ${total.toLocaleString("es-AR")}).`,
+        error: `El monto del segundo medio no puede ser mayor o igual al total a cobrar ($ ${baseParte.toLocaleString("es-AR")}).`,
       };
     }
     medioCobro2 = datos.medio2;
@@ -745,7 +847,7 @@ export async function registrarCobro(
   // calculado del lado del cliente: acá se recalcula desde cero.
   const montoTarjeta =
     datos.medio === "tarjeta_credito"
-      ? total - (montoCobro2 ?? 0)
+      ? baseParte - (montoCobro2 ?? 0)
       : medioCobro2 === "tarjeta_credito"
         ? (montoCobro2 ?? 0)
         : 0;
@@ -764,19 +866,39 @@ export async function registrarCobro(
       recargoMonto = Math.round(montoTarjeta * pct) / 100;
     }
   }
-  const totalFinal = total + (recargoMonto ?? 0);
+  const totalFinal = baseParte + (recargoMonto ?? 0);
 
+  // STORY-1036: primer cobro parcial de un compartido — solo el evento (la
+  // gestión sigue en facturación esperando a la otra parte, sin snapshots).
+  if (esCompartido && !cobroPrevio) {
+    await registrarEvento(gestionId, "cobro_registrado", actual.id, {
+      parte: datos.parte,
+      medio: datos.medio,
+      medio2: medioCobro2,
+      monto2: montoCobro2,
+      recargoPct,
+      recargoMonto,
+      total: totalFinal,
+    });
+    revalidatePath(`/gestiones/${gestionId}`);
+    revalidatePath("/finanzas");
+    return { ok: true };
+  }
+
+  // Cobro único (pagador simple) o SEGUNDA parte de un compartido: congelar
+  // los snapshots (en compartido, el monto es la SUMA de ambas partes y los
+  // medios viven en los eventos — cada parte pagó con el suyo).
   const { error } = await supabase
     .from("gestiones")
     .update({
       cobrado_en: new Date().toISOString(),
-      medio_cobro: datos.medio,
-      medio_cobro_2: medioCobro2,
-      cobrado_monto: totalFinal,
-      cobrado_monto_2: montoCobro2,
+      medio_cobro: esCompartido ? null : datos.medio,
+      medio_cobro_2: esCompartido ? null : medioCobro2,
+      cobrado_monto: totalFinal + (cobroPrevio?.total ?? 0),
+      cobrado_monto_2: esCompartido ? null : montoCobro2,
       cobrado_fee: cargoAdmin,
-      recargo_tarjeta_pct: recargoPct,
-      recargo_tarjeta_monto: recargoMonto,
+      recargo_tarjeta_pct: esCompartido ? null : recargoPct,
+      recargo_tarjeta_monto: esCompartido ? null : recargoMonto,
     })
     .eq("id", gestionId);
   if (error) {
@@ -787,6 +909,7 @@ export async function registrarCobro(
   // STORY-973: el total viaja en el evento — la Actividad cuenta el cobro
   // completo (cuánto y con qué medios) sin leer campos de la gestión.
   await registrarEvento(gestionId, "cobro_registrado", actual.id, {
+    ...(esCompartido ? { parte: datos.parte } : {}),
     medio: datos.medio,
     medio2: medioCobro2,
     monto2: montoCobro2,

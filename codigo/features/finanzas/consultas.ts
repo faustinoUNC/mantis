@@ -10,12 +10,16 @@ import {
 } from "./medios";
 import {
   diasDesde,
+  PARTE_COBRO_LABEL,
   type AdelantosData,
+  type CobroParcial,
   type CobrosData,
   type FilaAdelantoSaldado,
+  type FilaCobroCerrado,
   type GrupoAdelantosTecnico,
   type ItemAdelantoAResolver,
   type LiquidacionesData,
+  type ParteCobro,
 } from "./consultas-types";
 
 // Solo admin y gestor administrativo ven finanzas (defensa en profundidad:
@@ -33,6 +37,56 @@ function medioCobroLabel(m1: string | null, m2: string | null): string {
   if (!m2) return l1;
   const l2 = MEDIO_COBRO_LABEL[m2 as MedioCobro] ?? m2;
   return `${l1} + ${l2}`;
+}
+
+// STORY-1036: cobros parciales de gestiones compartidas — cada parte se cobra
+// por separado y queda como evento `cobro_registrado` con `parte` (hechos
+// congelados, patrón STORY-973). LA derivación vive acá: la card de cobro del
+// detalle y la pestaña Cobros leen esta lectura, nunca re-derivan.
+type ClienteAdmin = ReturnType<typeof createAdminClient>;
+
+async function partesCobradasPorGestion(
+  admin: ClienteAdmin,
+  gestionIds: string[]
+): Promise<Map<string, CobroParcial[]>> {
+  const porGestion = new Map<string, CobroParcial[]>();
+  if (gestionIds.length === 0) return porGestion;
+  const { data } = await admin
+    .from("eventos_gestion")
+    .select("gestion_id, creado_en, detalle")
+    .in("gestion_id", gestionIds)
+    .eq("tipo", "cobro_registrado")
+    .order("creado_en", { ascending: true });
+  for (const e of (data ?? []) as {
+    gestion_id: string;
+    creado_en: string;
+    detalle: Record<string, unknown> | null;
+  }[]) {
+    const parte = e.detalle?.parte;
+    if (parte !== "inquilino" && parte !== "propietario") continue;
+    const lista = porGestion.get(e.gestion_id) ?? [];
+    lista.push({
+      parte,
+      fecha: e.creado_en,
+      medioLabel: medioCobroLabel(
+        String(e.detalle?.medio ?? "") || null,
+        (e.detalle?.medio2 as string | null) ?? null
+      ),
+      monto: Number(e.detalle?.total ?? 0),
+    });
+    porGestion.set(e.gestion_id, lista);
+  }
+  return porGestion;
+}
+
+// Card de cobro del detalle de la gestión: qué partes ya se cobraron.
+export async function cobrosParcialesDeGestion(
+  gestionId: string
+): Promise<CobroParcial[]> {
+  if (!(await permitido())) return [];
+  const admin = createAdminClient();
+  const porGestion = await partesCobradasPorGestion(admin, [gestionId]);
+  return porGestion.get(gestionId) ?? [];
 }
 
 // Compartido entre pendientes y cerrados: el pagador se busca igual en los
@@ -105,29 +159,6 @@ export async function listarCobros(): Promise<CobrosData> {
     }
   }
 
-  const pendientes = pendFilas.map((g) => {
-    const total =
-      g.cargo_cancelacion != null
-        ? Number(g.cargo_cancelacion)
-        : Number(g.costo_final ?? 0) + Number(g.cargo_admin ?? 0);
-    const { nombre: pagadorNombre, rotulo: pagadorRotulo } = resolverPagador(
-      g.pagador,
-      g.propiedades,
-      g.legajos,
-      g.pagador_pct_inquilino
-    );
-    const entro = entroPorId.get(g.id);
-    return {
-      id: g.id,
-      descripcion: g.descripcion,
-      direccion: g.propiedades?.direccion ?? "—",
-      pagadorNombre,
-      pagadorRotulo,
-      total,
-      diasPendiente: entro ? diasDesde(entro) : null,
-    };
-  });
-
   // Cerrados: ya cobrados (monto congelado en cobrado_monto). Trae también
   // el pagador — permite buscar un cobro cerrado por quién pagó.
   const { data: cerrRaw } = await admin
@@ -153,24 +184,93 @@ export async function listarCobros(): Promise<CobrosData> {
     } | null;
     legajos: { inquilinos: { nombre: string } | null } | null;
   };
-  const cerrados = ((cerrRaw ?? []) as unknown as CerrFila[]).map((g) => {
+  const cerrFilas = (cerrRaw ?? []) as unknown as CerrFila[];
+
+  // STORY-1036: los cobros por parte de las compartidas viven en los eventos
+  // — una sola query para pendientes (marca "falta X") y cerrados (fila por
+  // parte). Las compartidas cobradas antes de la story no tienen eventos con
+  // parte y conservan su fila única.
+  const idsCompartido = [
+    ...pendFilas.filter((g) => g.pagador === "compartido").map((g) => g.id),
+    ...cerrFilas.filter((g) => g.pagador === "compartido").map((g) => g.id),
+  ];
+  const partesPorGestion = await partesCobradasPorGestion(admin, idsCompartido);
+
+  const pendientes = pendFilas.map((g) => {
+    const total =
+      g.cargo_cancelacion != null
+        ? Number(g.cargo_cancelacion)
+        : Number(g.costo_final ?? 0) + Number(g.cargo_admin ?? 0);
     const { nombre: pagadorNombre, rotulo: pagadorRotulo } = resolverPagador(
       g.pagador,
       g.propiedades,
       g.legajos,
       g.pagador_pct_inquilino
     );
+    const entro = entroPorId.get(g.id);
+    const partes = partesPorGestion.get(g.id) ?? [];
+    const faltante: ParteCobro | null =
+      partes.length === 1
+        ? partes[0].parte === "inquilino"
+          ? "propietario"
+          : "inquilino"
+        : null;
     return {
       id: g.id,
       descripcion: g.descripcion,
       direccion: g.propiedades?.direccion ?? "—",
       pagadorNombre,
       pagadorRotulo,
-      monto: Number(g.cobrado_monto ?? 0),
-      medioLabel: medioCobroLabel(g.medio_cobro, g.medio_cobro_2),
-      fecha: g.cobrado_en,
+      total,
+      diasPendiente: entro ? diasDesde(entro) : null,
+      parcialLabel: faltante
+        ? `Falta el ${PARTE_COBRO_LABEL[faltante].toLowerCase()}`
+        : null,
     };
   });
+
+  const cerrados: FilaCobroCerrado[] = cerrFilas.flatMap((g) => {
+    const { nombre: pagadorNombre, rotulo: pagadorRotulo } = resolverPagador(
+      g.pagador,
+      g.propiedades,
+      g.legajos,
+      g.pagador_pct_inquilino
+    );
+    const base = {
+      gestionId: g.id,
+      descripcion: g.descripcion,
+      direccion: g.propiedades?.direccion ?? "—",
+    };
+    // Compartida cobrada por partes → una fila por parte (quién, cuándo y
+    // con qué medio). El nombre por parte sale del rótulo combinado de la
+    // 1031: "Ana (40%) + Pedro (60%)".
+    const partes = partesPorGestion.get(g.id) ?? [];
+    if (g.pagador === "compartido" && partes.length > 0) {
+      return partes.map((p) => ({
+        ...base,
+        id: `${g.id}:${p.parte}`,
+        pagadorNombre,
+        pagadorRotulo: `Compartido — pagó el ${PARTE_COBRO_LABEL[p.parte].toLowerCase()}`,
+        monto: p.monto,
+        medioLabel: p.medioLabel,
+        fecha: p.fecha,
+      }));
+    }
+    return [
+      {
+        ...base,
+        id: g.id,
+        pagadorNombre,
+        pagadorRotulo,
+        monto: Number(g.cobrado_monto ?? 0),
+        medioLabel: medioCobroLabel(g.medio_cobro, g.medio_cobro_2),
+        fecha: g.cobrado_en,
+      },
+    ];
+  });
+  // Las filas por parte pueden desordenar el historial (la parte vieja de una
+  // compartida recién completada): se reordena por fecha como el query.
+  cerrados.sort((a, b) => b.fecha.localeCompare(a.fecha));
 
   return { pendientes, cerrados };
 }

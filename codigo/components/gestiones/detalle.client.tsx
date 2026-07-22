@@ -26,7 +26,11 @@ import {
   enviarPresupuestoEmail,
   marcarAdelantoSaldado,
 } from "@/features/finanzas/service";
-import type { ItemAdelantoAResolver, OrigenAdelanto } from "@/features/finanzas/consultas-types";
+import type {
+  CobroParcial,
+  ItemAdelantoAResolver,
+  OrigenAdelanto,
+} from "@/features/finanzas/consultas-types";
 import {
   archivarGestion,
   asignarTecnico,
@@ -2362,6 +2366,7 @@ export function DetalleGestion({
   tecnicos,
   gestores,
   deudasTecnico = [],
+  cobrosParciales = [],
 }: {
   gestion: GestionDetalle;
   usuario: UsuarioActual;
@@ -2371,6 +2376,9 @@ export function DetalleGestion({
   // gestión) — la misma derivación de features/finanzas, traída por la page
   // solo en liquidación. Alimenta el aviso ámbar antes de liquidar.
   deudasTecnico?: ItemAdelantoAResolver[];
+  // STORY-1036: cobro compartido — partes ya cobradas (derivado server-side,
+  // traído por la page solo en facturación de una gestión compartida).
+  cobrosParciales?: CobroParcial[];
 }) {
   const esAdmin = usuario.rol === "administrador";
   const esGestorOwner =
@@ -2631,7 +2639,13 @@ export function DetalleGestion({
           </p>
         )}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
-          esAdministrativo && <FinanzasAcciones gestion={gestion} deudasTecnico={deudasTecnico} />}
+          esAdministrativo && (
+            <FinanzasAcciones
+              gestion={gestion}
+              deudasTecnico={deudasTecnico}
+              cobrosParciales={cobrosParciales}
+            />
+          )}
         {(gestion.etapa === "facturacion_cobro" || gestion.etapa === "liquidacion_tecnico") &&
           !esAdministrativo && (esGestorOwner || esTecnicoAsignado) && (
             <p className="text-sm text-muted">

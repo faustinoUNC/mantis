@@ -14,6 +14,7 @@ import type { DocumentoGenerado } from "@/features/finanzas/service";
 
 export function EnvioDocumento({
   etiqueta,
+  etiquetaEnvio,
   destinatarioEtiqueta,
   generar,
   enviar,
@@ -21,6 +22,9 @@ export function EnvioDocumento({
   onEnviado,
 }: {
   etiqueta: string; // "presupuesto" | "nota de cobro" | ...
+  // STORY-1036: cuando el envío manda MÁS que lo que se previsualiza (las dos
+  // notas de un pago compartido), el botón de enviar lo dice con su etiqueta.
+  etiquetaEnvio?: string;
   destinatarioEtiqueta?: string; // "propietario" | "inquilino" — para el botón de envío
   generar: () => Promise<ActionResult<DocumentoGenerado>>;
   enviar?: () => Promise<ActionResult>; // sin enviar → solo ver/descargar
@@ -100,7 +104,7 @@ export function EnvioDocumento({
           >
             {cargando === "enviar"
               ? "Enviando…"
-              : `${enviado ? "Reenviar" : `Enviar ${etiqueta}`} al ${destinatarioEtiqueta ?? "pagador"} por email`}
+              : `${enviado ? "Reenviar" : `Enviar ${etiquetaEnvio ?? etiqueta}`} al ${destinatarioEtiqueta ?? "pagador"} por email`}
           </Button>
         )}
         {enviado && (
