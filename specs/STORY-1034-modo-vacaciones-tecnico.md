@@ -38,4 +38,7 @@ Un **toggle auto-servicio** en el perfil del técnico. Sin rangos de fechas, sin
 
 ## Dev Agent Record
 
-- _Pendiente._
+- **Commit:** `ce3fd74` (2026-07-21).
+- **Migración:** `story_1034_tecnicos_en_vacaciones` (columna `tecnicos.en_vacaciones boolean not null default false`), aplicada vía Supabase MCP.
+- **Archivos:** `features/tecnicos/service.ts` (`actualizarMisVacaciones` nueva; `miPerfilTecnico`, `listarTecnicos` y `obtenerTecnico` traen el flag); `features/tecnicos/types.ts` y `features/gestiones/types.ts` (campo `en_vacaciones`); `features/gestiones/service.ts` (`tecnicosDisponibles` ordena los de vacaciones al final; `asignarTecnico` con guard server-side); `components/gestiones/detalle.client.tsx` (FilaTecnico deshabilitada + badge; la selección por defecto saltea a los de vacaciones); `components/tecnicos/perfil-tecnico.client.tsx` (`VacacionesPerfil`); `app/tecnico/perfil/page.tsx`; `components/tecnicos/tecnicos.client.tsx` (badge en la lista staff).
+- **Verificación:** `tsc` y eslint verdes. E2E navegador: técnico activa el modo desde su perfil (persiste tras recargar y en DB); como gestor, en el picker de una gestión de Electricidad "Tecnico Uno" (4.5★) aparece último, opacado, con badge "De vacaciones" y no seleccionable (la selección por defecto cae en el primer disponible); `/tecnicos` muestra "Aprobado + De vacaciones"; el técnico desactiva el modo y el flag vuelve a `false` en DB. Consola sin errores.
