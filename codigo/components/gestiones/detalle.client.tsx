@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ComboFiltrable } from "@/components/ui/combo-filtrable.client";
 import { Input } from "@/components/ui/input";
+import { InputNumerico } from "@/components/ui/input-numerico.client";
 import { InputArchivo } from "@/components/ui/input-archivo.client";
 import { urlGoogleMaps } from "@/components/ui/mapa";
 import { Select } from "@/components/ui/select";
@@ -869,10 +870,10 @@ function FormPresupuestoTecnico({ gestion }: { gestion: GestionDetalle }) {
         placeholder="Qué vas a hacer, materiales principales y cómo lo vas a resolver"
       />
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <Input label="Materiales ($)" name="materiales" type="number" min="0" step="0.01" required />
-        <Input label="Mano de obra ($)" name="mano_obra" type="number" min="0" step="0.01" required />
+        <InputNumerico label="Materiales ($)" name="materiales" required />
+        <InputNumerico label="Mano de obra ($)" name="mano_obra" required />
         <div className="col-span-2 sm:col-span-1">
-          <Input label="Plazo de obra (días)" name="plazo_dias" type="number" min="1" required />
+          <InputNumerico label="Plazo de obra (días)" name="plazo_dias" decimales={false} required />
         </div>
       </div>
       <Input label="Observaciones" name="notas" placeholder="Aclaraciones para el gestor (opcional)" />
@@ -946,8 +947,10 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
   // Sin inquilino en la propiedad, la opción ni se ofrece
   const hayInquilino = Boolean(gestion.inquilino_nombre);
   const [rechazando, setRechazando] = useState(false);
-  const [cargoAdmin, setCargoAdmin] = useState<number>(
-    Number(gestion.cargo_admin ?? 0)
+  // String para poder tipear decimales en un input de texto (STORY-1033);
+  // el número derivado es cargoAdminNum, más abajo.
+  const [cargoAdmin, setCargoAdmin] = useState<string>(
+    gestion.cargo_admin ? String(Number(gestion.cargo_admin)) : ""
   );
   // Resincronizar con lo que otro usuario dejó en la base (el refresh vivo
   // trae props nuevas pero React conserva el estado local). Ajuste durante
@@ -955,7 +958,7 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
   const [cargoPrevio, setCargoPrevio] = useState(gestion.cargo_admin);
   if (cargoPrevio !== gestion.cargo_admin) {
     setCargoPrevio(gestion.cargo_admin);
-    setCargoAdmin(Number(gestion.cargo_admin ?? 0));
+    setCargoAdmin(gestion.cargo_admin ? String(Number(gestion.cargo_admin)) : "");
   }
   const [pagadorPrevio, setPagadorPrevio] = useState(gestion.pagador);
   if (pagadorPrevio !== gestion.pagador) {
@@ -998,8 +1001,9 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
     pagador === "compartido" &&
     (!Number.isInteger(pctInquilino) || pctInquilino < 1 || pctInquilino > 99);
   const pctParam = pagador === "compartido" ? pctInquilino : undefined;
+  const cargoAdminNum = Number(cargoAdmin) || 0;
   const totalPrevisto =
-    Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra) + cargoAdmin;
+    Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra) + cargoAdminNum;
 
   return (
     <div className="flex flex-col gap-4">
@@ -1018,14 +1022,11 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
       {/* El fee de la inmobiliaria se define ACÁ: el pagador aprueba
           conociendo el total real (pedido Fausti) */}
       <div className="max-w-md flex flex-col gap-3">
-        <Input
+        <InputNumerico
           label="Gestión administrativa ($) — fee de la inmobiliaria"
-          type="number"
-          min="0"
-          step="0.01"
-          value={cargoAdmin || ""}
+          value={cargoAdmin}
           placeholder="0"
-          onChange={(e) => setCargoAdmin(Number(e.target.value) || 0)}
+          onChange={(e) => setCargoAdmin(e.target.value)}
         />
         <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
           <div className="flex justify-between">
@@ -1034,10 +1035,10 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
               {plata(Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra))}
             </span>
           </div>
-          {cargoAdmin > 0 && (
+          {cargoAdminNum > 0 && (
             <div className="flex justify-between">
               <span className="text-muted">Gestión administrativa</span>
-              <span className="font-mono">{plata(cargoAdmin)}</span>
+              <span className="font-mono">{plata(cargoAdminNum)}</span>
             </div>
           )}
           <div className="flex justify-between pt-1 border-t border-border font-semibold">
@@ -1069,9 +1070,9 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
           etiqueta="presupuesto"
           destinatarioEtiqueta={etiqueta ?? undefined}
           generar={() =>
-            descargarPresupuestoPDF(gestion.id, { cargoAdmin, pagador, pctInquilino: pctParam })
+            descargarPresupuestoPDF(gestion.id, { cargoAdmin: cargoAdminNum, pagador, pctInquilino: pctParam })
           }
-          enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdmin, pagador, pctParam)}
+          enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdminNum, pagador, pctParam)}
           yaEnviado={Boolean(gestion.presupuesto_enviado_en)}
           onEnviado={() => setMailEnviado(true)}
         />
@@ -1118,12 +1119,9 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
           </Select>
           {pagador === "compartido" && (
             <div className="w-32">
-              <Input
+              <InputNumerico
                 label="% inquilino"
-                type="number"
-                min="1"
-                max="99"
-                step="1"
+                decimales={false}
                 value={pctInquilino || ""}
                 onChange={(e) =>
                   setPctInquilino(
@@ -1140,7 +1138,7 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
                 resolverPresupuesto(enviado.id, gestion.id, true, {
                   pagador: pagador || undefined,
                   pct_inquilino: pctParam,
-                  cargo_admin: cargoAdmin,
+                  cargo_admin: cargoAdminNum,
                 })
               )
             }
@@ -1231,7 +1229,7 @@ function AmpliacionTecnico({ gestion }: { gestion: GestionDetalle }) {
           }}
         >
           <div className="w-44">
-            <Input label="Monto extra ($)" name="monto" type="number" min="1" step="0.01" required />
+            <InputNumerico label="Monto extra ($)" name="monto" required />
           </div>
           <Textarea
             label="Qué surgió"
@@ -1444,12 +1442,9 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
             Rendición de la obra{" "}
             <span className="text-muted/50 font-normal">· con esto se calcula tu liquidación</span>
           </p>
-          <Input
+          <InputNumerico
             label="Total final gastado en materiales ($) — sin contar tu mano de obra"
             name="materiales_total"
-            type="number"
-            min="0.01"
-            step="0.01"
             required
           />
           {/* STORY-965: una foto por ticket — sin capture para que el celular
@@ -1773,12 +1768,9 @@ function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
         <Input label="Motivo de la cancelación" name="motivo" required placeholder="Por qué no continúa" />
         {admiteCargo && (
           <div className="max-w-xs">
-            <Input
+            <InputNumerico
               label="Cargo por cancelación ($) — opcional"
               name="cargo"
-              type="number"
-              min="0"
-              step="0.01"
               placeholder="0 = sin cargo"
             />
             <p className="mt-1 text-[12px] text-muted">
