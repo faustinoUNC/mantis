@@ -34,6 +34,7 @@ Con pagador `compartido` (STORY-1031) el reparto es solo informativo: se manda U
 
 ## Dev Agent Record
 
+- **Commit:** `5f33b2e` (2026-07-22).
 - **Implementación (2026-07-22):** 9 archivos, cero tablas/migraciones.
   - `features/finanzas/consultas-types.ts`: `ParteCobro` + `PARTE_COBRO_LABEL` + `CobroParcial`; `FilaCobroCerrado` gana `gestionId` (la clave de fila puede ser `{gestion}:{parte}`); `FilaCobroPendiente.parcialLabel`.
   - `features/finanzas/consultas.ts`: `partesCobradasPorGestion()` (LA derivación: eventos `cobro_registrado` con `parte`) + `cobrosParcialesDeGestion()` para la card del detalle; `listarCobros()` marca "Falta el X" en pendientes y abre una fila por parte en cerrados (fallback: compartidas cobradas pre-story conservan fila única).
