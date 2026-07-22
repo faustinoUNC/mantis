@@ -99,9 +99,22 @@ export interface FilaAdelantoSaldado {
   direccion: string;
   tecnicoNombre: string;
   monto: number;
-  modo: "liquidacion" | "manual";
-  nota: string | null; // solo manual
+  // "liquidacion" = adelanto propio descontado al liquidar su misma gestión;
+  // "descuento" = deuda de OTRA gestión retenida de una liquidación
+  // (STORY-1032); "manual" = botón "Marcar saldada" con nota.
+  modo: "liquidacion" | "manual" | "descuento";
+  nota: string | null;
   fecha: string; // ISO
+}
+
+// STORY-1032: clave estable de una deuda "a resolver" — la misma se computa
+// en el cliente (checkboxes de la liquidación) y en el server (validación).
+export function claveDeuda(d: {
+  origen: OrigenAdelanto;
+  origenEventoId: string | null;
+  gestionId: string;
+}): string {
+  return `${d.origen}:${d.origenEventoId ?? d.gestionId}`;
 }
 
 export interface AdelantosData {

@@ -8,6 +8,8 @@ import { avanzarEtapa } from "@/features/gestiones/service";
 import type { Pagador } from "@/features/gestiones/types";
 import { createAdminClient } from "@/shared/lib/supabase/admin";
 import { createClient } from "@/shared/lib/supabase/server";
+import { adelantosAResolverDeTecnico } from "./consultas";
+import { claveDeuda } from "./consultas-types";
 import {
   MEDIO_LIQUIDACION_LABEL,
   MEDIOS_COBRO,
@@ -200,6 +202,27 @@ async function datosDocumento(
     envios = [{ nombre: destinatarioNombre, email: emailDestinatario }];
   }
 
+  // STORY-1032: deudas de otras gestiones retenidas al liquidar — viven
+  // congeladas en el evento de la liquidación; el detalle del técnico las
+  // muestra para que el total pagado cierre (también al re-descargar).
+  let descuentosDeuda: { descripcion: string; monto: number }[] = [];
+  if (tipo === "detalle" && g.liq_pagada_en) {
+    const { data: evLiq } = await admin
+      .from("eventos_gestion")
+      .select("detalle")
+      .eq("gestion_id", gestionId)
+      .eq("tipo", "liquidacion_registrada")
+      .order("creado_en", { ascending: false })
+      .limit(1);
+    const crudo = (evLiq?.[0]?.detalle as Record<string, unknown> | null)?.deudas_descontadas;
+    if (Array.isArray(crudo)) {
+      descuentosDeuda = crudo.map((d) => ({
+        descripcion: String((d as Record<string, unknown>).descripcion ?? "otra gestión"),
+        monto: Number((d as Record<string, unknown>).monto ?? 0),
+      }));
+    }
+  }
+
   const cargoAdmin = Number(overrides?.cargoAdmin ?? g.cargo_admin ?? 0);
   // STORY-972: la nota de una cancelación con cargo cobra SOLO el cargo —
   // sin desglose de obra (no hubo obra terminada que facturar).
@@ -281,6 +304,7 @@ async function datosDocumento(
       // se muestra en el detalle del técnico, nunca en la nota al pagador.
       adelantoMateriales:
         tipo === "detalle" ? Number(g.adelanto_materiales ?? 0) : null,
+      descuentosDeuda: descuentosDeuda.length > 0 ? descuentosDeuda : null,
     },
   };
 }
@@ -910,8 +934,8 @@ export async function marcarAdelantoSaldado(
   }
 
   const admin = createAdminClient();
-  // Recalcular monto + técnico desde el hecho de origen.
-  let monto = 0;
+  // Recalcular el ENTREGADO + técnico desde el hecho de origen.
+  let entregadoOrigen = 0;
   let tecnicoId: string | null = null;
   if (origen === "cancelacion") {
     const { data: g } = await admin
@@ -923,7 +947,7 @@ export async function marcarAdelantoSaldado(
     if (!fila || fila.etapa !== "cancelada" || Number(fila.adelanto_materiales ?? 0) <= 0) {
       return { ok: false, error: "Esta gestión no tiene un adelanto a resolver por cancelación." };
     }
-    monto = Number(fila.adelanto_materiales);
+    entregadoOrigen = Number(fila.adelanto_materiales);
     tecnicoId = fila.tecnico_id;
   } else {
     if (!origenEventoId) return { ok: false, error: "Falta el evento de origen." };
@@ -938,11 +962,11 @@ export async function marcarAdelantoSaldado(
     if (origen === "desasignacion") {
       const entregado = Number(ev.detalle?.adelanto_saliente ?? 0);
       const devuelto = Number(ev.detalle?.devolucion_adelanto ?? 0);
-      monto = Math.max(entregado - devuelto, 0);
+      entregadoOrigen = Math.max(entregado - devuelto, 0);
       const saliente = String(ev.detalle?.tecnico_saliente ?? "");
       tecnicoId = /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(saliente) ? saliente : null;
     } else {
-      monto = Number(ev.detalle?.sobrante ?? 0);
+      entregadoOrigen = Number(ev.detalle?.sobrante ?? 0);
       const { data: g } = await admin
         .from("gestiones")
         .select("tecnico_id")
@@ -950,22 +974,26 @@ export async function marcarAdelantoSaldado(
         .single();
       tecnicoId = (g as unknown as { tecnico_id: string | null } | null)?.tecnico_id ?? null;
     }
-    if (monto <= 0) return { ok: false, error: "Ese adelanto no tiene monto a resolver." };
+    if (entregadoOrigen <= 0) return { ok: false, error: "Ese adelanto no tiene monto a resolver." };
   }
 
-  // Doble saldado: el mismo origen no se cierra dos veces.
+  // STORY-1032: los descuentos desde liquidaciones pueden haber recuperado
+  // una parte — el saldado manual cierra el RESTO (si no queda nada, el
+  // origen ya está saldado). Mismo criterio de suma que la derivación.
   const { data: previos } = await admin
     .from("eventos_gestion")
     .select("detalle")
     .eq("gestion_id", gestionId)
     .eq("tipo", "adelanto_saldado");
-  const yaSaldado = ((previos ?? []) as { detalle: Record<string, unknown> | null }[]).some(
-    (p) =>
+  const saldadoPrevio = ((previos ?? []) as { detalle: Record<string, unknown> | null }[])
+    .filter((p) =>
       origen === "cancelacion"
         ? p.detalle?.origen === "cancelacion"
         : String(p.detalle?.origen_evento_id ?? "") === origenEventoId
-  );
-  if (yaSaldado) return { ok: false, error: "Ese adelanto ya estaba marcado como saldado." };
+    )
+    .reduce((s, p) => s + Number(p.detalle?.monto ?? 0), 0);
+  const monto = Math.max(entregadoOrigen - saldadoPrevio, 0);
+  if (monto <= 0) return { ok: false, error: "Ese adelanto ya estaba marcado como saldado." };
 
   // Nombre congelado del técnico (el evento debe leerse solo, sin joins).
   let tecnicoNombre: string | null = null;
@@ -1030,10 +1058,12 @@ export async function registrarLiquidacion(
   const supabase = await createClient();
   const { data: g } = await supabase
     .from("gestiones")
-    .select("costo_final, materiales_total, adelanto_materiales, presupuestos(monto_mano_obra, estado)")
+    .select("descripcion, tecnico_id, costo_final, materiales_total, adelanto_materiales, presupuestos(monto_mano_obra, estado)")
     .eq("id", gestionId)
     .single();
   type Fila = {
+    descripcion: string;
+    tecnico_id: string | null;
     costo_final: number | null;
     materiales_total: number | null;
     adelanto_materiales: number | null;
@@ -1059,16 +1089,105 @@ export async function registrarLiquidacion(
   const monto = Math.max(base - adelanto, 0);
   const sobrante = Math.max(adelanto - base, 0);
 
+  // STORY-1032: deudas "a resolver" del técnico (cross-gestión) tildadas para
+  // retener de esta liquidación. Se re-deriva TODO en el server — del cliente
+  // solo viajan las claves; los montos salen de la derivación única. Si la
+  // plata no alcanza, se retiene lo que entre (descuento PARCIAL) y el resto
+  // sigue a resolver. El orden es el de la derivación (la más vieja primero).
+  const seleccion = [...new Set(formData.getAll("deuda").map(String).filter(Boolean))];
+  const descuentos: {
+    gestion_id: string;
+    descripcion: string;
+    origen: string;
+    origen_evento_id: string | null;
+    tecnico_id: string | null;
+    tecnico: string;
+    monto: number;
+  }[] = [];
+  if (seleccion.length > 0) {
+    if (!fila?.tecnico_id) {
+      return { ok: false, error: "La gestión no tiene técnico al que descontarle deudas." };
+    }
+    const deudas = await adelantosAResolverDeTecnico(fila.tecnico_id);
+    const elegidas = deudas.filter((d) => seleccion.includes(claveDeuda(d)));
+    if (elegidas.length !== seleccion.length) {
+      return {
+        ok: false,
+        error: "Alguna de las deudas seleccionadas ya no está pendiente. Refrescá la página y volvé a intentar.",
+      };
+    }
+    let restante = monto;
+    for (const d of elegidas) {
+      const retenido = Math.min(d.monto, restante);
+      if (retenido <= 0) continue;
+      restante -= retenido;
+      descuentos.push({
+        gestion_id: d.gestionId,
+        descripcion: d.descripcion,
+        origen: d.origen,
+        origen_evento_id: d.origenEventoId,
+        tecnico_id: d.tecnicoId,
+        tecnico: d.tecnicoNombre,
+        monto: retenido,
+      });
+    }
+  }
+  const totalDescontado = descuentos.reduce((s, d) => s + d.monto, 0);
+  const montoPagado = monto - totalDescontado;
+
   const { error } = await supabase
     .from("gestiones")
     .update({
-      liq_monto: monto,
+      liq_monto: montoPagado,
       liq_medio: medio,
       liq_pagada_en: new Date().toISOString(),
       liq_comprobante_path: comprobantePath,
     })
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo registrar la liquidación." };
+
+  // Los descuentos se asientan como saldados (parciales o totales) en la
+  // gestión de ORIGEN de cada deuda — DESPUÉS de asentar la liquidación: si
+  // un insert falla, la deuda sigue "a resolver" (molesta dos veces, nunca
+  // pierde plata en silencio) y queda el saldado manual como red.
+  const fallidas: string[] = [];
+  for (const d of descuentos) {
+    const { error: errSaldado } = await supabase.from("eventos_gestion").insert({
+      gestion_id: d.gestion_id,
+      tipo: "adelanto_saldado",
+      actor_id: actual.id,
+      detalle: {
+        monto: d.monto,
+        origen: d.origen,
+        ...(d.origen_evento_id ? { origen_evento_id: d.origen_evento_id } : {}),
+        ...(d.tecnico_id ? { tecnico_id: d.tecnico_id } : {}),
+        tecnico: d.tecnico,
+        via: "liquidacion",
+        gestion_liquidacion_id: gestionId,
+        nota: `Descontado de la liquidación de «${fila?.descripcion ?? "otra gestión"}»`,
+      },
+    });
+    if (errSaldado) fallidas.push(d.descripcion);
+    else revalidatePath(`/gestiones/${d.gestion_id}`);
+  }
+
+  // El evento va ANTES del email: el PDF del detalle lee las deudas
+  // descontadas de acá (así la re-descarga también las muestra).
+  await registrarEvento(gestionId, "liquidacion_registrada", actual.id, {
+    monto: montoPagado,
+    medio,
+    ...(sobrante > 0 ? { sobrante } : {}),
+    ...(comprobantePath ? { comprobante: true } : {}),
+    ...(descuentos.length > 0
+      ? {
+          deudas_descontadas: descuentos.map((d) => ({
+            gestion_id: d.gestion_id,
+            descripcion: d.descripcion,
+            monto: d.monto,
+          })),
+        }
+      : {}),
+  });
 
   const doc = await datosDocumento(gestionId, "detalle");
   if (doc?.emailDestinatario) {
@@ -1101,11 +1220,13 @@ export async function registrarLiquidacion(
     });
   }
 
-  await registrarEvento(gestionId, "liquidacion_registrada", actual.id, {
-    monto,
-    medio,
-    ...(sobrante > 0 ? { sobrante } : {}),
-    ...(comprobantePath ? { comprobante: true } : {}),
-  });
-  return avanzarEtapa(gestionId, "finalizado");
+  if (descuentos.length > 0) revalidatePath("/finanzas");
+  const avance = await avanzarEtapa(gestionId, "finalizado");
+  if (fallidas.length > 0) {
+    return {
+      ok: false,
+      error: `La liquidación se registró, pero no se pudo asentar el descuento de «${fallidas.join("», «")}» — esa deuda sigue a resolver (saldala a mano desde su gestión).`,
+    };
+  }
+  return avance;
 }

@@ -67,6 +67,16 @@ export function detalleLegible(detalle: Record<string, unknown> | null): string 
   // STORY-977 v1.1: si el adelanto de materiales superó lo debido al
   // liquidar, queda documentado como sobrante en el evento.
   if (detalle.sobrante != null) partes.push(`Sobrante: ${plataD(detalle.sobrante)}`);
+  // STORY-1032: deudas de otras gestiones retenidas de esta liquidación —
+  // el técnico también lo ve (se le aclara qué se descontó de su pago).
+  if (Array.isArray(detalle.deudas_descontadas) && detalle.deudas_descontadas.length > 0) {
+    const ds = detalle.deudas_descontadas as { descripcion?: unknown; monto?: unknown }[];
+    partes.push(
+      `Descontado por adelantos pendientes: ${ds
+        .map((d) => `${plataD(d.monto ?? 0)} de «${String(d.descripcion ?? "otra gestión")}»`)
+        .join(" · ")}`
+    );
+  }
   // STORY-1018: adelanto confirmado por encima del techo autorizado de
   // materiales — la Auditoría responde "quién autorizó dar de más".
   if (detalle.excedente_tope != null)

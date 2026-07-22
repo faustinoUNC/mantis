@@ -746,7 +746,13 @@ function TabAdelantos({
               descripcion={f.nota ? `${f.descripcion} — ${f.nota}` : f.descripcion}
               direccion={f.direccion}
               persona={`Técnico: ${f.tecnicoNombre}`}
-              medio={f.modo === "liquidacion" ? "Al liquidar" : "A mano"}
+              medio={
+                f.modo === "liquidacion"
+                  ? "Al liquidar"
+                  : f.modo === "descuento"
+                    ? "Descontado al liquidar"
+                    : "A mano"
+              }
             />
           )}
         />

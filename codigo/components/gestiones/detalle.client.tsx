@@ -151,6 +151,38 @@ function SaldarAdelanto({
   );
 }
 
+// STORY-1032: las líneas de cierre de una constancia — cada saldado con su
+// monto y fecha; el descuento hecho desde una liquidación linkea a la
+// gestión donde se retuvo la plata (el origen de la deuda queda a un click).
+function LineasSaldado({ cierres }: { cierres: GestionDetalle["eventos"] }) {
+  if (cierres.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-0.5">
+      {cierres.map((s) => (
+        <p key={s.id} className="text-[12px] text-muted">
+          {s.detalle?.via === "liquidacion" ? "Descontado" : "Saldado"}{" "}
+          <span className="font-mono font-medium text-foreground">
+            {plata(Number(s.detalle?.monto ?? 0))}
+          </span>{" "}
+          el {fechaHora(s.creado_en)}
+          {s.detalle?.nota ? ` — ${String(s.detalle.nota)}` : ""}
+          {s.detalle?.via === "liquidacion" && s.detalle?.gestion_liquidacion_id ? (
+            <>
+              {" "}
+              <Link
+                href={`/gestiones/${String(s.detalle.gestion_liquidacion_id)}`}
+                className="text-brand hover:text-brand-hover underline underline-offset-2"
+              >
+                Ver liquidación
+              </Link>
+            </>
+          ) : null}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 // STORY-1029: par label/valor de los carteles de adelanto — el monto en mono,
 // en ámbar fuerte solo cuando sigue abierto (un acento un significado).
 function MontoConstancia({
@@ -189,15 +221,18 @@ function DatosGestion({
     (e) => e.detalle?.adelanto_saliente != null
   );
   // STORY-1019: el saldado es un EVENTO nuevo, no una edición del congelado.
-  // Cada constancia busca su cierre por origen; mientras no exista, el
-  // administrativo puede registrarlo (nota obligatoria).
+  // STORY-1032: pueden ser VARIOS por origen (retenciones parciales desde
+  // liquidaciones + un cierre manual) — se suman; el ítem queda resuelto
+  // cuando el pendiente llega a 0.
   const saldados = gestion.eventos.filter((e) => e.tipo === "adelanto_saldado");
-  const saldadoDe = (origenEventoId: string | null, origen: OrigenAdelanto) =>
-    saldados.find((s) =>
-      origen === "cancelacion"
-        ? s.detalle?.origen === "cancelacion"
-        : String(s.detalle?.origen_evento_id ?? "") === origenEventoId
-    );
+  const saldadosDe = (origenEventoId: string | null, origen: OrigenAdelanto) =>
+    saldados
+      .filter((s) =>
+        origen === "cancelacion"
+          ? s.detalle?.origen === "cancelacion"
+          : String(s.detalle?.origen_evento_id ?? "") === origenEventoId
+      )
+      .sort((a, b) => a.creado_en.localeCompare(b.creado_en));
   const canceladaConAdelanto =
     gestion.etapa === "cancelada" && Number(gestion.adelanto_materiales ?? 0) > 0;
   const sobrantes = gestion.eventos.filter(
@@ -294,7 +329,6 @@ function DatosGestion({
           {adelantosSalientes.map((e) => {
             const monto = Number(e.detalle?.adelanto_saliente);
             const devuelto = Number(e.detalle?.devolucion_adelanto ?? 0);
-            const pendiente = Math.max(monto - devuelto, 0);
             // nombrarSalientes() ya tradujo el UUID a nombre; si quedó sin
             // resolver, el id crudo no aporta (mismo criterio que eventos.ts).
             const saliente = e.detalle?.tecnico_saliente;
@@ -302,8 +336,10 @@ function DatosGestion({
               typeof saliente === "string" && !/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(saliente)
                 ? saliente
                 : "Técnico saliente";
-            const saldado = saldadoDe(e.id, "desasignacion");
-            const resuelto = pendiente <= 0 || Boolean(saldado);
+            const cierres = saldadosDe(e.id, "desasignacion");
+            const recuperado = cierres.reduce((s, c) => s + Number(c.detalle?.monto ?? 0), 0);
+            const pendiente = Math.max(monto - devuelto - recuperado, 0);
+            const resuelto = pendiente <= 0;
             return (
               <div key={e.id} className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -320,16 +356,14 @@ function DatosGestion({
                   {devuelto > 0 && (
                     <MontoConstancia label="Devolvió en el acto" monto={devuelto} />
                   )}
+                  {recuperado > 0 && (
+                    <MontoConstancia label="Recuperado" monto={recuperado} />
+                  )}
                   {!resuelto && (
                     <MontoConstancia label="Pendiente" monto={pendiente} alerta />
                   )}
                 </div>
-                {saldado && (
-                  <p className="text-[12px] text-muted">
-                    Saldado el {fechaHora(saldado.creado_en)}
-                    {saldado.detalle?.nota ? ` — ${String(saldado.detalle.nota)}` : ""}
-                  </p>
-                )}
+                <LineasSaldado cierres={cierres} />
                 {!resuelto && esAdministrativo && (
                   <SaldarAdelanto gestionId={gestion.id} origen="desasignacion" origenEventoId={e.id} />
                 )}
@@ -337,7 +371,10 @@ function DatosGestion({
             );
           })}
           {canceladaConAdelanto && (() => {
-            const saldado = saldadoDe(null, "cancelacion");
+            const cierres = saldadosDe(null, "cancelacion");
+            const recuperado = cierres.reduce((s, c) => s + Number(c.detalle?.monto ?? 0), 0);
+            const pendiente = Math.max(Number(gestion.adelanto_materiales) - recuperado, 0);
+            const resuelto = pendiente <= 0;
             return (
               <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -347,24 +384,25 @@ function DatosGestion({
                   <span className="text-[12px] text-muted">
                     tenía adelanto al cancelarse la gestión
                   </span>
-                  <Badge tono={saldado ? "neutro" : "urgente"} className="ml-auto">
-                    {saldado ? "Saldado" : "A resolver"}
+                  <Badge tono={resuelto ? "neutro" : "urgente"} className="ml-auto">
+                    {resuelto ? "Saldado" : "A resolver"}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap gap-x-6 gap-y-1.5">
                   <MontoConstancia
                     label="Adelanto"
                     monto={Number(gestion.adelanto_materiales)}
-                    alerta={!saldado}
+                    alerta={!resuelto}
                   />
+                  {recuperado > 0 && (
+                    <MontoConstancia label="Recuperado" monto={recuperado} />
+                  )}
+                  {!resuelto && recuperado > 0 && (
+                    <MontoConstancia label="Pendiente" monto={pendiente} alerta />
+                  )}
                 </div>
-                {saldado && (
-                  <p className="text-[12px] text-muted">
-                    Saldado el {fechaHora(saldado.creado_en)}
-                    {saldado.detalle?.nota ? ` — ${String(saldado.detalle.nota)}` : ""}
-                  </p>
-                )}
-                {!saldado && esAdministrativo && (
+                <LineasSaldado cierres={cierres} />
+                {!resuelto && esAdministrativo && (
                   <SaldarAdelanto gestionId={gestion.id} origen="cancelacion" origenEventoId={null} />
                 )}
               </div>
@@ -372,7 +410,10 @@ function DatosGestion({
           })()}
           {sobrantes.map((e) => {
             const sobrante = Number(e.detalle?.sobrante);
-            const saldado = saldadoDe(e.id, "sobrante");
+            const cierres = saldadosDe(e.id, "sobrante");
+            const recuperado = cierres.reduce((s, c) => s + Number(c.detalle?.monto ?? 0), 0);
+            const pendiente = Math.max(sobrante - recuperado, 0);
+            const resuelto = pendiente <= 0;
             return (
               <div key={e.id} className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -380,20 +421,21 @@ function DatosGestion({
                   <span className="text-[12px] text-muted">
                     el adelanto superó lo debido · {fechaHora(e.creado_en)}
                   </span>
-                  <Badge tono={saldado ? "neutro" : "urgente"} className="ml-auto">
-                    {saldado ? "Saldado" : "A resolver"}
+                  <Badge tono={resuelto ? "neutro" : "urgente"} className="ml-auto">
+                    {resuelto ? "Saldado" : "A resolver"}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap gap-x-6 gap-y-1.5">
-                  <MontoConstancia label="Sobrante" monto={sobrante} alerta={!saldado} />
+                  <MontoConstancia label="Sobrante" monto={sobrante} alerta={!resuelto} />
+                  {recuperado > 0 && (
+                    <MontoConstancia label="Recuperado" monto={recuperado} />
+                  )}
+                  {!resuelto && recuperado > 0 && (
+                    <MontoConstancia label="Pendiente" monto={pendiente} alerta />
+                  )}
                 </div>
-                {saldado && (
-                  <p className="text-[12px] text-muted">
-                    Saldado el {fechaHora(saldado.creado_en)}
-                    {saldado.detalle?.nota ? ` — ${String(saldado.detalle.nota)}` : ""}
-                  </p>
-                )}
-                {!saldado && esAdministrativo && (
+                <LineasSaldado cierres={cierres} />
+                {!resuelto && esAdministrativo && (
                   <SaldarAdelanto gestionId={gestion.id} origen="sobrante" origenEventoId={e.id} />
                 )}
               </div>

@@ -182,10 +182,12 @@ export async function listarCobros(): Promise<CobrosData> {
 // componente (read-model sobre hechos congelados, patrón historial STORY-985).
 //   EN OBRA     = columna adelanto_materiales viva en gestión activa.
 //   A RESOLVER  = desasignación (neto de devolución en el acto), cancelación
-//                 con adelanto y sobrante de liquidación — sin evento de
-//                 saldado que los cierre.
-//   SALDADO     = por liquidación (el descuento ES el saldado, automático) o
-//                 manual (evento adelanto_saldado con nota).
+//                 con adelanto y sobrante de liquidación — mientras el
+//                 pendiente (monto − Σ saldados) siga > 0 (STORY-1032:
+//                 el descuento desde una liquidación puede ser parcial).
+//   SALDADO     = por liquidación (el descuento ES el saldado, automático),
+//                 por retención en la liquidación de otra gestión
+//                 (via "liquidacion", STORY-1032) o manual (con nota).
 async function derivarAdelantos(): Promise<AdelantosData> {
   const admin = createAdminClient();
 
@@ -255,13 +257,22 @@ async function derivarAdelantos(): Promise<AdelantosData> {
     for (const t of (data ?? []) as { id: string; nombre: string }[]) nombreTecnico.set(t.id, t.nombre);
   }
 
-  // Saldados manuales: qué orígenes cierran.
-  const saldadoPorEvento = new Set(
-    evSaldado.map((e) => String(e.detalle?.origen_evento_id ?? "")).filter(Boolean)
-  );
-  const saldadoCancelacion = new Set(
-    evSaldado.filter((e) => e.detalle?.origen === "cancelacion").map((e) => e.gestion_id)
-  );
+  // Saldados: cuánto se recuperó de cada origen. STORY-1032 permite el
+  // descuento PARCIAL desde una liquidación, así que ya no alcanza con la
+  // existencia del evento — se SUMAN los montos y el ítem sigue "a resolver"
+  // mientras quede pendiente (> 0). El saldado manual sigue cerrando todo el
+  // resto (registra el pendiente del momento como monto).
+  const saldadoPorEvento = new Map<string, number>();
+  const saldadoCancelacion = new Map<string, number>();
+  for (const e of evSaldado) {
+    const m = Number(e.detalle?.monto ?? 0);
+    const origenEventoId = String(e.detalle?.origen_evento_id ?? "");
+    if (origenEventoId) {
+      saldadoPorEvento.set(origenEventoId, (saldadoPorEvento.get(origenEventoId) ?? 0) + m);
+    } else if (e.detalle?.origen === "cancelacion") {
+      saldadoCancelacion.set(e.gestion_id, (saldadoCancelacion.get(e.gestion_id) ?? 0) + m);
+    }
+  }
 
   // ── EN OBRA ──
   const enObra = [...info.values()]
@@ -284,8 +295,8 @@ async function derivarAdelantos(): Promise<AdelantosData> {
   for (const e of evDesasig) {
     const monto = Number(e.detalle?.adelanto_saliente ?? 0);
     const devuelto = Number(e.detalle?.devolucion_adelanto ?? 0);
-    const pendiente = Math.max(monto - devuelto, 0);
-    if (pendiente <= 0 || saldadoPorEvento.has(e.id)) continue;
+    const pendiente = Math.max(monto - devuelto - (saldadoPorEvento.get(e.id) ?? 0), 0);
+    if (pendiente <= 0) continue;
     const g = info.get(e.gestion_id);
     const tecnicoId = String(e.detalle?.tecnico_saliente ?? "") || null;
     items.push({
@@ -302,22 +313,29 @@ async function derivarAdelantos(): Promise<AdelantosData> {
   }
   for (const g of info.values()) {
     if (g.etapa !== "cancelada" || Number(g.adelanto_materiales ?? 0) <= 0) continue;
-    if (saldadoCancelacion.has(g.id)) continue;
+    const pendiente = Math.max(
+      Number(g.adelanto_materiales) - (saldadoCancelacion.get(g.id) ?? 0),
+      0
+    );
+    if (pendiente <= 0) continue;
     items.push({
       gestionId: g.id,
       descripcion: g.descripcion,
       direccion: g.propiedades?.direccion ?? "—",
       tecnicoId: g.tecnico_id,
       tecnicoNombre: g.tecnico?.nombre ?? "—",
-      monto: Number(g.adelanto_materiales),
+      monto: pendiente,
       origen: "cancelacion",
       origenEventoId: null,
       diasPendiente: null, // la fecha de cancelación vive en el evento de transición; sin alarma acá
     });
   }
   for (const e of evLiq) {
-    const sobrante = Number(e.detalle?.sobrante ?? 0);
-    if (sobrante <= 0 || saldadoPorEvento.has(e.id)) continue;
+    const pendiente = Math.max(
+      Number(e.detalle?.sobrante ?? 0) - (saldadoPorEvento.get(e.id) ?? 0),
+      0
+    );
+    if (pendiente <= 0) continue;
     const g = info.get(e.gestion_id);
     items.push({
       gestionId: e.gestion_id,
@@ -325,7 +343,7 @@ async function derivarAdelantos(): Promise<AdelantosData> {
       direccion: g?.propiedades?.direccion ?? "—",
       tecnicoId: g?.tecnico_id ?? null,
       tecnicoNombre: g?.tecnico?.nombre ?? "—",
-      monto: sobrante,
+      monto: pendiente,
       origen: "sobrante",
       origenEventoId: e.id,
       diasPendiente: diasDesde(e.creado_en),
@@ -383,7 +401,9 @@ async function derivarAdelantos(): Promise<AdelantosData> {
       direccion: g?.propiedades?.direccion ?? "—",
       tecnicoNombre: String(e.detalle?.tecnico ?? "") || (g?.tecnico?.nombre ?? "—"),
       monto: Number(e.detalle?.monto ?? 0),
-      modo: "manual",
+      // STORY-1032: la deuda retenida de la liquidación de otra gestión se
+      // distingue del saldado a mano.
+      modo: e.detalle?.via === "liquidacion" ? "descuento" : "manual",
       nota: String(e.detalle?.nota ?? "") || null,
       fecha: e.creado_en,
     });

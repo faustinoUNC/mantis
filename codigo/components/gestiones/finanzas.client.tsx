@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { EnvioDocumento } from "@/components/gestiones/envio-documento.client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
   MEDIOS_LIQUIDACION,
   type MedioCobro,
 } from "@/features/finanzas/medios";
+import { claveDeuda } from "@/features/finanzas/consultas-types";
 import {
   descargarDocumento,
   emitirNotaCobro,
@@ -357,12 +359,15 @@ export function FinanzasAcciones({
     cargo_admin?: number | null;
   };
   // STORY-1019: adelantos "a resolver" del técnico (derivación de
-  // features/finanzas, viene de la page) — aviso antes de liquidar, no
-  // bloquea ni descuenta (el descuento cross-gestión sería cobranza).
+  // features/finanzas, viene de la page — la más vieja primero, mismo orden
+  // en que el server descuenta). STORY-1032: se pueden tildar para retener
+  // de la liquidación; si la plata no alcanza el descuento es parcial.
   deudasTecnico?: import("@/features/finanzas/consultas-types").ItemAdelantoAResolver[];
 }) {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
+  // STORY-1032: claves de las deudas tildadas para descontar al liquidar.
+  const [deudasElegidas, setDeudasElegidas] = useState<ReadonlySet<string>>(new Set());
   // STORY-934: el fee quedó ANCLADO al aprobar el presupuesto — acá es solo
   // lectura (el pagador aprobó conociendo ese total; no se corrige a último
   // momento).
@@ -535,6 +540,32 @@ export function FinanzasAcciones({
     const liqTotal = Math.max(base - adelanto, 0);
     // v1.1: si el adelanto superó lo debido, se lo muestra como sobrante.
     const sobrante = Math.max(adelanto - base, 0);
+    // STORY-1032: espejo del cálculo del server — por cada deuda tildada se
+    // retiene min(pendiente, lo que queda por liquidar), en el orden en que
+    // vienen (la más vieja primero). El descuento puede ser parcial.
+    const descuentos: {
+      deuda: (typeof deudasTecnico)[number];
+      clave: string;
+      elegida: boolean;
+      retenido: number;
+    }[] = [];
+    let restanteDeudas = liqTotal;
+    for (const d of deudasTecnico) {
+      const clave = claveDeuda(d);
+      const elegida = deudasElegidas.has(clave);
+      const retenido = elegida ? Math.min(d.monto, restanteDeudas) : 0;
+      if (elegida) restanteDeudas -= retenido;
+      descuentos.push({ deuda: d, clave, elegida, retenido });
+    }
+    const totalDescontado = descuentos.reduce((s, x) => s + x.retenido, 0);
+    const aPagar = liqTotal - totalDescontado;
+    const toggleDeuda = (clave: string) =>
+      setDeudasElegidas((prev) => {
+        const sig = new Set(prev);
+        if (sig.has(clave)) sig.delete(clave);
+        else sig.add(clave);
+        return sig;
+      });
     return (
       <div className="flex flex-col gap-4">
         {deudasTecnico.length > 0 && (
@@ -544,14 +575,46 @@ export function FinanzasAcciones({
           >
             <p className="text-sm font-semibold text-urgente-fuerte">
               {gestion.tecnico_nombre ?? "El técnico"} tiene{" "}
-              {plata(deudasTecnico.reduce((s, d) => s + d.monto, 0))} en adelantos a
-              resolver{" "}
-              ({deudasTecnico.map((d) => `${plata(d.monto)} de "${d.descripcion}"`).join(" · ")}).
+              {plata(deudasTecnico.reduce((s, d) => s + d.monto, 0))} en
+              adelantos a resolver de otras gestiones.
             </p>
             <p className="text-[13px] text-muted mt-1">
-              Tenelo en cuenta antes de liquidar — es un aviso, no descuenta ni
-              bloquea. El detalle vive en Finanzas → Adelantos.
+              Tildá lo que quieras descontar de esta liquidación — queda
+              saldado en su gestión de origen. Si la plata no alcanza, se
+              retiene lo que entre y el resto sigue a resolver.
             </p>
+            <div className="mt-2.5 flex flex-col gap-2">
+              {descuentos.map(({ deuda: d, clave, elegida, retenido }) => (
+                <div key={clave} className="flex flex-col gap-0.5">
+                  <label className="flex items-start gap-2 text-sm cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={elegida}
+                      disabled={liqTotal <= 0 || (!elegida && restanteDeudas <= 0)}
+                      onChange={() => toggleDeuda(clave)}
+                      className="size-4 mt-0.5 accent-(--color-brand)"
+                    />
+                    <span>
+                      <span className="font-mono font-semibold">{plata(d.monto)}</span>{" "}
+                      de{" "}
+                      <Link
+                        href={`/gestiones/${d.gestionId}`}
+                        className="text-brand hover:text-brand-hover underline underline-offset-2"
+                      >
+                        «{d.descripcion}»
+                      </Link>
+                    </span>
+                  </label>
+                  {elegida && retenido < d.monto && (
+                    <p className="pl-6 text-[12px] text-muted">
+                      {retenido > 0
+                        ? `Se retienen ${plata(retenido)} — quedan ${plata(d.monto - retenido)} a resolver.`
+                        : "No queda plata en esta liquidación para retener."}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
         <div className="max-w-md rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
@@ -573,9 +636,15 @@ export function FinanzasAcciones({
               <span className="font-mono">− {plata(adelanto)}</span>
             </div>
           )}
+          {totalDescontado > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted">Deudas de otras gestiones</span>
+              <span className="font-mono">− {plata(totalDescontado)}</span>
+            </div>
+          )}
           <div className="flex justify-between pt-1 border-t border-border font-semibold">
             <span>A liquidar al técnico</span>
-            <span className="font-mono">{plata(liqTotal)}</span>
+            <span className="font-mono">{plata(aPagar)}</span>
           </div>
         </div>
         {sobrante > 0 && (
@@ -589,6 +658,11 @@ export function FinanzasAcciones({
           onSubmit={(e) => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
+            // STORY-1032: viajan solo las CLAVES de las deudas con retención
+            // efectiva — los montos los re-deriva el server.
+            for (const x of descuentos) {
+              if (x.elegida && x.retenido > 0) formData.append("deuda", x.clave);
+            }
             correr("liq", () => registrarLiquidacion(gestion.id, formData));
           }}
         >

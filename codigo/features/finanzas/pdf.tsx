@@ -51,6 +51,9 @@ export interface DatosDocumento {
   // STORY-977: adelanto de materiales ya entregado al técnico — solo en el
   // detalle de liquidación (nunca en la nota al pagador, no le corresponde verlo).
   adelantoMateriales?: number | null;
+  // STORY-1032: adelantos pendientes de OTRAS gestiones retenidos de este
+  // pago — el técnico ve qué se le descontó y por qué el total cierra.
+  descuentosDeuda?: { descripcion: string; monto: number }[] | null;
   // STORY-1031: pago compartido — el total se reparte por % entre las partes
   // (los montos vienen calculados, suman exacto el total). Solo nota/presupuesto.
   split?: {
@@ -155,6 +158,12 @@ function Documento({ datos }: { datos: DatosDocumento }) {
                   <Text>− {monto(datos.adelantoMateriales!)}</Text>
                 </View>
               )}
+              {(datos.descuentosDeuda ?? []).map((d, i) => (
+                <View key={i} style={s.filaTabla}>
+                  <Text>Adelanto pendiente descontado («{d.descripcion}»)</Text>
+                  <Text>− {monto(d.monto)}</Text>
+                </View>
+              ))}
             </>
           )}
           <View style={s.total}>
