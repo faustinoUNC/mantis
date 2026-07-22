@@ -38,15 +38,24 @@ function medioCobroLabel(m1: string | null, m2: string | null): string {
 // Compartido entre pendientes y cerrados: el pagador se busca igual en los
 // dos (permite filtrar cobros cerrados por quién pagó, no solo pendientes).
 function resolverPagador(
-  pagador: "inquilino" | "propietario" | null,
+  pagador: "inquilino" | "propietario" | "compartido" | null,
   propiedades: { propietarios: { nombre: string } | null } | null,
-  legajos: { inquilinos: { nombre: string } | null } | null
+  legajos: { inquilinos: { nombre: string } | null } | null,
+  pctInquilino?: number | null
 ): { nombre: string; rotulo: string } {
   if (pagador === "propietario") {
     return { nombre: propiedades?.propietarios?.nombre ?? "—", rotulo: "Propietario" };
   }
   if (pagador === "inquilino") {
     return { nombre: legajos?.inquilinos?.nombre ?? "—", rotulo: "Inquilino" };
+  }
+  // STORY-1031: pago compartido — ambos nombres con su % (el cobro sigue
+  // siendo uno solo; el reparto es informativo).
+  if (pagador === "compartido") {
+    const inq = legajos?.inquilinos?.nombre ?? "—";
+    const prop = propiedades?.propietarios?.nombre ?? "—";
+    const pct = pctInquilino ?? 50;
+    return { nombre: `${inq} (${pct}%) + ${prop} (${100 - pct}%)`, rotulo: "Compartido" };
   }
   return { nombre: "—", rotulo: "—" };
 }
@@ -60,7 +69,7 @@ export async function listarCobros(): Promise<CobrosData> {
   const { data: pendRaw } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, costo_final, cargo_admin, cargo_cancelacion, propiedades(direccion, propietarios(nombre)), legajos(inquilinos(nombre))"
+      "id, descripcion, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, propiedades(direccion, propietarios(nombre)), legajos(inquilinos(nombre))"
     )
     .eq("etapa", "facturacion_cobro")
     .is("cobrado_en", null);
@@ -68,7 +77,8 @@ export async function listarCobros(): Promise<CobrosData> {
   type PendFila = {
     id: string;
     descripcion: string;
-    pagador: "inquilino" | "propietario" | null;
+    pagador: "inquilino" | "propietario" | "compartido" | null;
+    pagador_pct_inquilino: number | null;
     costo_final: number | null;
     cargo_admin: number | null;
     cargo_cancelacion: number | null;
@@ -103,7 +113,8 @@ export async function listarCobros(): Promise<CobrosData> {
     const { nombre: pagadorNombre, rotulo: pagadorRotulo } = resolverPagador(
       g.pagador,
       g.propiedades,
-      g.legajos
+      g.legajos,
+      g.pagador_pct_inquilino
     );
     const entro = entroPorId.get(g.id);
     return {
@@ -122,7 +133,7 @@ export async function listarCobros(): Promise<CobrosData> {
   const { data: cerrRaw } = await admin
     .from("gestiones")
     .select(
-      "id, descripcion, pagador, cobrado_en, cobrado_monto, medio_cobro, medio_cobro_2, propiedades(direccion, propietarios(nombre)), legajos(inquilinos(nombre))"
+      "id, descripcion, pagador, pagador_pct_inquilino, cobrado_en, cobrado_monto, medio_cobro, medio_cobro_2, propiedades(direccion, propietarios(nombre)), legajos(inquilinos(nombre))"
     )
     .not("cobrado_en", "is", null)
     .order("cobrado_en", { ascending: false });
@@ -130,7 +141,8 @@ export async function listarCobros(): Promise<CobrosData> {
   type CerrFila = {
     id: string;
     descripcion: string;
-    pagador: "inquilino" | "propietario" | null;
+    pagador: "inquilino" | "propietario" | "compartido" | null;
+    pagador_pct_inquilino: number | null;
     cobrado_en: string;
     cobrado_monto: number | null;
     medio_cobro: string | null;
@@ -145,7 +157,8 @@ export async function listarCobros(): Promise<CobrosData> {
     const { nombre: pagadorNombre, rotulo: pagadorRotulo } = resolverPagador(
       g.pagador,
       g.propiedades,
-      g.legajos
+      g.legajos,
+      g.pagador_pct_inquilino
     );
     return {
       id: g.id,

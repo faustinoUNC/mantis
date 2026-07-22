@@ -497,6 +497,7 @@ type FilaObra = {
   cobrado_monto: number | null;
   cargo_cancelacion: number | null;
   pagador: string | null;
+  pagador_pct_inquilino: number | null;
   creado_en: string;
   especialidades: { nombre: string } | null;
   tecnico: { nombre: string } | null;
@@ -514,7 +515,7 @@ async function obrasDe(
   const { data } = await admin
     .from("gestiones")
     .select(
-      "id, legajo_id, descripcion, etapa, costo_final, cargo_admin, cobrado_monto, cargo_cancelacion, pagador, creado_en, especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, descripcion_trabajo)"
+      "id, legajo_id, descripcion, etapa, costo_final, cargo_admin, cobrado_monto, cargo_cancelacion, pagador, pagador_pct_inquilino, creado_en, especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado, descripcion_trabajo)"
     )
     .eq(columna, id)
     .order("creado_en");
@@ -550,6 +551,7 @@ async function obrasDe(
       tecnico: g.tecnico?.nombre ?? null,
       costo: costoObra(g),
       pagador: g.pagador,
+      pagador_pct_inquilino: g.pagador_pct_inquilino,
       reportada_en: g.creado_en,
       terminada_en: estado === "terminada" ? (terminadaEn.get(g.id) ?? null) : null,
     };
@@ -638,6 +640,7 @@ async function datosResumen(legajoId: string) {
         tecnico: o.tecnico,
         costo: o.costo,
         pagador: o.pagador,
+        pagador_pct_inquilino: o.pagador_pct_inquilino,
       })),
     },
   };

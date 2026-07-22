@@ -78,7 +78,14 @@ export function detalleLegible(detalle: Record<string, unknown> | null): string 
   if (detalle.origen === "sobrante") partes.push("Origen: sobrante de liquidación");
   if (detalle.nota) partes.push(String(detalle.nota));
   if (detalle.plazo_dias != null) partes.push(`Plazo: ${detalle.plazo_dias} día${Number(detalle.plazo_dias) === 1 ? "" : "s"}`);
-  if (detalle.pagador) partes.push(`Paga: ${detalle.pagador}`);
+  // STORY-1031: el pago compartido se cuenta con su reparto.
+  if (detalle.pagador) {
+    partes.push(
+      detalle.pagador === "compartido" && detalle.pct_inquilino != null
+        ? `Paga: compartido (inquilino ${detalle.pct_inquilino}% / propietario ${100 - Number(detalle.pct_inquilino)}%)`
+        : `Paga: ${detalle.pagador}`
+    );
+  }
   if (detalle.medio) partes.push(`Medio: ${MEDIO_LABEL[String(detalle.medio)] ?? detalle.medio}`);
   // STORY-973: el cobro combinado (STORY-950) se cuenta completo.
   if (detalle.medio2) {

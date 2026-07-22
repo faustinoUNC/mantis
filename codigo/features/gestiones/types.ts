@@ -15,7 +15,16 @@ export type Etapa =
 export type Urgencia = "normal" | "urgente";
 // STORY-943: la "Causa" se eliminó — la responsabilidad de pago la decide la
 // inmobiliaria en la etapa Presupuesto, con la inspección del técnico a la vista.
-export type Pagador = "inquilino" | "propietario";
+// STORY-1031: "compartido" = el gasto se divide por % entre ambos (el % del
+// inquilino vive en pagador_pct_inquilino; el del propietario se deriva).
+export type Pagador = "inquilino" | "propietario" | "compartido";
+
+// STORY-1031: rótulo legible del pagador para los textos de la UI
+// ("al compartido" no se lee — se dice "al inquilino y propietario").
+export function etiquetaPagador(p: string | null | undefined): string | null {
+  if (!p) return null;
+  return p === "compartido" ? "inquilino y propietario" : p;
+}
 
 // STORY-966: el set de terminales, en UN solo lugar (estaba repetido como
 // literales en métricas y servicios — una terminal nueva rompía por goteo).
@@ -156,6 +165,8 @@ export interface ContactoCliente {
 export interface GestionDetalle extends GestionResumen {
   // null hasta que el gestor lo decide al aprobar/enviar el presupuesto
   pagador: Pagador | null;
+  // STORY-1031: % a cargo del inquilino cuando pagador = "compartido"
+  pagador_pct_inquilino: number | null;
   costo_final: number | null;
   cargo_admin: number | null;
   // STORY-967: cargo por cancelación tardía — null = cancelación sin cargo.

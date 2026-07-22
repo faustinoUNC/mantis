@@ -21,6 +21,7 @@ import {
   registrarLiquidacion,
 } from "@/features/finanzas/service";
 import type { GestionDetalle } from "@/features/gestiones/types";
+import { etiquetaPagador } from "@/features/gestiones/types";
 
 function plata(n: number) {
   return `$ ${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
@@ -177,7 +178,7 @@ function FormCobro({
       {hayTarjeta && recargoMonto > 0 && (
         <p className="text-sm text-muted">
           Recargo tarjeta: <span className="font-mono text-foreground">{plata(recargoMonto)}</span>
-          {" — "}Total a cobrar al {pagador ?? "pagador"}:{" "}
+          {" — "}Total a cobrar al {etiquetaPagador(pagador) ?? "pagador"}:{" "}
           <span className="font-mono font-semibold text-foreground">{plata(total + recargoMonto)}</span>
         </p>
       )}
@@ -395,7 +396,7 @@ export function FinanzasAcciones({
         <div className="max-w-md">
           <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
             <div className="flex justify-between font-semibold">
-              <span>Cargo por cancelación a cobrar al {gestion.pagador ?? "responsable"}</span>
+              <span>Cargo por cancelación a cobrar al {etiquetaPagador(gestion.pagador) ?? "responsable"}</span>
               <span className="font-mono">{plata(cargo)}</span>
             </div>
             <p className="text-[12px] text-muted">
@@ -408,7 +409,7 @@ export function FinanzasAcciones({
             siempre (vista previa + envío por mail al pagador). */}
         <EnvioDocumento
           etiqueta="nota de cobro"
-          destinatarioEtiqueta={gestion.pagador ?? "pagador"}
+          destinatarioEtiqueta={etiquetaPagador(gestion.pagador) ?? "pagador"}
           yaEnviado={Boolean(gestion.nota_emitida_en)}
           generar={() => descargarDocumento(gestion.id, "nota")}
           enviar={() => emitirNotaCobro(gestion.id)}
@@ -455,7 +456,7 @@ export function FinanzasAcciones({
               el pagador ({plata(autorizado ?? 0)}) en {plata(excedente)}.
             </p>
             <p className="text-[13px] text-muted mt-1">
-              Confirmalo con el {gestion.pagador ?? "pagador"} antes de emitir
+              Confirmalo con el {etiquetaPagador(gestion.pagador) ?? "pagador"} antes de emitir
               la nota — es un aviso, no bloquea la facturación.
             </p>
           </div>
@@ -472,15 +473,36 @@ export function FinanzasAcciones({
               <span className="font-mono">{plata(cargoAdmin)}</span>
             </div>
             <div className="flex justify-between pt-1 border-t border-border font-semibold">
-              <span>Total a cobrar al {gestion.pagador ?? "pagador"}</span>
+              <span>Total a cobrar al {etiquetaPagador(gestion.pagador) ?? "pagador"}</span>
               <span className="font-mono">{plata(trabajo + cargoAdmin)}</span>
             </div>
+            {/* STORY-1031: con pago compartido, el reparto a la vista del
+                administrativo (mismo redondeo que la nota). */}
+            {gestion.pagador === "compartido" && (
+              <div className="flex flex-col gap-0.5 text-[13px] text-muted">
+                <div className="flex justify-between">
+                  <span>Inquilino ({gestion.pagador_pct_inquilino ?? 50}%)</span>
+                  <span className="font-mono">
+                    {plata(Math.round((trabajo + cargoAdmin) * (gestion.pagador_pct_inquilino ?? 50)) / 100)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Propietario ({100 - (gestion.pagador_pct_inquilino ?? 50)}%)</span>
+                  <span className="font-mono">
+                    {plata(
+                      trabajo + cargoAdmin -
+                        Math.round((trabajo + cargoAdmin) * (gestion.pagador_pct_inquilino ?? 50)) / 100
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         <EnvioDocumento
           etiqueta="nota de cobro"
-          destinatarioEtiqueta={gestion.pagador ?? "pagador"}
+          destinatarioEtiqueta={etiquetaPagador(gestion.pagador) ?? "pagador"}
           yaEnviado={Boolean(gestion.nota_emitida_en)}
           generar={() => descargarDocumento(gestion.id, "nota")}
           enviar={() => emitirNotaCobro(gestion.id)}

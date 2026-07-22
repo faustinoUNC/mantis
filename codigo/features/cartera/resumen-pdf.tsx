@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from "@react-pdf/renderer";
+import { parteObra } from "./historial";
 
 // PDF "Resumen de obras" por legajo (PRD §3/§8): respaldo documental para
 // propietario, inquilino y verificación al recibir llaves. Complementa el
@@ -60,6 +61,8 @@ export interface DatosResumen {
     tecnico: string | null;
     costo: number | null;
     pagador: string | null;
+    // STORY-1031: % del inquilino cuando pagador = "compartido"
+    pagador_pct_inquilino: number | null;
   }[];
 }
 
@@ -137,7 +140,12 @@ function ResumenDoc({ datos }: { datos: DatosResumen }) {
                 {`Reportado el ${o.reportada}`}
                 {`  ·  ${o.tecnico ? `Técnico: ${o.tecnico}` : "Sin técnico asignado"}`}
                 {o.costo != null && `  ·  Costo: ${pesos(o.costo)}`}
-                {o.pagador && `  ·  Pagó: ${o.pagador}`}
+                {o.pagador &&
+                  `  ·  Pagó: ${
+                    o.pagador === "compartido"
+                      ? `compartido (inquilino ${o.pagador_pct_inquilino ?? 50}% / propietario ${100 - (o.pagador_pct_inquilino ?? 50)}%)`
+                      : o.pagador
+                  }`}
               </Text>
             </View>
           ))}
@@ -145,21 +153,19 @@ function ResumenDoc({ datos }: { datos: DatosResumen }) {
 
         {datos.obras.some((o) => o.costo != null) && (
           <View style={s.totales}>
+            {/* STORY-1031: una obra compartida reparte su costo por % entre
+                los dos baldes (antes la suma era binaria por pagador). */}
             {(
               [
-                ["Total del período", () => true],
-                ["Pagó inquilino", (o: DatosResumen["obras"][number]) => o.pagador === "inquilino"],
-                ["Pagó propietario", (o: DatosResumen["obras"][number]) => o.pagador === "propietario"],
+                ["Total del período", (o: DatosResumen["obras"][number]) => o.costo ?? 0],
+                ["Pagó inquilino", (o: DatosResumen["obras"][number]) => parteObra(o, "inquilino")],
+                ["Pagó propietario", (o: DatosResumen["obras"][number]) => parteObra(o, "propietario")],
               ] as const
-            ).map(([label, filtro]) => (
+            ).map(([label, montoDe]) => (
               <View key={label}>
                 <Text style={s.totalLabel}>{label}</Text>
                 <Text style={s.totalMonto}>
-                  {pesos(
-                    datos.obras
-                      .filter((o) => o.costo != null && filtro(o))
-                      .reduce((sum, o) => sum + (o.costo ?? 0), 0)
-                  )}
+                  {pesos(datos.obras.reduce((sum, o) => sum + montoDe(o), 0))}
                 </Text>
               </View>
             ))}

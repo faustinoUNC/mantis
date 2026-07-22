@@ -7,7 +7,7 @@ export interface FilaCobroPendiente {
   descripcion: string;
   direccion: string;
   pagadorNombre: string;
-  pagadorRotulo: string; // "Propietario" | "Inquilino" | "—"
+  pagadorRotulo: string; // "Propietario" | "Inquilino" | "Compartido" | "—"
   total: number;
   diasPendiente: number | null;
 }
@@ -17,7 +17,7 @@ export interface FilaCobroCerrado {
   descripcion: string;
   direccion: string;
   pagadorNombre: string;
-  pagadorRotulo: string; // "Propietario" | "Inquilino" | "—"
+  pagadorRotulo: string; // "Propietario" | "Inquilino" | "Compartido" | "—"
   monto: number;
   medioLabel: string;
   fecha: string; // ISO (cobrado_en)

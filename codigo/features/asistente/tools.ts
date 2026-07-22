@@ -344,7 +344,11 @@ export function crearTools(usuario: UsuarioActual) {
         contacto_para_visita: g.contacto_cliente
           ? { tipo: g.contacto_cliente.tipo, nombre: g.contacto_cliente.nombre, telefono: g.contacto_cliente.telefono }
           : null,
-        pagador: g.pagador,
+        // STORY-1031: con pago compartido se informa el reparto
+        pagador:
+          g.pagador === "compartido"
+            ? `compartido (inquilino ${g.pagador_pct_inquilino ?? 50}% / propietario ${100 - (g.pagador_pct_inquilino ?? 50)}%)`
+            : g.pagador,
         presupuestos: g.presupuestos.map((p) => ({
           estado: p.estado,
           materiales: plata(p.monto_materiales),

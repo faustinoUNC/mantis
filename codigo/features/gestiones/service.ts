@@ -285,7 +285,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_DETALLE}, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, fotos_reporte_paths, adelanto_materiales, nota_emitida_en, presupuesto_enviado_en, archivada_en, aviso_no_continua_motivo, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_DETALLE}, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, fotos_reporte_paths, adelanto_materiales, nota_emitida_en, presupuesto_enviado_en, archivada_en, aviso_no_continua_motivo, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -338,6 +338,7 @@ export async function obtenerGestion(
   const base = normalizarFila(g as unknown as Record<string, unknown>);
   const fila = g as unknown as {
     pagador: Pagador | null;
+    pagador_pct_inquilino: number | null;
     costo_final: number | null;
     cargo_admin: number | null;
     cargo_cancelacion: number | null;
@@ -370,6 +371,7 @@ export async function obtenerGestion(
     calificacion: calif ?? null,
     contacto_cliente: resolverContacto(g as unknown as Record<string, unknown>),
     pagador: fila.pagador,
+    pagador_pct_inquilino: fila.pagador_pct_inquilino,
     costo_final: fila.costo_final,
     cargo_admin: fila.cargo_admin,
     cargo_cancelacion:
@@ -1067,7 +1069,7 @@ export async function resolverPresupuesto(
   presupuestoId: string,
   gestionId: string,
   aprobar: boolean,
-  opciones: { pagador?: Pagador; motivo?: string; cargo_admin?: number }
+  opciones: { pagador?: Pagador; pct_inquilino?: number; motivo?: string; cargo_admin?: number }
 ): Promise<ActionResult> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
@@ -1075,6 +1077,16 @@ export async function resolverPresupuesto(
   // Validar TODO antes de escribir (evita estados a medias)
   if (aprobar && !opciones.pagador) {
     return { ok: false, error: "Confirmá quién paga la obra." };
+  }
+  // STORY-1031: compartido exige un % entero de inquilino entre 1 y 99.
+  const pctInquilino =
+    opciones.pagador === "compartido" ? opciones.pct_inquilino : null;
+  if (
+    aprobar &&
+    opciones.pagador === "compartido" &&
+    (!Number.isInteger(pctInquilino) || pctInquilino! < 1 || pctInquilino! > 99)
+  ) {
+    return { ok: false, error: "Indicá qué % paga el inquilino (entre 1 y 99)." };
   }
   const cargoAdmin = opciones.cargo_admin ?? 0;
   if (aprobar && (!Number.isFinite(cargoAdmin) || cargoAdmin < 0)) {
@@ -1104,7 +1116,11 @@ export async function resolverPresupuesto(
     const legajoVigente =
       g.legajo_id != null &&
       (g.legajos as unknown as { fecha_fin: string | null } | null)?.fecha_fin == null;
-    if (opciones.pagador === "inquilino" && !legajoVigente) {
+    // STORY-1031: compartido también necesita un inquilino habitando.
+    if (
+      (opciones.pagador === "inquilino" || opciones.pagador === "compartido") &&
+      !legajoVigente
+    ) {
       return {
         ok: false,
         error: "La propiedad no tiene inquilino vigente — el pago solo puede ser del propietario.",
@@ -1133,7 +1149,11 @@ export async function resolverPresupuesto(
     // después factura el administrativo (FIN-1)
     await supabase
       .from("gestiones")
-      .update({ pagador: opciones.pagador, cargo_admin: cargoAdmin })
+      .update({
+        pagador: opciones.pagador,
+        pagador_pct_inquilino: pctInquilino ?? null,
+        cargo_admin: cargoAdmin,
+      })
       .eq("id", gestionId);
   }
 
@@ -1142,7 +1162,11 @@ export async function resolverPresupuesto(
     tipo: aprobar ? "presupuesto_aprobado" : "presupuesto_rechazado",
     actor_id: actual.id,
     detalle: aprobar
-      ? { pagador: opciones.pagador, cargo_admin: cargoAdmin }
+      ? {
+          pagador: opciones.pagador,
+          ...(pctInquilino != null && { pct_inquilino: pctInquilino }),
+          cargo_admin: cargoAdmin,
+        }
       : { motivo: opciones.motivo },
   });
 

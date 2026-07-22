@@ -57,7 +57,7 @@ import type {
   Presupuesto,
   TecnicoDisponible,
 } from "@/features/gestiones/types";
-import { ETAPAS_TERMINALES } from "@/features/gestiones/types";
+import { ETAPAS_TERMINALES, etiquetaPagador } from "@/features/gestiones/types";
 import { Icono } from "@/components/ui/iconos";
 
 // Formato manual determinístico: toLocaleString mete un espacio invisible
@@ -264,7 +264,11 @@ function DatosGestion({
             en Presupuesto (con la inspección del técnico a la vista) */}
         <Dato label="Paga">
           {gestion.pagador
-            ? gestion.pagador === "propietario" ? "Propietario" : "Inquilino"
+            ? gestion.pagador === "propietario"
+              ? "Propietario"
+              : gestion.pagador === "inquilino"
+                ? "Inquilino"
+                : `Compartido (inquilino ${gestion.pagador_pct_inquilino ?? 50}% / propietario ${100 - (gestion.pagador_pct_inquilino ?? 50)}%)`
             : <span className="text-muted font-normal">Se define al presupuestar</span>}
         </Dato>
         <Dato label={gestion.costo_final != null ? "Costo final" : "Creada"}>
@@ -892,6 +896,11 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
   // STORY-943: sin sugerido — el gestor elige explícitamente en base a la
   // inspección. "" = todavía no decidió (bloquea enviar y aprobar).
   const [pagador, setPagador] = useState<Pagador | "">(gestion.pagador ?? "");
+  // STORY-1031: % del inquilino cuando el pago es compartido (el propietario
+  // paga el resto). Solo tiene efecto con pagador = "compartido".
+  const [pctInquilino, setPctInquilino] = useState<number>(
+    gestion.pagador_pct_inquilino ?? 50
+  );
   // Sin inquilino en la propiedad, la opción ni se ofrece
   const hayInquilino = Boolean(gestion.inquilino_nombre);
   const [rechazando, setRechazando] = useState(false);
@@ -910,6 +919,12 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
   if (pagadorPrevio !== gestion.pagador) {
     setPagadorPrevio(gestion.pagador);
     if (gestion.pagador) setPagador(gestion.pagador);
+  }
+  const [pctPrevio, setPctPrevio] = useState(gestion.pagador_pct_inquilino);
+  if (pctPrevio !== gestion.pagador_pct_inquilino) {
+    setPctPrevio(gestion.pagador_pct_inquilino);
+    if (gestion.pagador_pct_inquilino != null)
+      setPctInquilino(gestion.pagador_pct_inquilino);
   }
   // STORY-935: sin email enviado al pagador no se aprueba. Nunca degrada a
   // false: un envío local vale aunque el refresh vivo tarde en confirmarlo.
@@ -933,6 +948,16 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
     // card "Desasignar técnico" (abajo) — un solo camino, con motivo.
     return <p className="text-sm text-muted">Esperando presupuesto del técnico.</p>;
   }
+
+  // STORY-1031: etiqueta legible y validez del % (los botones se bloquean
+  // con % fuera de rango; el server valida igual).
+  const etiqueta = etiquetaPagador(pagador || null);
+  const pctInvalido =
+    pagador === "compartido" &&
+    (!Number.isInteger(pctInquilino) || pctInquilino < 1 || pctInquilino > 99);
+  const pctParam = pagador === "compartido" ? pctInquilino : undefined;
+  const totalPrevisto =
+    Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra) + cargoAdmin;
 
   return (
     <div className="flex flex-col gap-4">
@@ -975,26 +1000,44 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
           )}
           <div className="flex justify-between pt-1 border-t border-border font-semibold">
             {/* Mismo pagador que el Select de abajo: una sola verdad en pantalla */}
-            <span>Total al {pagador || "pagador"}</span>
-            <span className="font-mono">
-              {plata(Number(enviado.monto_materiales) + Number(enviado.monto_mano_obra) + cargoAdmin)}
-            </span>
+            <span>Total al {etiqueta ?? "pagador"}</span>
+            <span className="font-mono">{plata(totalPrevisto)}</span>
           </div>
+          {pagador === "compartido" && !pctInvalido && (
+            <div className="flex flex-col gap-0.5 text-[13px] text-muted">
+              <div className="flex justify-between">
+                <span>Inquilino ({pctInquilino}%)</span>
+                <span className="font-mono">
+                  {plata(Math.round(totalPrevisto * pctInquilino) / 100)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Propietario ({100 - pctInquilino}%)</span>
+                <span className="font-mono">
+                  {plata(totalPrevisto - Math.round(totalPrevisto * pctInquilino) / 100)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {pagador ? (
+      {pagador && !pctInvalido ? (
         <EnvioDocumento
           etiqueta="presupuesto"
-          destinatarioEtiqueta={pagador}
-          generar={() => descargarPresupuestoPDF(gestion.id, { cargoAdmin, pagador })}
-          enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdmin, pagador)}
+          destinatarioEtiqueta={etiqueta ?? undefined}
+          generar={() =>
+            descargarPresupuestoPDF(gestion.id, { cargoAdmin, pagador, pctInquilino: pctParam })
+          }
+          enviar={() => enviarPresupuestoEmail(gestion.id, cargoAdmin, pagador, pctParam)}
           yaEnviado={Boolean(gestion.presupuesto_enviado_en)}
           onEnviado={() => setMailEnviado(true)}
         />
       ) : (
         <p className="text-sm text-muted">
-          Elegí quién paga la obra (abajo) para generar y enviar el presupuesto.
+          {pagador
+            ? "Indicá qué % paga el inquilino (entre 1 y 99) para generar y enviar el presupuesto."
+            : "Elegí quién paga la obra (abajo) para generar y enviar el presupuesto."}
         </p>
       )}
 
@@ -1029,13 +1072,32 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
             </option>
             <option value="propietario">Propietario</option>
             {hayInquilino && <option value="inquilino">Inquilino</option>}
+            {hayInquilino && <option value="compartido">Compartido</option>}
           </Select>
+          {pagador === "compartido" && (
+            <div className="w-32">
+              <Input
+                label="% inquilino"
+                type="number"
+                min="1"
+                max="99"
+                step="1"
+                value={pctInquilino || ""}
+                onChange={(e) =>
+                  setPctInquilino(
+                    Math.min(99, Math.max(0, Math.round(Number(e.target.value) || 0)))
+                  )
+                }
+              />
+            </div>
+          )}
           <Button
-            disabled={cargando || !mailEnviado || !pagador}
+            disabled={cargando || !mailEnviado || !pagador || pctInvalido}
             onClick={() =>
               correr(() =>
                 resolverPresupuesto(enviado.id, gestion.id, true, {
                   pagador: pagador || undefined,
+                  pct_inquilino: pctParam,
                   cargo_admin: cargoAdmin,
                 })
               )
@@ -1053,7 +1115,7 @@ function EvaluacionPresupuesto({ gestion }: { gestion: GestionDetalle }) {
             </p>
           ) : !mailEnviado ? (
             <p className="w-full text-[12px] text-muted">
-              Para aprobar, primero enviá el presupuesto al {pagador} por email
+              Para aprobar, primero enviá el presupuesto al {etiqueta} por email
               — aprueba lo que recibió.
             </p>
           ) : null}
@@ -1192,7 +1254,7 @@ function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
           <>
             <div className="flex justify-between text-sm">
               <span className="text-muted">
-                Aprobado por el {gestion.pagador ?? "pagador"}
+                Aprobado por el {etiquetaPagador(gestion.pagador) ?? "pagador"}
               </span>
               <span className="font-mono">{plata(aprobadoTotal)}</span>
             </div>
@@ -1256,7 +1318,7 @@ function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
           {!enviadaPagador && (
             <p className="w-full text-[12px] text-muted">
               Para registrar la autorización, primero enviá la ampliación al{" "}
-              {gestion.pagador ?? "pagador"} por email — autoriza lo que recibió.
+              {etiquetaPagador(gestion.pagador) ?? "pagador"} por email — autoriza lo que recibió.
             </p>
           )}
         </div>

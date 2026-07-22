@@ -40,6 +40,22 @@ export function costoObra(g: {
   return null;
 }
 
+// STORY-1031: cuánto de una obra pagó cada parte — con pago compartido el
+// costo se reparte por el % anclado (mismo redondeo que la nota: centavos,
+// el propietario absorbe el resto); con pagador único va entero a un balde.
+export function parteObra(
+  o: { costo: number | null; pagador: string | null; pagador_pct_inquilino: number | null },
+  parte: "inquilino" | "propietario"
+): number {
+  if (o.costo == null) return 0;
+  if (o.pagador === parte) return o.costo;
+  if (o.pagador === "compartido") {
+    const inquilino = Math.round(o.costo * (o.pagador_pct_inquilino ?? 50)) / 100;
+    return parte === "inquilino" ? inquilino : o.costo - inquilino;
+  }
+  return 0;
+}
+
 export interface ObraHistorial {
   id: string;
   legajo_id: string | null;
@@ -51,6 +67,8 @@ export interface ObraHistorial {
   tecnico: string | null;
   costo: number | null;
   pagador: string | null;
+  // STORY-1031: % del inquilino cuando pagador = "compartido"
+  pagador_pct_inquilino: number | null;
   reportada_en: string; // ISO
   terminada_en: string | null; // ISO — última salida de obra a Conformidad
 }

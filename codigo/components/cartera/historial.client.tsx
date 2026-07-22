@@ -15,7 +15,7 @@ import type {
   EstadoObra,
   ObraHistorial,
 } from "@/features/cartera/historial";
-import { ESTADO_OBRA_LABEL } from "@/features/cartera/historial";
+import { ESTADO_OBRA_LABEL, parteObra } from "@/features/cartera/historial";
 
 // STORY-985: la historia clínica de la propiedad — los legajos como capítulos,
 // las obras sin legajo en su hueco "sin ocupar", y los números del negocio
@@ -190,11 +190,10 @@ export function Historial({ capitulos }: { capitulos: CapituloHistorial[] }) {
   // Invertido = plata de obras cerradas (terminadas + canceladas con cargo);
   // lo presupuestado de una obra en curso todavía no salió de ningún bolsillo.
   const cerradas = contadas.filter((o) => o.estado !== "en_curso");
-  const invertido = (filtro: (o: ObraHistorial) => boolean) =>
-    cerradas
-      .filter((o) => o.costo != null && filtro(o))
-      .reduce((sum, o) => sum + (o.costo ?? 0), 0);
-  const total = invertido(() => true);
+  // STORY-1031: una obra compartida reparte su costo por % entre los baldes.
+  const invertido = (montoDe: (o: ObraHistorial) => number) =>
+    cerradas.reduce((sum, o) => sum + montoDe(o), 0);
+  const total = invertido((o) => o.costo ?? 0);
 
   // Reincidencia: la misma especialidad ≥ 3 veces en la propiedad es un
   // problema crónico — el argumento de "cambiar en vez de arreglar de nuevo".
@@ -230,8 +229,8 @@ export function Historial({ capitulos }: { capitulos: CapituloHistorial[] }) {
           </p>
           {total > 0 && (
             <p className="mt-1 text-[13px] text-muted">
-              Pagó inquilino {pesos(invertido((o) => o.pagador === "inquilino"))} ·
-              propietario {pesos(invertido((o) => o.pagador === "propietario"))}
+              Pagó inquilino {pesos(invertido((o) => parteObra(o, "inquilino")))} ·
+              propietario {pesos(invertido((o) => parteObra(o, "propietario")))}
             </p>
           )}
           {reincidentes.length > 0 && (

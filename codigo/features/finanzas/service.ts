@@ -89,16 +89,22 @@ async function exigirAdelanto(gestionId: string) {
 async function datosDocumento(
   gestionId: string,
   tipo: "nota" | "detalle" | "presupuesto",
-  overrides?: { cargoAdmin?: number; pagador?: Pagador }
+  overrides?: { cargoAdmin?: number; pagador?: Pagador; pctInquilino?: number }
 ): Promise<
-  | { datos: DatosDocumento; emailDestinatario: string | null }
+  | {
+      datos: DatosDocumento;
+      emailDestinatario: string | null;
+      // STORY-1031: a quién(es) mandar el documento — 1 entrada con pagador
+      // único, 2 con compartido (cada una con su nombre para el saludo).
+      envios: { nombre: string; email: string | null }[];
+    }
   | null
 > {
   const admin = createAdminClient();
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, numero, descripcion, pagador, costo_final, cargo_admin, cargo_cancelacion, materiales_total, adelanto_materiales, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, numero, descripcion, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, materiales_total, adelanto_materiales, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -137,40 +143,61 @@ async function datosDocumento(
   let destinatarioNombre = "—";
   let destinatarioRotulo = "Destinatario";
   let emailDestinatario: string | null = null;
+  let envios: { nombre: string; email: string | null }[] = [];
+  // STORY-1031: reparto del total cuando el pago es compartido (solo nota y
+  // presupuesto — el detalle del técnico nunca ve pagador).
+  let splitInquilino: { nombre: string; email: string | null } | null = null;
 
   // Nota y presupuesto van al PAGADOR elegido en pantalla o confirmado.
   // STORY-943: ya no hay "sugerido" — sin elección explícita no hay
   // destinatario (los flujos lo validan antes de llegar acá).
-  const pagador = overrides?.pagador ?? g.pagador ?? null;
-  if (tipo === "detalle") {
-    destinatarioNombre = j.tecnico?.nombre ?? "—";
-    destinatarioRotulo = "Técnico";
-    emailDestinatario = j.tecnico?.email ?? null;
-  } else if (pagador === "propietario") {
-    destinatarioNombre = j.propiedades?.propietarios?.nombre ?? "—";
-    destinatarioRotulo = "Propietario";
-    emailDestinatario = j.propiedades?.propietarios?.email ?? null;
-  } else if (pagador === "inquilino" && g.legajo_id) {
+  let pagador = overrides?.pagador ?? g.pagador ?? null;
+  const propietario = {
+    nombre: j.propiedades?.propietarios?.nombre ?? "—",
+    email: j.propiedades?.propietarios?.email ?? null,
+  };
+  // STORY-962: si el legajo está cerrado el inquilino ya no habita — el
+  // documento cae al propietario (defensa por si una pestaña vieja llega acá).
+  let inq: { nombre: string; email: string | null } | null = null;
+  if ((pagador === "inquilino" || pagador === "compartido") && g.legajo_id) {
     const { data: legajo } = await admin
       .from("legajos")
       .select("fecha_fin, inquilinos(nombre, email)")
       .eq("id", g.legajo_id)
       .single();
-    // STORY-962: si el legajo está cerrado el inquilino ya no habita — el
-    // documento cae al propietario (defensa por si una pestaña vieja llega acá).
-    const inq =
+    inq =
       legajo && legajo.fecha_fin == null
         ? (legajo.inquilinos as unknown as { nombre: string; email: string } | null)
         : null;
-    if (inq) {
-      destinatarioNombre = inq.nombre ?? "—";
-      destinatarioRotulo = "Inquilino";
-      emailDestinatario = inq.email ?? null;
-    } else {
-      destinatarioNombre = j.propiedades?.propietarios?.nombre ?? "—";
-      destinatarioRotulo = "Propietario";
-      emailDestinatario = j.propiedades?.propietarios?.email ?? null;
-    }
+  }
+  if ((pagador === "inquilino" || pagador === "compartido") && !inq) {
+    pagador = "propietario";
+  }
+  if (tipo === "detalle") {
+    destinatarioNombre = j.tecnico?.nombre ?? "—";
+    destinatarioRotulo = "Técnico";
+    emailDestinatario = j.tecnico?.email ?? null;
+  } else if (pagador === "propietario") {
+    destinatarioNombre = propietario.nombre;
+    destinatarioRotulo = "Propietario";
+    emailDestinatario = propietario.email;
+  } else if (pagador === "inquilino" && inq) {
+    destinatarioNombre = inq.nombre ?? "—";
+    destinatarioRotulo = "Inquilino";
+    emailDestinatario = inq.email ?? null;
+  } else if (pagador === "compartido" && inq) {
+    // STORY-1031: el documento es UNO solo y va a los dos.
+    destinatarioNombre = `${inq.nombre} y ${propietario.nombre}`;
+    destinatarioRotulo = "Inquilino y propietario";
+    emailDestinatario = inq.email ?? null;
+    splitInquilino = inq;
+    envios = [
+      { nombre: inq.nombre, email: inq.email ?? null },
+      { nombre: propietario.nombre, email: propietario.email },
+    ];
+  }
+  if (envios.length === 0) {
+    envios = [{ nombre: destinatarioNombre, email: emailDestinatario }];
   }
 
   const cargoAdmin = Number(overrides?.cargoAdmin ?? g.cargo_admin ?? 0);
@@ -189,10 +216,30 @@ async function datosDocumento(
         ? Number(g.liq_monto ?? g.costo_final ?? 0)
         : Number(g.costo_final ?? 0) + cargoAdmin;
 
+  // STORY-1031: montos por parte, siempre derivados del total (redondeo a
+  // centavos; el propietario absorbe el resto — la suma da exacto el total).
+  const pctInquilino =
+    overrides?.pctInquilino ?? g.pagador_pct_inquilino ?? null;
+  const split =
+    splitInquilino && pctInquilino != null && total > 0
+      ? (() => {
+          const montoInquilino = Math.round(total * pctInquilino) / 100;
+          return {
+            pctInquilino,
+            inquilinoNombre: splitInquilino.nombre,
+            montoInquilino,
+            propietarioNombre: propietario.nombre,
+            montoPropietario: total - montoInquilino,
+          };
+        })()
+      : null;
+
   return {
     emailDestinatario,
+    envios,
     datos: {
       tipo,
+      split,
       // STORY-1009: el documento lleva el mismo número visible de la gestión
       numero: String(g.numero),
       // Detalle: la fecha del documento es la del pago real (no la de
@@ -273,8 +320,18 @@ async function errorPagador(
   const legajoVigente =
     g?.legajo_id != null &&
     (g.legajos as unknown as { fecha_fin: string | null } | null)?.fecha_fin == null;
-  if (efectivo === "inquilino" && !legajoVigente) {
+  // STORY-1031: compartido también necesita un inquilino habitando.
+  if ((efectivo === "inquilino" || efectivo === "compartido") && !legajoVigente) {
     return "La propiedad no tiene inquilino vigente — el pago solo puede ser del propietario.";
+  }
+  return null;
+}
+
+// STORY-1031: % del inquilino en un pago compartido — entero entre 1 y 99.
+function errorPctInquilino(pagador?: Pagador, pct?: number): string | null {
+  if (pagador !== "compartido") return null;
+  if (!Number.isInteger(pct) || pct! < 1 || pct! > 99) {
+    return "Indicá qué % paga el inquilino (entre 1 y 99).";
   }
   return null;
 }
@@ -296,32 +353,41 @@ export async function emitirNotaCobro(gestionId: string): Promise<ActionResult> 
   const doc = await datosDocumento(gestionId, "nota");
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
   if (!doc.datos.total) return { ok: false, error: "La gestión no tiene costo final." };
-  if (!doc.emailDestinatario) {
-    return { ok: false, error: "El pagador no tiene email cargado." };
+  // STORY-1031: con pago compartido la nota va a los DOS.
+  if (doc.envios.some((e) => !e.email)) {
+    return {
+      ok: false,
+      error:
+        doc.envios.length > 1
+          ? "Falta el email del inquilino o del propietario — con pago compartido la nota va a los dos."
+          : "El pagador no tiene email cargado.",
+    };
   }
 
   const pdf = await generarPDF(doc.datos);
-  await enviarEmailDocumento({
-    para: doc.emailDestinatario,
-    destinatario: doc.datos.destinatarioNombre,
-    asunto: doc.datos.cancelacion
-      ? `Cargo por cancelación — ${doc.datos.direccion}`
-      : `Nota de cobro — ${doc.datos.direccion}`,
-    titulo: doc.datos.cancelacion
-      ? "Nota de cobro por cancelación del trabajo"
-      : "Nota de cobro por trabajo de mantenimiento",
-    cuerpo: doc.datos.cancelacion
-      ? `Te enviamos el detalle del cargo por la cancelación del trabajo en ${doc.datos.direccion}. El documento adjunto tiene el importe acordado.`
-      : `Te enviamos el detalle del trabajo realizado en ${doc.datos.direccion}. El documento adjunto tiene el desglose completo.`,
-    tipo: "nota_cobro",
-    gestion_id: gestionId,
-    adjuntos: [
-      {
-        filename: `nota-cobro-${doc.datos.numero}.pdf`,
-        contentBase64: pdf,
-      },
-    ],
-  });
+  for (const destino of doc.envios) {
+    await enviarEmailDocumento({
+      para: destino.email!,
+      destinatario: destino.nombre,
+      asunto: doc.datos.cancelacion
+        ? `Cargo por cancelación — ${doc.datos.direccion}`
+        : `Nota de cobro — ${doc.datos.direccion}`,
+      titulo: doc.datos.cancelacion
+        ? "Nota de cobro por cancelación del trabajo"
+        : "Nota de cobro por trabajo de mantenimiento",
+      cuerpo: doc.datos.cancelacion
+        ? `Te enviamos el detalle del cargo por la cancelación del trabajo en ${doc.datos.direccion}. El documento adjunto tiene el importe acordado.`
+        : `Te enviamos el detalle del trabajo realizado en ${doc.datos.direccion}. El documento adjunto tiene el desglose completo.`,
+      tipo: "nota_cobro",
+      gestion_id: gestionId,
+      adjuntos: [
+        {
+          filename: `nota-cobro-${doc.datos.numero}.pdf`,
+          contentBase64: pdf,
+        },
+      ],
+    });
+  }
 
   const supabase = await createClient();
   const { error: errorMarca } = await supabase
@@ -374,7 +440,7 @@ export async function descargarDocumento(
 // PDF/email del presupuesto en su etapa (staff de mantenimiento).
 export async function descargarPresupuestoPDF(
   gestionId: string,
-  opciones?: { cargoAdmin?: number; pagador?: Pagador }
+  opciones?: { cargoAdmin?: number; pagador?: Pagador; pctInquilino?: number }
 ): Promise<ActionResult<DocumentoGenerado>> {
   const actual = await exigirMantenimiento(gestionId);
   if (!actual) return { ok: false, error: "No tenés permiso." };
@@ -383,6 +449,8 @@ export async function descargarPresupuestoPDF(
   }
   const errPagador = await errorPagador(gestionId, opciones?.pagador);
   if (errPagador) return { ok: false, error: errPagador };
+  const errPct = errorPctInquilino(opciones?.pagador, opciones?.pctInquilino);
+  if (errPct) return { ok: false, error: errPct };
 
   // Vista previa pura: fee y pagador tipeados viajan como override
   const doc = await datosDocumento(gestionId, "presupuesto", opciones);
@@ -407,7 +475,8 @@ export async function descargarPresupuestoPDF(
 export async function enviarPresupuestoEmail(
   gestionId: string,
   cargoAdmin?: number,
-  pagador?: Pagador
+  pagador?: Pagador,
+  pctInquilino?: number
 ): Promise<ActionResult> {
   const actual = await exigirMantenimiento(gestionId);
   if (!actual) return { ok: false, error: "No tenés permiso." };
@@ -416,37 +485,59 @@ export async function enviarPresupuestoEmail(
   }
   const errPagador = await errorPagador(gestionId, pagador);
   if (errPagador) return { ok: false, error: errPagador };
+  const errPct = errorPctInquilino(pagador, pctInquilino);
+  if (errPct) return { ok: false, error: errPct };
 
   // Enviar SÍ persiste: el pagador elegido y el fee quedan anclados a lo
   // que realmente se mandó (el email debe ir a quien se ve en pantalla)
   await guardarCargoAdmin(gestionId, cargoAdmin);
   if (pagador) {
     const admin = createAdminClient();
-    await admin.from("gestiones").update({ pagador }).eq("id", gestionId);
+    await admin
+      .from("gestiones")
+      .update({
+        pagador,
+        pagador_pct_inquilino: pagador === "compartido" ? pctInquilino : null,
+      })
+      .eq("id", gestionId);
   }
-  const doc = await datosDocumento(gestionId, "presupuesto", { cargoAdmin, pagador });
+  const doc = await datosDocumento(gestionId, "presupuesto", {
+    cargoAdmin,
+    pagador,
+    pctInquilino,
+  });
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
   if (!doc.datos.total) return { ok: false, error: "No hay presupuesto cargado." };
-  if (!doc.emailDestinatario) {
-    return { ok: false, error: "El destinatario no tiene email cargado." };
+  // STORY-1031: con pago compartido el documento va a los DOS — sin el email
+  // de alguna de las partes no se envía.
+  if (doc.envios.some((e) => !e.email)) {
+    return {
+      ok: false,
+      error:
+        doc.envios.length > 1
+          ? "Falta el email del inquilino o del propietario — con pago compartido el presupuesto va a los dos."
+          : "El destinatario no tiene email cargado.",
+    };
   }
 
   const pdf = await generarPDF(doc.datos);
-  await enviarEmailDocumento({
-    para: doc.emailDestinatario,
-    destinatario: doc.datos.destinatarioNombre,
-    asunto: `Presupuesto de obra — ${doc.datos.direccion}`,
-    titulo: "Presupuesto por trabajo de mantenimiento",
-    cuerpo: `Te enviamos el presupuesto por el trabajo a realizar en ${doc.datos.direccion}. El documento adjunto tiene el detalle completo.`,
-    tipo: "presupuesto",
-    gestion_id: gestionId,
-    adjuntos: [
-      {
-        filename: `presupuesto-${doc.datos.numero}.pdf`,
-        contentBase64: pdf,
-      },
-    ],
-  });
+  for (const destino of doc.envios) {
+    await enviarEmailDocumento({
+      para: destino.email!,
+      destinatario: destino.nombre,
+      asunto: `Presupuesto de obra — ${doc.datos.direccion}`,
+      titulo: "Presupuesto por trabajo de mantenimiento",
+      cuerpo: `Te enviamos el presupuesto por el trabajo a realizar en ${doc.datos.direccion}. El documento adjunto tiene el detalle completo.`,
+      tipo: "presupuesto",
+      gestion_id: gestionId,
+      adjuntos: [
+        {
+          filename: `presupuesto-${doc.datos.numero}.pdf`,
+          contentBase64: pdf,
+        },
+      ],
+    });
+  }
 
   // STORY-935: marca persistida del envío — habilita "Aprobar y ejecutar"
   // (sobrevive al refresh; el reenvío solo actualiza la fecha).
@@ -515,8 +606,15 @@ export async function enviarAmpliacionEmail(
   // cerrado cae al propietario — defensa STORY-962).
   const doc = await datosDocumento(gestionId, "presupuesto");
   if (!doc) return { ok: false, error: "Gestión no encontrada." };
-  if (!doc.emailDestinatario) {
-    return { ok: false, error: "El pagador no tiene email cargado." };
+  // STORY-1031: con pago compartido el aviso va a los DOS.
+  if (doc.envios.some((e) => !e.email)) {
+    return {
+      ok: false,
+      error:
+        doc.envios.length > 1
+          ? "Falta el email del inquilino o del propietario — con pago compartido la ampliación va a los dos."
+          : "El pagador no tiene email cargado.",
+    };
   }
 
   const monto = Number(amp.monto);
@@ -526,20 +624,22 @@ export async function enviarAmpliacionEmail(
     Number(g?.cargo_admin ?? 0);
   const plata = (v: number) => `$ ${v.toLocaleString("es-AR")}`;
 
-  await enviarEmailDocumento({
-    para: doc.emailDestinatario,
-    destinatario: doc.datos.destinatarioNombre,
-    asunto: `Ampliación de presupuesto — ${doc.datos.direccion}`,
-    titulo: "Ampliación del presupuesto aprobado",
-    cuerpo:
-      `Durante el trabajo en ${doc.datos.direccion} surgieron gastos no previstos: ${amp.motivo}. ` +
-      `El presupuesto que aprobaste fue de ${plata(aprobadoTotal)}; la ampliación solicitada es de ${plata(monto)} ` +
-      `y, si la autorizás, el nuevo total será ${plata(aprobadoTotal + monto)}. ` +
-      `Confirmá tu decisión con la inmobiliaria — el gasto extra no se realiza sin tu autorización.`,
-    tipo: "ampliacion",
-    gestion_id: gestionId,
-    adjuntos: [],
-  });
+  for (const destino of doc.envios) {
+    await enviarEmailDocumento({
+      para: destino.email!,
+      destinatario: destino.nombre,
+      asunto: `Ampliación de presupuesto — ${doc.datos.direccion}`,
+      titulo: "Ampliación del presupuesto aprobado",
+      cuerpo:
+        `Durante el trabajo en ${doc.datos.direccion} surgieron gastos no previstos: ${amp.motivo}. ` +
+        `El presupuesto que aprobaste fue de ${plata(aprobadoTotal)}; la ampliación solicitada es de ${plata(monto)} ` +
+        `y, si la autorizás, el nuevo total será ${plata(aprobadoTotal + monto)}. ` +
+        `Confirmá tu decisión con la inmobiliaria — el gasto extra no se realiza sin tu autorización.`,
+      tipo: "ampliacion",
+      gestion_id: gestionId,
+      adjuntos: [],
+    });
+  }
 
   await admin
     .from("ampliaciones")

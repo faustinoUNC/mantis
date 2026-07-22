@@ -51,6 +51,15 @@ export interface DatosDocumento {
   // STORY-977: adelanto de materiales ya entregado al técnico — solo en el
   // detalle de liquidación (nunca en la nota al pagador, no le corresponde verlo).
   adelantoMateriales?: number | null;
+  // STORY-1031: pago compartido — el total se reparte por % entre las partes
+  // (los montos vienen calculados, suman exacto el total). Solo nota/presupuesto.
+  split?: {
+    pctInquilino: number;
+    inquilinoNombre: string;
+    montoInquilino: number;
+    propietarioNombre: string;
+    montoPropietario: number;
+  } | null;
 }
 
 function monto(n: number) {
@@ -158,6 +167,19 @@ function Documento({ datos }: { datos: DatosDocumento }) {
             </Text>
             <Text style={s.totalTexto}>{monto(datos.total)}</Text>
           </View>
+          {datos.split && (
+            <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: "#e4e4e7" }}>
+              <Text style={s.label}>Gasto compartido</Text>
+              <View style={s.fila}>
+                <Text>Inquilino — {datos.split.inquilinoNombre} ({datos.split.pctInquilino}%)</Text>
+                <Text>{monto(datos.split.montoInquilino)}</Text>
+              </View>
+              <View style={s.fila}>
+                <Text>Propietario — {datos.split.propietarioNombre} ({100 - datos.split.pctInquilino}%)</Text>
+                <Text>{monto(datos.split.montoPropietario)}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {datos.plazoDias != null && (
