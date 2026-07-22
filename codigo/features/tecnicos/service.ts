@@ -522,7 +522,7 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
     supabase
       .from("tecnicos")
       .select(
-        "id, nombre, email, telefono, estado, email_verificado, motivo_rechazo, creado_en, tecnico_especialidades(especialidades(nombre))"
+        "id, nombre, email, telefono, estado, email_verificado, motivo_rechazo, en_vacaciones, creado_en, tecnico_especialidades(especialidades(nombre))"
       )
       // Una solicitud NUEVA sin email verificado todavía "no existe" para el
       // staff (STORY-955). Los reintentos tras rechazo (tienen motivo_rechazo,
@@ -544,6 +544,7 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
     estado: EstadoTecnico;
     email_verificado: boolean;
     motivo_rechazo: string | null;
+    en_vacaciones: boolean;
     creado_en: string;
     tecnico_especialidades: { especialidades: { nombre: string } | null }[];
   };
@@ -554,6 +555,7 @@ export async function listarTecnicos(): Promise<TecnicoResumen[]> {
     telefono: t.telefono,
     estado: t.estado,
     email_verificado: t.email_verificado,
+    en_vacaciones: t.en_vacaciones,
     creado_en: t.creado_en,
     especialidades: t.tecnico_especialidades
       .map((te) => te.especialidades?.nombre)
@@ -571,7 +573,7 @@ export async function obtenerTecnico(
   const { data: t } = await supabase
     .from("tecnicos")
     .select(
-      "id, nombre, email, telefono, cuil, estado, email_verificado, creado_en, motivo_rechazo, doc_dni_path, doc_matricula_paths, tecnico_especialidades(especialidad_id, especialidades(nombre))"
+      "id, nombre, email, telefono, cuil, estado, email_verificado, en_vacaciones, creado_en, motivo_rechazo, doc_dni_path, doc_matricula_paths, tecnico_especialidades(especialidad_id, especialidades(nombre))"
     )
     .eq("id", id)
     .single();
@@ -615,6 +617,7 @@ export async function obtenerTecnico(
     especialidades: tes.map((te) => te.especialidades?.nombre).filter(Boolean) as string[],
     especialidad_ids: tes.map((te) => te.especialidad_id),
     esta_activo: null,
+    en_vacaciones: t.en_vacaciones as boolean,
     docs,
   };
 }
@@ -934,6 +937,27 @@ export async function actualizarMiContacto(datos: {
   return { ok: true };
 }
 
+// STORY-1034: modo vacaciones auto-servicio. Solo frena solicitudes de
+// asignación nuevas — los trabajos ya aceptados siguen a cargo del técnico.
+export async function actualizarMisVacaciones(
+  enVacaciones: boolean
+): Promise<ActionResult> {
+  const actual = await obtenerUsuarioActual();
+  if (actual?.rol !== "tecnico") {
+    return { ok: false, error: "No tenés permiso para hacer esto." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("tecnicos")
+    .update({ en_vacaciones: enVacaciones })
+    .eq("id", actual.id);
+  if (error) return { ok: false, error: "No se pudo guardar." };
+
+  revalidatePath("/tecnico/perfil");
+  return { ok: true };
+}
+
 // Inhabilitar/habilitar técnicos también lo puede el gestor de mantenimiento
 // (la policy de usuarios es admin-only → admin client con rol-check).
 export async function cambiarEstadoTecnico(
@@ -1033,7 +1057,7 @@ export async function miPerfilTecnico() {
   const { data: t } = await supabase
     .from("tecnicos")
     .select(
-      "nombre, email, telefono, cuil, doc_dni_path, doc_matricula_paths, tecnico_especialidades(especialidades(nombre))"
+      "nombre, email, telefono, cuil, en_vacaciones, doc_dni_path, doc_matricula_paths, tecnico_especialidades(especialidades(nombre))"
     )
     .eq("id", user.id)
     .single();
@@ -1045,6 +1069,7 @@ export async function miPerfilTecnico() {
     email: t.email,
     telefono: t.telefono,
     cuil: t.cuil,
+    en_vacaciones: t.en_vacaciones as boolean,
     tiene_dni: Boolean(t.doc_dni_path),
     tiene_matricula: (t.doc_matricula_paths?.length ?? 0) > 0,
     especialidades: ((t.tecnico_especialidades as unknown as TE[]) ?? [])

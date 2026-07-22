@@ -11,6 +11,7 @@ export interface TecnicoResumen {
   email_verificado: boolean;
   especialidades: string[];
   esta_activo: boolean | null; // null = sin fila en usuarios (pendiente/rechazado)
+  en_vacaciones: boolean; // STORY-1034: lo prende/apaga el propio técnico
   creado_en: string; // fecha de registro/alta del técnico
 }
 

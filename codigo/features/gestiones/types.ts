@@ -241,4 +241,6 @@ export interface TecnicoDisponible {
   especialidades: string[];
   franjas: { dia_semana: number; hora_desde: string; hora_hasta: string }[];
   stats: StatsTecnico | null;
+  // STORY-1034: se muestra en el picker pero no se puede elegir.
+  en_vacaciones: boolean;
 }

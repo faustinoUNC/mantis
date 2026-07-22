@@ -612,12 +612,20 @@ function FilaTecnico({
   const otrasVisibles = otras.slice(0, MAX_OTRAS);
   const restoOtras = otras.length - otrasVisibles.length;
   const enCurso = s?.obrasActivas ?? 0;
+  // STORY-1034: de vacaciones = visible pero no seleccionable, para que el
+  // gestor sepa que el técnico existe y va a volver.
+  const deVacaciones = tecnico.en_vacaciones;
   return (
     <button
       type="button"
+      disabled={deVacaciones}
       onClick={onSelect}
       className={`relative w-full text-left px-3 py-2.5 transition-colors first:rounded-t-lg last:rounded-b-lg hover:z-10 ${
-        seleccionado ? "bg-brand-soft/40" : "hover:bg-surface-2"
+        deVacaciones
+          ? "opacity-55 cursor-not-allowed"
+          : seleccionado
+            ? "bg-brand-soft/40"
+            : "hover:bg-surface-2"
       }`}
     >
       <div className="flex items-center gap-2">
@@ -629,6 +637,11 @@ function FilaTecnico({
           {seleccionado && <span className="size-2 rounded-full bg-brand" />}
         </span>
         <span className="font-medium truncate min-w-0 flex-1">{tecnico.nombre}</span>
+        {deVacaciones && (
+          <span className="inline-flex items-center rounded-sm bg-urgente-soft px-1.5 py-0.5 text-[12px] font-medium text-urgente-fuerte shrink-0">
+            De vacaciones
+          </span>
+        )}
         <ConTooltip ayuda="Promedio de estrellas de sus trabajos." pos="abajo-der" className="shrink-0">
           <span
             className={`text-[13px] font-semibold ${
@@ -709,7 +722,10 @@ function AccionAsignar({
   tecnicos: TecnicoDisponible[];
 }) {
   const { error, cargando, correr } = useAccion();
-  const [elegido, setElegido] = useState(tecnicos[0]?.id ?? "");
+  // STORY-1034: los de vacaciones no son elegibles (vienen últimos del server).
+  const [elegido, setElegido] = useState(
+    tecnicos.find((t) => !t.en_vacaciones)?.id ?? ""
+  );
 
   if (gestion.tecnico_id && gestion.asignacion_aceptada === null) {
     // Salida si el técnico no responde: cancelar la solicitud y reelegir

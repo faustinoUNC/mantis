@@ -660,7 +660,7 @@ export async function tecnicosDisponibles(
   const { data } = await supabase
     .from("tecnicos")
     .select(
-      "id, nombre, estado, tecnico_especialidades!inner(especialidad_id), todas:tecnico_especialidades(especialidades(nombre)), franjas_disponibilidad(dia_semana, hora_desde, hora_hasta)"
+      "id, nombre, estado, en_vacaciones, tecnico_especialidades!inner(especialidad_id), todas:tecnico_especialidades(especialidades(nombre)), franjas_disponibilidad(dia_semana, hora_desde, hora_hasta)"
     )
     .eq("estado", "aprobado")
     .eq("tecnico_especialidades.especialidad_id", especialidadId);
@@ -675,6 +675,7 @@ export async function tecnicosDisponibles(
   type Fila = {
     id: string;
     nombre: string;
+    en_vacaciones: boolean;
     todas: { especialidades: { nombre: string } | null }[];
     franjas_disponibilidad: TecnicoDisponible["franjas"];
   };
@@ -691,10 +692,13 @@ export async function tecnicosDisponibles(
       .filter((n): n is string => Boolean(n)),
     franjas: t.franjas_disponibilidad ?? [],
     stats: stats.get(t.id) ?? null,
+    en_vacaciones: t.en_vacaciones,
   }));
   // STORY-987 v1.2: mejor calificados primero (los sin calificación quedan al
   // final); se desempata por nombre para un orden estable.
+  // STORY-1034: los de vacaciones van últimos — se ven pero no se eligen.
   return lista.sort((a, b) => {
+    if (a.en_vacaciones !== b.en_vacaciones) return a.en_vacaciones ? 1 : -1;
     const ea = a.stats?.estrellas ?? -1;
     const eb = b.stats?.estrellas ?? -1;
     if (eb !== ea) return eb - ea;
@@ -893,18 +897,25 @@ export async function asignarTecnico(
   if (!actual) return { ok: false, error: "Sin sesión." };
 
   const supabase = await createClient();
+  const { data: tecnicoAsignado } = await supabase
+    .from("tecnicos")
+    .select("nombre, en_vacaciones")
+    .eq("id", tecnicoId)
+    .single();
+  // STORY-1034: guard server-side por si la UI quedó desactualizada.
+  if (tecnicoAsignado?.en_vacaciones) {
+    return {
+      ok: false,
+      error: `${tecnicoAsignado.nombre} está de vacaciones — elegí otro técnico.`,
+    };
+  }
+
   // RLS: solo admin o gestor owner pueden actualizar la gestión.
   const { error } = await supabase
     .from("gestiones")
     .update({ tecnico_id: tecnicoId, asignacion_aceptada: null })
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo asignar." };
-
-  const { data: tecnicoAsignado } = await supabase
-    .from("tecnicos")
-    .select("nombre")
-    .eq("id", tecnicoId)
-    .single();
   await supabase.from("eventos_gestion").insert({
     gestion_id: gestionId,
     tipo: "asignacion_solicitada",

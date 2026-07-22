@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import {
   CambiarContrasena,
   ContactoPerfil,
+  VacacionesPerfil,
 } from "@/components/tecnicos/perfil-tecnico.client";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ export default async function PerfilTecnicoPage() {
 
       <Card className="divide-y divide-border">
         <ContactoPerfil email={perfil.email} telefono={perfil.telefono} />
+        <VacacionesPerfil enVacaciones={perfil.en_vacaciones} />
         <CambiarContrasena />
         <div className="px-4 py-3">
           <p className="text-[13px] font-medium text-muted">CUIL</p>

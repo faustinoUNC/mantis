@@ -59,9 +59,15 @@ function Fila({ tecnico }: { tecnico: TecnicoResumen }) {
         {tecnico.estado === "pendiente" && !tecnico.email_verificado ? (
           <Badge tono="neutro">Reintento — esperando verificación</Badge>
         ) : (
-          <Badge tono={inactivo ? "error" : TONO_ESTADO[tecnico.estado]}>
-            {inactivo ? "Inhabilitado" : LABEL_ESTADO[tecnico.estado]}
-          </Badge>
+          <div className="flex flex-wrap gap-1">
+            <Badge tono={inactivo ? "error" : TONO_ESTADO[tecnico.estado]}>
+              {inactivo ? "Inhabilitado" : LABEL_ESTADO[tecnico.estado]}
+            </Badge>
+            {/* STORY-1034: aviso de que el técnico no recibe solicitudes. */}
+            {tecnico.estado === "aprobado" && !inactivo && tecnico.en_vacaciones && (
+              <Badge tono="urgente">De vacaciones</Badge>
+            )}
+          </div>
         )}
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">

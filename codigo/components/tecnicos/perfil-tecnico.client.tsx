@@ -5,7 +5,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputPassword } from "@/components/ui/input-password.client";
-import { actualizarMiContacto } from "@/features/tecnicos/service";
+import {
+  actualizarMiContacto,
+  actualizarMisVacaciones,
+} from "@/features/tecnicos/service";
 import { createClient } from "@/shared/lib/supabase/client";
 import { errorTelefono } from "@/shared/utils/telefono";
 
@@ -108,6 +111,55 @@ export function ContactoPerfil({
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// STORY-1034: modo vacaciones auto-servicio. Con el modo activo la
+// inmobiliaria no puede mandarle solicitudes de asignación nuevas; los
+// trabajos ya aceptados siguen a su cargo.
+export function VacacionesPerfil({ enVacaciones }: { enVacaciones: boolean }) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  async function cambiar() {
+    setError(null);
+    setGuardando(true);
+    const r = await actualizarMisVacaciones(!enVacaciones);
+    setGuardando(false);
+    if (!r.ok) return setError(r.error);
+    router.refresh();
+  }
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium text-muted">Vacaciones</p>
+          <p className={`mt-0.5 ${enVacaciones ? "font-medium text-urgente-fuerte" : ""}`}>
+            {enVacaciones ? "Modo vacaciones activado" : "Desactivado"}
+          </p>
+        </div>
+        <Button
+          variante="fantasma"
+          disabled={guardando}
+          className="min-h-tap px-3 text-sm shrink-0"
+          onClick={cambiar}
+        >
+          {guardando ? "Guardando…" : enVacaciones ? "Desactivar" : "Activar"}
+        </Button>
+      </div>
+      <p className="mt-1.5 text-[13px] text-muted">
+        {enVacaciones
+          ? "No vas a recibir solicitudes de trabajo nuevas. Los trabajos que ya aceptaste siguen a tu cargo."
+          : "Activalo antes de irte para no recibir solicitudes de trabajo nuevas."}
+      </p>
+      {error && (
+        <p role="alert" className="mt-1.5 text-sm font-medium text-error">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
