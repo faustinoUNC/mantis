@@ -57,6 +57,10 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
   const ultimaConformidad = [...conformidades].sort((a, b) =>
     b.creado_en.localeCompare(a.creado_en)
   )[0];
+  // STORY-1035: el embed sobre FK UNIQUE puede venir objeto o array (STORY-919)
+  const calif = Array.isArray(g.calificaciones)
+    ? g.calificaciones[0]
+    : g.calificaciones;
   return {
     id: g.id as string,
     numero: g.numero as number,
@@ -76,6 +80,8 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     conformidad_rechazada: ultimaConformidad?.estado === "rechazada",
     desasignada_en: (g.desasignada_en as string | null) ?? null,
     aviso_no_continua_en: (g.aviso_no_continua_en as string | null) ?? null,
+    calificacion_pendiente:
+      g.etapa === "finalizado" && tecnico != null && calif == null,
     creado_en: g.creado_en as string,
     propiedad_id: g.propiedad_id as string,
     gestion_origen_id: (g.gestion_origen_id as string | null) ?? null,
@@ -91,7 +97,7 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
 // STORY-1001: origen (to-one por la columna) y vinculadas (to-many) son
 // self-embeds de gestiones — chip + hover del tablero y "Surgió de".
 const SELECT_RESUMEN =
-  "id, numero, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestor_id, propiedad_id, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
+  "id, numero, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestor_id, propiedad_id, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en), calificaciones(estrellas)";
 
 // STORY-938: igual que SELECT_RESUMEN pero con el contacto de propietario/
 // inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
@@ -163,6 +169,28 @@ export async function archivarGestion(
   if (!actual) return { ok: false, error: "Sin sesión." };
 
   const supabase = await createClient();
+
+  // STORY-1035: sin calificación no se archiva — archivada, la gestión sale
+  // del tablero y la calificación (que alimenta las métricas de calidad)
+  // queda olvidada. La RLS de calificaciones deja leer a los tres roles que
+  // pueden archivar. Sin técnico no hay a quién calificar: pasa.
+  if (archivar) {
+    const { data: g } = await supabase
+      .from("gestiones")
+      .select("tecnico_id, calificaciones(estrellas)")
+      .eq("id", gestionId)
+      .single();
+    const calif = Array.isArray(g?.calificaciones)
+      ? g?.calificaciones[0]
+      : g?.calificaciones;
+    if (g?.tecnico_id && !calif) {
+      return {
+        ok: false,
+        error: "Falta calificar al técnico — calificalo y después archivá.",
+      };
+    }
+  }
+
   const { data, error } = await supabase
     .from("gestiones")
     .update({ archivada_en: archivar ? new Date().toISOString() : null })

@@ -2031,17 +2031,23 @@ function AvisoNoContinuaBanner({ gestion }: { gestion: GestionDetalle }) {
 function ArchivarGestion({ gestion }: { gestion: GestionDetalle }) {
   const { error, cargando, correr } = useAccion();
   const archivada = Boolean(gestion.archivada_en);
+  // STORY-1035: sin calificar al técnico no se archiva (el server action
+  // también lo rechaza; esto es el espejo visual con la explicación).
+  const faltaCalificar =
+    !archivada && Boolean(gestion.tecnico_id) && !gestion.calificacion;
   return (
     <Card className="p-4 mt-4 border-dashed">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[13px] text-muted">
           {archivada
             ? "Archivada — no aparece en el tablero (está en Archivo)."
-            : "¿Ya está todo al día? Archivala para despejar el tablero."}
+            : faltaCalificar
+              ? "Antes de archivar, falta calificar al técnico — esa métrica alimenta los informes de calidad."
+              : "¿Ya está todo al día? Archivala para despejar el tablero."}
         </p>
         <Button
           variante="fantasma"
-          disabled={cargando}
+          disabled={cargando || faltaCalificar}
           onClick={() => correr(() => archivarGestion(gestion.id, !archivada))}
         >
           {archivada ? "Desarchivar" : "Archivar gestión"}

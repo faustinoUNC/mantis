@@ -125,6 +125,13 @@ function TarjetaGestion({
                 En pausa
               </Badge>
             )}
+            {/* STORY-1035: finalizada sin calificar al técnico — recordatorio;
+                sin la calificación no se puede archivar. */}
+            {gestion.calificacion_pendiente && (
+              <Badge tono="urgente" className="shrink-0 whitespace-nowrap">
+                Falta calificar
+              </Badge>
+            )}
             {/* STORY-1001: vinculada a otra gestión — el hover resalta la
                 contraparte; el title cuenta el vínculo aunque la otra ya no
                 esté en el tablero. */}

@@ -75,6 +75,10 @@ export interface GestionResumen {
   // la obra está en pausa para él (banner del gestor + badges). Lo limpia
   // cualquier transición del funnel o resolverAvisoTecnico().
   aviso_no_continua_en: string | null;
+  // STORY-1035: finalizada con técnico y sin calificación — badge recordatorio
+  // en el tablero; archivar está bloqueado hasta calificar. Solo confiable
+  // para los roles del tablero (la RLS no deja al técnico leer calificaciones).
+  calificacion_pendiente: boolean;
   creado_en: string;
   propiedad_id: string;
   // STORY-1001: vínculo con la gestión que la originó (trabajo adicional
