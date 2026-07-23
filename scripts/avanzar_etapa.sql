@@ -135,10 +135,14 @@ begin
 
   -- STORY-976: toda transición es una decisión del gestor que resuelve el
   -- aviso "no puedo continuar" — el campo no sobrevive a un cambio de etapa.
+  -- STORY-1041: cancelada => auto-archivado (queda en el Archivo, único punto
+  -- terminal — cubre sin cargo directo y con cargo vía cobro). El resto de las
+  -- etapas no toca archivada_en.
   update public.gestiones
     set etapa = p_nueva,
         aviso_no_continua_en = null,
-        aviso_no_continua_motivo = null
+        aviso_no_continua_motivo = null,
+        archivada_en = case when p_nueva = 'cancelada' then now() else archivada_en end
     where id = p_gestion;
   insert into public.eventos_gestion (gestion_id, tipo, de_etapa, a_etapa, actor_id, detalle)
   values (p_gestion, 'transicion', v_actual, p_nueva, v_uid, v_detalle);

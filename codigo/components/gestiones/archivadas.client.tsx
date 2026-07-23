@@ -36,6 +36,10 @@ function fechaCorta(f: string) {
 function TarjetaArchivada({ gestion }: { gestion: Archivada }) {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  // STORY-1041: las canceladas se auto-archivan (avanzar_etapa). No se
+  // desarchivan — no hay columna del tablero a la que volver y archivarGestion
+  // solo acepta finalizadas.
+  const cancelada = gestion.etapa === "cancelada";
 
   async function desarchivar() {
     setError(null);
@@ -63,16 +67,19 @@ function TarjetaArchivada({ gestion }: { gestion: Archivada }) {
       </Link>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted">
         <Badge tono="neutro">{gestion.especialidad}</Badge>
+        {cancelada && <Badge tono="neutro">Cancelada</Badge>}
         <span>Gestor: {gestion.gestor_nombre}</span>
         {gestion.tecnico_nombre && <span>Técnico: {gestion.tecnico_nombre}</span>}
       </div>
       <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-border/70">
         <span className="font-mono text-[12px] text-muted/80">
-          Archivada el {fechaCorta(gestion.archivada_en)}
+          {cancelada ? "Cancelada" : "Archivada"} el {fechaCorta(gestion.archivada_en)}
         </span>
-        <Button variante="fantasma" disabled={cargando} onClick={desarchivar}>
-          {cargando ? "Desarchivando…" : "Desarchivar"}
-        </Button>
+        {!cancelada && (
+          <Button variante="fantasma" disabled={cargando} onClick={desarchivar}>
+            {cargando ? "Desarchivando…" : "Desarchivar"}
+          </Button>
+        )}
       </div>
       {error && <p className="text-sm font-medium text-error">{error}</p>}
     </Card>
