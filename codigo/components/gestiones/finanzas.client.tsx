@@ -72,10 +72,27 @@ function plata(n: number) {
 }
 
 // STORY-975: formatea en vivo lo que se va tipeando (separador de miles),
-// manteniendo el estado interno como dígitos crudos — mismo criterio simple
+// manteniendo el estado interno como el texto crudo — mismo criterio simple
 // que "plata()", sin librerías de máscara de input.
-function formatearPesos(digitos: string) {
-  return digitos ? Number(digitos).toLocaleString("es-AR") : "";
+// STORY-1043: admite decimales con coma (es-AR) para el pago combinado
+// "mitad y mitad" con centavos. El punto es separador de miles y la coma el
+// decimal, así que conviven sin ambigüedad.
+function normalizarMonto(value: string) {
+  const limpio = value.replace(/[^\d,]/g, "");
+  const [entero, ...resto] = limpio.split(",");
+  if (resto.length === 0) return entero;
+  return `${entero},${resto.join("").slice(0, 2)}`;
+}
+
+function formatearPesos(raw: string) {
+  if (!raw) return "";
+  const [entero, decimales] = raw.split(",");
+  const enteroFmt = entero ? Number(entero).toLocaleString("es-AR") : "";
+  return decimales !== undefined ? `${enteroFmt},${decimales}` : enteroFmt;
+}
+
+function montoADecimal(raw: string) {
+  return Number(raw.replace(",", ".")) || 0;
 }
 
 // STORY-950: registrar el cobro con un solo medio (100%) o combinar 2 — el
@@ -109,7 +126,7 @@ function FormCobro({
   const [monto2, setMonto2] = useState("");
   const [recargoPct, setRecargoPct] = useState("");
 
-  const monto2Num = Number(monto2) || 0;
+  const monto2Num = montoADecimal(monto2);
   const monto1Num = Math.max(total - monto2Num, 0);
   const seExcede = combinado && monto2Num > 0 && monto2Num >= total;
   const mismoMedio = combinado && medio === medio2;
@@ -192,7 +209,7 @@ function FormCobro({
                 label="Monto medio 2"
                 inputMode="decimal"
                 value={formatearPesos(monto2)}
-                onChange={(e) => setMonto2(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => setMonto2(normalizarMonto(e.target.value))}
                 placeholder="0"
               />
             </div>
