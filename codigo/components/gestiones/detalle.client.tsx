@@ -2700,7 +2700,7 @@ export function DetalleGestion({
             <FinanzasAcciones gestion={gestion} />
           </div>
         )}
-        {gestion.etapa === "conformidad" && esAdministrativo && (
+        {gestion.etapa === "conformidad" && esAdministrativo && !esGestorOwner && (
           <p className="text-sm text-muted">
             Sin acciones para tu rol en esta etapa — interviene en Cobro, cuando se apruebe la conformidad.
           </p>
