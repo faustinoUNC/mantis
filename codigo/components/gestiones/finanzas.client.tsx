@@ -107,6 +107,10 @@ function FormCobro({
   onSubmit,
   // STORY-967: el cobro de una cancelación no va a Liquidación — el CTA no miente.
   cta = "Registrar cobro → Liquidación",
+  // STORY-1044: en el cobro por partes (pagador mixto) hay dos FormCobro que
+  // comparten `cargando` — cada uno se anima solo si su propia clave está en
+  // vuelo, no cualquier "cobro".
+  claveCarga = "cobro",
 }: {
   total: number;
   pagador?: string | null;
@@ -119,6 +123,7 @@ function FormCobro({
     recargoPct?: number;
   }) => void;
   cta?: string;
+  claveCarga?: string;
 }) {
   const [combinado, setCombinado] = useState(false);
   const [medio, setMedio] = useState<MedioCobro>("transferencia");
@@ -232,7 +237,7 @@ function FormCobro({
           type="submit"
           disabled={cargando !== null || seExcede || mismoMedio || (combinado && monto2Num <= 0)}
         >
-          {cargando === "cobro" ? "Registrando…" : cta}
+          {cargando === claveCarga ? "Registrando…" : cta}
         </Button>
       </div>
 
@@ -487,9 +492,12 @@ function CobroPorPartes({
                 total={monto}
                 pagador={parte}
                 cargando={cargando}
+                claveCarga={`cobro:${parte}`}
                 error={error}
                 onSubmit={(datos) =>
-                  correr("cobro", () => registrarCobro(gestion.id, { ...datos, parte }))
+                  correr(`cobro:${parte}`, () =>
+                    registrarCobro(gestion.id, { ...datos, parte })
+                  )
                 }
                 cta={
                   faltaUna
