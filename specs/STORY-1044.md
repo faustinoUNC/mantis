@@ -42,7 +42,7 @@ Es solo visual (cada cobro se registra por separado y correcto, con su `parte`),
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente)_
+- **Commit:** `f064925` (2026-07-23). Sin migración (fix 100% cliente, solo visual).
 - **Archivos:**
   - `codigo/components/gestiones/finanzas.client.tsx`: prop `claveCarga` en `FormCobro` (default `"cobro"`, usada en el texto del botón); `CobroPorPartes` pasa `` `cobro:${parte}` `` en `claveCarga` y en `correr(...)`.
 - **Verificación:**
