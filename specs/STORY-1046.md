@@ -47,7 +47,7 @@ Dos cómputos **gemelos** del desvío (misma fórmula STORY-937), mismo gate en 
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de commit)_. Sin migración de DB.
+- **Commit:** `24ed58d` (2026-07-23). Sin migración de DB.
 - **Archivos:**
   - `codigo/components/metricas/panel-metricas.client.tsx`: en el `useMemo desvio` (card "Desvíos de presupuesto"), gate `if (!f.conformidades.includes("aprobada")) continue;` antes de acumular. La fila ya traía `f.conformidades`; sin tocar queries. La métrica de plazo (`desvioPlazo`) es un `useMemo` aparte → no afectada.
   - `codigo/features/gestiones/service.ts` (`estadisticasTecnicos`, desvío del picker/ranking Walter): SELECT de `gestiones` suma `conformidades(estado)`; tipo `GFila` suma `conformidades: { estado: string }[] | null`; en el loop, `real = !conformidadAprobada ? null : …` (gate por conformidad aprobada **envolviendo solo el desvío**, sin `continue`, para no gatear por error el cómputo de plazo que corre en el mismo loop).
