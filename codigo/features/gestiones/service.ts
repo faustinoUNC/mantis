@@ -52,6 +52,7 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
   const gestor = g.gestor as { nombre: string; rol: Rol } | null;
   const tecnico = g.tecnico as { nombre: string } | null;
   const presupuestos = (g.presupuestos as { estado: string }[] | null) ?? [];
+  const ampliaciones = (g.ampliaciones as { estado: string }[] | null) ?? [];
   const conformidades =
     (g.conformidades as { estado: string; creado_en: string }[] | null) ?? [];
   const ultimaConformidad = [...conformidades].sort((a, b) =>
@@ -77,6 +78,9 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     tecnico_nombre: tecnico?.nombre ?? null,
     asignacion_aceptada: (g.asignacion_aceptada as boolean | null) ?? null,
     presupuesto_pendiente: presupuestos.some((p) => p.estado === "enviado"),
+    // STORY-1042: hay una ampliación esperando respuesta del pagador — badge
+    // en la card (tablero + mis trabajos) y candado del "terminar" del técnico.
+    ampliacion_pendiente: ampliaciones.some((a) => a.estado === "enviada"),
     conformidad_rechazada: ultimaConformidad?.estado === "rechazada",
     desasignada_en: (g.desasignada_en as string | null) ?? null,
     aviso_no_continua_en: (g.aviso_no_continua_en as string | null) ?? null,
@@ -97,7 +101,7 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
 // STORY-1001: origen (to-one por la columna) y vinculadas (to-many) son
 // self-embeds de gestiones — chip + hover del tablero y "Surgió de".
 const SELECT_RESUMEN =
-  "id, numero, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestor_id, propiedad_id, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en), calificaciones(estrellas)";
+  "id, numero, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestor_id, propiedad_id, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, propietarios(nombre)), legajos(fecha_fin, inquilinos(nombre)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), ampliaciones(estado), conformidades(estado, creado_en), calificaciones(estrellas)";
 
 // STORY-938: igual que SELECT_RESUMEN pero con el contacto de propietario/
 // inquilino — solo para el detalle (obtenerGestion), el tablero no lo necesita.
@@ -1497,6 +1501,29 @@ export async function subirConformidad(
   // en_ejecucion — el rechazo de una conformidad no mueve el funnel (Regla #0),
   // así que la resubida NO vuelve a llamar avanzar_etapa.
   const terminando = ctx.gestion.etapa === "en_ejecucion";
+
+  // STORY-1042: no se termina la obra con una ampliación de presupuesto
+  // esperando respuesta del pagador — la inmobiliaria tiene que resolverla
+  // antes de cerrar. Solo al TERMINAR (las ampliaciones solo viven en
+  // en_ejecucion); el índice único garantiza a lo sumo una `enviada` por
+  // gestión. Gate autoritativo: la UI ya deshabilita el botón, esto cubre
+  // refresh y carreras.
+  if (terminando) {
+    const { data: ampPendiente } = await supabaseCheck
+      .from("ampliaciones")
+      .select("id")
+      .eq("gestion_id", gestionId)
+      .eq("estado", "enviada")
+      .limit(1)
+      .maybeSingle();
+    if (ampPendiente) {
+      return {
+        ok: false,
+        error:
+          "Tenés una ampliación de presupuesto esperando respuesta del pagador — no podés terminar la obra hasta que la resuelvan.",
+      };
+    }
+  }
 
   // STORY-934/964/965/1006: para TERMINAR la obra el técnico rinde UN solo
   // número — el total real gastado en la obra — más las fotos de los

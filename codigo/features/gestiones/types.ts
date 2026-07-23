@@ -66,6 +66,10 @@ export interface GestionResumen {
   asignacion_aceptada: boolean | null;
   // Para que la lista muestre el MISMO estado que el detalle (CTA del técnico)
   presupuesto_pendiente: boolean;
+  // STORY-1042: hay una ampliación de presupuesto esperando respuesta del
+  // pagador (estado 'enviada'). Badge "Ampliación" en la card y, para el
+  // técnico, candado del "terminar y subir conformidad" hasta que se resuelva.
+  ampliacion_pendiente: boolean;
   conformidad_rechazada: boolean;
   // STORY-966: marca explícita de "volvió a asignación con técnico previo" —
   // se setea al desasignar y se limpia cuando un técnico ACEPTA (badge del

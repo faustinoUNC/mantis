@@ -86,6 +86,9 @@ function TarjetaAccion({ g, cta }: { g: GestionResumen; cta: string }) {
         <div className="flex items-center gap-2">
           <Badge tono="neutro">{g.especialidad}</Badge>
           {g.urgencia === "urgente" && <Badge tono="urgente">Urgente</Badge>}
+          {/* STORY-1042: ampliación esperando respuesta del pagador — le
+              recuerda al técnico por qué no puede terminar todavía. */}
+          {g.ampliacion_pendiente && <Badge tono="urgente">Ampliación</Badge>}
           <span className="ml-auto font-mono text-[12px] text-muted shrink-0">
             #{g.numero} · {hace(g.creado_en)}
           </span>

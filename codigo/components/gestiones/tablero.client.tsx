@@ -125,6 +125,15 @@ function TarjetaGestion({
                 En pausa
               </Badge>
             )}
+            {/* STORY-1042: el técnico pidió una ampliación de presupuesto que
+                el gestor todavía tiene que evaluar (enviar al pagador /
+                registrar la autorización). Badge corto para la columna
+                angosta, mismo tono de "atención" que los demás. */}
+            {gestion.ampliacion_pendiente && (
+              <Badge tono="urgente" className="shrink-0 whitespace-nowrap">
+                Ampliación
+              </Badge>
+            )}
             {/* STORY-1035: finalizada sin calificar al técnico — recordatorio;
                 sin la calificación no se puede archivar. */}
             {gestion.calificacion_pendiente && (

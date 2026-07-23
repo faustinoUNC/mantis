@@ -1510,6 +1510,12 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
   );
   const esperando = ultima?.estado === "subida";
   const terminando = gestion.etapa === "en_ejecucion";
+  // STORY-1042: no se termina la obra con una ampliación de presupuesto
+  // esperando la autorización del pagador — la inmobiliaria la resuelve antes
+  // de cerrar. Solo frena el TERMINAR (las ampliaciones viven en en_ejecucion);
+  // el server valida lo mismo. El índice único garantiza a lo sumo una.
+  const ampliacionPendiente =
+    terminando && gestion.ampliaciones.some((a) => a.estado === "enviada");
   // STORY-934/964/965/1006: al TERMINAR la obra se rinde el total real
   // gastado + las fotos de los comprobantes (una por ticket). La resubida de
   // una conformidad rechazada TAMBIÉN lo vuelve a pedir — el rechazo puede
@@ -1573,7 +1579,17 @@ function AccionConformidadTecnico({ gestion }: { gestion: GestionDetalle }) {
           Registrá al menos una nota de avance (arriba) antes de terminar la obra.
         </p>
       )}
-      <Button type="submit" disabled={cargando || sinAvance} className="self-start">
+      {ampliacionPendiente && (
+        <p className="text-sm text-urgente-fuerte bg-urgente-soft border border-urgente-soft-border rounded-md px-3 py-2">
+          Pediste una ampliación de presupuesto — no podés terminar la obra
+          hasta que el pagador la autorice o la rechace.
+        </p>
+      )}
+      <Button
+        type="submit"
+        disabled={cargando || sinAvance || ampliacionPendiente}
+        className="self-start"
+      >
         {ultima?.estado === "rechazada"
           ? "Volver a enviar →"
           : terminando
