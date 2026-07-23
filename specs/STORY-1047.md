@@ -61,7 +61,7 @@ El pagador del cargo por cancelación se **elige explícito e independiente** de
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente — sin commitear)_
+- **Commit:** `d06c4ec` (2026-07-23).
 - **Migración:** `story_1047_cargo_cancelacion_pagador` aplicada — columna `gestiones.cargo_cancelacion_pagador public.pagador_gestion` + `CHECK (… IN ('inquilino','propietario'))`. Sin backfill.
 - **Archivos:**
   - `features/gestiones/types.ts`: `GestionDetalle.cargo_cancelacion_pagador: Pagador | null`.
