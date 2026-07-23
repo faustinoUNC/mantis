@@ -55,6 +55,7 @@ Además, hoy **nada en la card de la gestión** avisa que se pidió una ampliaci
   - `codigo/components/gestiones/detalle.client.tsx`: `AccionConformidadTecnico` calcula `ampliacionPendiente` (solo `terminando`), muestra cartel ámbar y deshabilita "Terminar y subir conformidad".
   - `codigo/components/gestiones/tablero.client.tsx`: badge `<Badge tono="urgente">Ampliación</Badge>` en la card del gestor.
   - `codigo/components/gestiones/mis-trabajos.client.tsx`: mismo badge en `TarjetaAccion` (card del técnico).
+- **Fix realtime (follow-up):** el badge no aparecía en vivo — el tablero y Mis trabajos solo suscribían `<RefrescoVivo tabla="gestiones" />`, y un INSERT en `ampliaciones` no toca `gestiones`, así que no disparaba `router.refresh()` (el detalle sí funcionaba porque ya suscribe `ampliaciones`). Se agrega `<RefrescoVivo tabla="ampliaciones" />` (sin filtro; la RLS limita las filas) en `tablero.client.tsx` y `mis-trabajos.client.tsx`. `ampliaciones` ya está en la publicación `supabase_realtime`.
 - **Verificación:**
-  - `tsc --noEmit` y `eslint` verdes sobre los 5 archivos tocados.
+  - `tsc --noEmit` y `eslint` verdes sobre los archivos tocados.
   - Click-through en la app pendiente (card de Trello para Giuli).

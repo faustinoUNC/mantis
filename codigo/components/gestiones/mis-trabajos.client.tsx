@@ -395,6 +395,10 @@ export function MisTrabajos({
           le crea el service. También cubre el rechazo de presupuesto, que
           solo toca la tabla presupuestos. */}
       <RefrescoVivo tabla="notificaciones" filtro={`usuario_id=eq.${usuarioId}`} />
+      {/* STORY-1042: el badge "Ampliación" depende de la tabla ampliaciones,
+          que no toca gestiones — sin esto el técnico no lo ve aparecer hasta
+          recargar. La RLS limita qué filas disparan a cada suscriptor. */}
+      <RefrescoVivo tabla="ampliaciones" />
       <p className="text-[13px] font-medium text-muted">{fecha}</p>
       <h1 className="text-2xl font-semibold tracking-tight mt-0.5">
         Hola, {nombre.split(" ")[0]}

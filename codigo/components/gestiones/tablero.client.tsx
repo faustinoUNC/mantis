@@ -344,6 +344,10 @@ export function Tablero({
   return (
     <div className="animate-aparecer">
       <RefrescoVivo tabla="gestiones" />
+      {/* STORY-1042: el badge "Ampliación" depende de la tabla ampliaciones,
+          que no toca gestiones — sin esto el badge no aparece hasta recargar.
+          La RLS limita qué filas disparan a cada suscriptor. */}
+      <RefrescoVivo tabla="ampliaciones" />
       <div className="mb-5">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight">Tablero</h1>
