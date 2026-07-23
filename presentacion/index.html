@@ -1993,7 +1993,6 @@
   #sysmapSvg { width: 100%; height: 100%; display: block; }
   #sysmapSvg .sm-node { cursor: grab; transition: opacity 0.25s; }
   #sysmapSvg .sm-node:active { cursor: grabbing; }
-  #sysmapSvg .sm-link { transition: opacity 0.25s, stroke 0.25s; }
   #sysmapSvg text { pointer-events: none; user-select: none; }
   .sysmap-legend {
     position: absolute; bottom: 10px; left: 14px;
@@ -3514,7 +3513,7 @@
         <div class="sysmap-info" id="sysmapInfo">
           <div class="si-kicker">9 módulos · un solo flujo</div>
           <h3>Todo conectado</h3>
-          <p class="si-desc">Cada nodo es un módulo real del sistema; su tamaño refleja el peso que tiene en la operación diaria. Las líneas son información que fluye: un reclamo entra por el Inbox, se vuelve gestión, moviliza técnicos y dinero — y cada movimiento queda registrado.</p>
+          <p class="si-desc">Cada nodo es un módulo real del sistema; su tamaño refleja el peso que tiene en la operación diaria. Un reclamo entra por el Inbox, se vuelve gestión, moviliza técnicos y dinero — y cada movimiento queda registrado.</p>
           <div class="sysmap-conns">
             <div class="sc-label">Para explorar</div>
             <div class="sysmap-conn">Pasá el mouse por un nodo para ver <strong>qué hace y con quién se conecta</strong>.</div>
@@ -3525,7 +3524,7 @@
 
       <div class="sysmap-svg-wrap">
         <svg id="sysmapSvg" viewBox="0 0 960 640" preserveAspectRatio="xMidYMid meet"></svg>
-        <div class="sysmap-legend">Tamaño = peso en la operación · línea = flujo de información</div>
+        <div class="sysmap-legend">Tamaño = peso en la operación</div>
       </div>
     </div>
 
@@ -5717,13 +5716,6 @@
     const smSvg = d3.select('#sysmapSvg');
     const INK = '#0A0A0A', MANTIS = '#059669', FADED = '#737373';
 
-    const linkSel = smSvg.append('g').selectAll('line')
-      .data(smLinks).join('line')
-      .attr('class', 'sm-link')
-      .attr('stroke', INK)
-      .attr('stroke-opacity', 0.22)
-      .attr('stroke-width', d => d.w);
-
     const nodeSel = smSvg.append('g').selectAll('g')
       .data(SM_NODES).join('g')
       .attr('class', 'sm-node');
@@ -5786,11 +5778,6 @@
         const o = smOff(d, i);
         return `translate(${d.x + o.x}, ${d.y + o.y})`;
       });
-      linkSel
-        .attr('x1', d => d.source.x + smOff(d.source, SM_NODES.indexOf(d.source)).x)
-        .attr('y1', d => d.source.y + smOff(d.source, SM_NODES.indexOf(d.source)).y)
-        .attr('x2', d => d.target.x + smOff(d.target, SM_NODES.indexOf(d.target)).x)
-        .attr('y2', d => d.target.y + smOff(d.target, SM_NODES.indexOf(d.target)).y);
     }
 
     // ── Drag con retorno al ancla ──
@@ -5806,10 +5793,6 @@
     function smActivate(d) {
       const conns = smLinks.filter(l => l.source === d || l.target === d);
       nodeSel.style('opacity', n => (n === d || conns.some(l => l.source === n || l.target === n)) ? 1 : 0.18);
-      linkSel
-        .style('opacity', l => conns.includes(l) ? 1 : 0.08)
-        .attr('stroke', l => conns.includes(l) ? MANTIS : INK)
-        .attr('stroke-opacity', l => conns.includes(l) ? 0.8 : 0.22);
       nodeSel.select('.sm-halo').attr('stroke-opacity', n => n === d ? 0.9 : 0);
 
       smInfo.innerHTML =
@@ -5826,7 +5809,6 @@
 
     function smReset() {
       nodeSel.style('opacity', 1);
-      linkSel.style('opacity', 1).attr('stroke', INK).attr('stroke-opacity', 0.22);
       nodeSel.select('.sm-halo').attr('stroke-opacity', 0);
       smInfo.innerHTML = smInfoDefault;
     }
