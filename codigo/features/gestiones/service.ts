@@ -77,11 +77,23 @@ function normalizarFila(g: Record<string, unknown>): GestionResumen {
     gestor_nombre: gestor?.nombre ?? "—",
     tecnico_nombre: tecnico?.nombre ?? null,
     asignacion_aceptada: (g.asignacion_aceptada as boolean | null) ?? null,
-    presupuesto_pendiente: presupuestos.some((p) => p.estado === "enviado"),
+    // STORY-1045: los flags derivados de tablas hijas se acotan por etapa EN EL
+    // ORIGEN (igual que calificacion_pendiente), para que no sobrevivan a su
+    // etapa. Una fila hija que quedó pendiente (p. ej. una ampliación 'enviada'
+    // sin resolver, o un presupuesto 'enviado' al cancelar) no se resetea al
+    // cambiar de etapa; sin esta guarda el badge se pisa con el de la etapa real
+    // y el asistente cuenta gestiones cerradas como "esperando decisión".
+    presupuesto_pendiente:
+      g.etapa === "presupuesto" &&
+      presupuestos.some((p) => p.estado === "enviado"),
     // STORY-1042: hay una ampliación esperando respuesta del pagador — badge
     // en la card (tablero + mis trabajos) y candado del "terminar" del técnico.
-    ampliacion_pendiente: ampliaciones.some((a) => a.estado === "enviada"),
-    conformidad_rechazada: ultimaConformidad?.estado === "rechazada",
+    // Las ampliaciones solo viven en en_ejecucion (crearAmpliacion lo exige).
+    ampliacion_pendiente:
+      g.etapa === "en_ejecucion" &&
+      ampliaciones.some((a) => a.estado === "enviada"),
+    conformidad_rechazada:
+      g.etapa === "conformidad" && ultimaConformidad?.estado === "rechazada",
     desasignada_en: (g.desasignada_en as string | null) ?? null,
     aviso_no_continua_en: (g.aviso_no_continua_en as string | null) ?? null,
     calificacion_pendiente:

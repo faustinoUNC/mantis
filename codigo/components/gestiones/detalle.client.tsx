@@ -2553,7 +2553,12 @@ export function DetalleGestion({
         {gestion.aviso_no_continua_en && (
           <Badge tono="urgente">Técnico no continúa</Badge>
         )}
-        {gestion.urgencia === "urgente" && <Badge tono="urgente">Urgente</Badge>}
+        {/* STORY-1045: Urgente no se muestra en estados terminales — la
+            urgencia de un trabajo ya cerrado no es accionable. */}
+        {gestion.urgencia === "urgente" &&
+          !ETAPAS_TERMINALES.has(gestion.etapa) && (
+            <Badge tono="urgente">Urgente</Badge>
+          )}
         <Badge tono="neutro">{gestion.especialidad}</Badge>
         {gestion.archivada_en && <Badge tono="neutro">Archivada</Badge>}
       </div>

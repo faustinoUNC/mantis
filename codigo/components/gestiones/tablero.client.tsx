@@ -104,17 +104,28 @@ function TarjetaGestion({
           {gestion.descripcion}
         </p>
         <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border/70">
-          <div className="flex items-center gap-1.5 min-w-0">
+          {/* STORY-1045: flex-wrap para que ningún badge se clippee cuando
+              conviven varios; todos con shrink-0/whitespace-nowrap para que se
+              comporten igual (antes Urgente/Reasignar no lo tenían). */}
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
             <span className="text-[12px] font-medium text-muted truncate">
               {gestion.especialidad}
             </span>
-            {gestion.urgencia === "urgente" && (
-              <Badge tono="urgente">Urgente</Badge>
-            )}
+            {/* STORY-1045: la urgencia describe trabajo pendiente; en estados
+                terminales (finalizado/cancelada) ya no es accionable y solo le
+                roba renglón a "Falta calificar". */}
+            {gestion.urgencia === "urgente" &&
+              !ETAPAS_TERMINALES.has(gestion.etapa) && (
+                <Badge tono="urgente" className="shrink-0 whitespace-nowrap">
+                  Urgente
+                </Badge>
+              )}
             {/* STORY-966: volvió a Asignación con técnico previo (baja,
                 abandono o reasignación) — hay que reasignar cuanto antes. */}
             {gestion.etapa === "asignacion" && gestion.desasignada_en && (
-              <Badge tono="urgente">Reasignar</Badge>
+              <Badge tono="urgente" className="shrink-0 whitespace-nowrap">
+                Reasignar
+              </Badge>
             )}
             {/* STORY-976: el técnico avisó que no puede continuar — la obra
                 está en pausa hasta que el gestor decida. STORY-1016: badge corto
