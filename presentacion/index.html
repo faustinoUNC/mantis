@@ -342,48 +342,115 @@
     background: var(--paper);
     border: 2px solid var(--ink);
     box-shadow: 12px 12px 0 var(--ink);
-    max-width: 560px;
-    width: 90%;
-    padding: 36px 40px 32px;
+    max-width: 720px;
+    width: 92%;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 40px 44px 36px;
     position: relative;
     animation: modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
   }
   .foda-modal-badge {
     display: inline-block;
-    font-size: 9px;
+    font-size: 13px;
     font-weight: 800;
     letter-spacing: 0.12em;
-    padding: 3px 10px;
+    padding: 5px 14px;
     border-radius: 3px;
-    margin-bottom: 10px;
+    margin-bottom: 16px;
   }
   .foda-modal-badge.deb { background: rgba(234,88,12,0.12); color: rgb(194,65,12); }
   .foda-modal-badge.ame { background: rgba(185,28,28,0.1); color: rgb(153,27,27); }
-  .foda-modal-title { font-size: 18px; font-weight: 800; color: var(--ink); margin-bottom: 20px; line-height: 1.3; }
+  .foda-modal-badge.fort, .foda-modal-badge.opo { background: var(--mantis-soft); color: var(--mantis-deep); }
+  .foda-modal-title { font-family: var(--display); font-size: 32px; font-weight: 700; color: var(--ink); margin-bottom: 24px; line-height: 1.2; letter-spacing: -0.02em; }
+  .foda-modal-item { margin-bottom: 26px; padding-bottom: 26px; border-bottom: 1px solid rgba(0,0,0,0.1); }
+  .foda-modal-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .foda-modal-item-title { font-size: 20px; font-weight: 800; color: var(--ink); margin-bottom: 14px; line-height: 1.35; }
   .foda-modal-section-label {
-    font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--ink-faded);
-    margin-bottom: 8px; margin-top: 16px;
+    margin-bottom: 10px; margin-top: 18px;
   }
   .foda-modal-strats { list-style: none; padding: 0; margin: 0; }
   .foda-modal-strats li {
-    padding: 8px 0 8px 16px;
+    padding: 10px 0 10px 18px;
     border-left: 3px solid var(--mantis);
-    font-size: 13px; line-height: 1.55; color: var(--ink-soft);
-    margin-bottom: 6px;
+    font-size: 17px; line-height: 1.55; color: var(--ink-soft);
+    margin-bottom: 8px;
   }
-  .foda-modal-detail { margin-top: 12px; }
+  .foda-modal-detail { margin-top: 14px; }
   .foda-modal-detail-item {
-    font-size: 11px; color: var(--ink-faded);
-    padding: 4px 8px; background: rgba(0,0,0,0.03);
-    border-radius: 4px; margin-bottom: 4px;
+    font-size: 15px; color: var(--ink-faded);
+    padding: 6px 10px; background: rgba(0,0,0,0.03);
+    border-radius: 4px; margin-bottom: 6px;
   }
   .foda-modal-result {
-    margin-top: 16px; padding: 10px 14px;
+    margin-top: 18px; padding: 12px 16px;
     background: rgba(21,128,61,0.06);
     border-left: 3px solid rgba(21,128,61,0.5);
-    font-size: 11px; color: var(--ink-soft); border-radius: 0 4px 4px 0;
+    font-size: 15px; color: var(--ink-soft); border-radius: 0 4px 4px 0;
   }
+
+  /* ─── Zoom modal genérico · lectura proyector para texto chico ─── */
+  .zoom-clickable { cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; }
+  .zoom-clickable:hover { box-shadow: 5px 5px 0 var(--mantis); transform: translateY(-2px); }
+  .zoom-hint {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--ink-faded);
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+  }
+  .zoom-hint::before { content: '⤢'; font-size: 13px; color: var(--mantis); }
+  #zoomModal { z-index: 10002; }
+  .zoom-modal-inner {
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: 14px 14px 0 var(--ink);
+    max-width: 760px;
+    width: 92%;
+    padding: 44px 48px 40px;
+    position: relative;
+    animation: modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
+  .zoom-modal-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 12px; font-weight: 800; letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 12px; border-radius: 3px;
+    margin-bottom: 16px;
+    background: var(--mantis-soft); color: var(--mantis-deep);
+  }
+  .zoom-modal-eyebrow {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ink-faded);
+    margin-bottom: 14px;
+  }
+  .zoom-modal-title {
+    font-family: var(--display); font-size: 34px; font-weight: 700;
+    color: var(--ink); line-height: 1.15; letter-spacing: -0.02em;
+    margin-bottom: 18px;
+  }
+  .zoom-modal-body { font-size: 21px; line-height: 1.55; color: var(--ink-soft); }
+  .zoom-modal-body strong, .zoom-modal-body em { color: var(--ink); font-style: normal; font-weight: 700; }
+  .zoom-modal-body p + p { margin-top: 14px; }
+  .zoom-modal-body ul { list-style: none; padding: 0; margin: 0; }
+  .zoom-modal-body li { padding: 10px 0 10px 18px; border-left: 3px solid var(--mantis); margin-bottom: 10px; }
+  .zoom-modal-body li:last-child { margin-bottom: 0; }
+  .zoom-modal-body .chip {
+    display: inline-block;
+    padding: 4px 11px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    background: var(--paper-2);
+    border: 1px solid var(--ink);
+    margin: 3px 6px 3px 0;
+    color: var(--ink);
+  }
+  .zoom-modal-body .chip-blue { background: var(--mantis-soft); color: var(--mantis-deep); border-color: var(--mantis); }
+  .zoom-modal-body .chip-warm { background: var(--warm-soft); color: #9A3412; border-color: var(--warm); }
+  .zoom-modal-body .chip-success { background: var(--success-soft); color: #14532D; border-color: var(--success); }
 
   /* ─────────── Stack logos ─────────── */
   .stack-grid {
@@ -2190,9 +2257,10 @@
           Inmobiliaria cordobesa que administra, vende y alquila inmuebles. Nuestro trabajo se enfoca en el <strong style="color: var(--ink);">área de mantenimiento</strong>: el equipo que resuelve los reclamos que aparecen en las propiedades que gestiona.
         </p>
 
-        <p style="margin-top: 26px; padding: 14px 18px; background: var(--paper-2); border-left: 4px solid var(--mantis); font-size: 15px; line-height: 1.45; color: var(--ink); max-width: 620px;">
+        <p class="zoom-clickable" data-zoom="diseno-clave" style="margin-top: 26px; padding: 14px 18px; background: var(--paper-2); border-left: 4px solid var(--mantis); font-size: 15px; line-height: 1.45; color: var(--ink); max-width: 620px;">
           Una decisión de diseño clave: <strong>inquilinos y propietarios no usan el sistema</strong>. Reportan por los canales de siempre y reciben todo por email — el sistema es 100% para la <strong>operación interna</strong> de la inmobiliaria. Menos usuarios que educar, cero fricción para adoptarlo.
         </p>
+        <div class="zoom-hint">Tocá el recuadro para ampliar</div>
       </div>
 
       <div class="stagger">
@@ -2235,6 +2303,7 @@
     <div style="padding-top: 56px; margin-bottom: 20px;">
       <div class="eyebrow">Análisis organizacional · la estructura de ISBA</div>
       <h2 class="display-lg">Dónde se inserta el sistema<span class="mark-blue dot-end"></span></h2>
+      <div class="zoom-hint">Tocá cada área del organigrama para ampliar</div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1.45fr 400px; gap: 52px; flex: 1; align-items: start;">
@@ -2242,7 +2311,7 @@
       <!-- Organigrama -->
       <div class="org-tree">
         <div class="org-root-wrap">
-          <div class="org-node" style="min-width: 340px;">
+          <div class="org-node zoom-clickable" data-zoom="org-gerencia" style="min-width: 340px;">
             <div class="org-area">Gerencia general</div>
             <div class="org-sub">Dirección de la inmobiliaria: define las reglas y controla toda la operación.</div>
             <span class="org-role">En Mantis → Administrador</span>
@@ -2252,21 +2321,21 @@
 
         <div class="org-row">
           <div class="org-branch">
-            <div class="org-node dim" style="flex: 1;">
+            <div class="org-node dim zoom-clickable" data-zoom="org-comercial" style="flex: 1;">
               <div class="org-area">Comercial</div>
               <div class="org-sub">Venta y alquiler de propiedades. Acá no estaba el problema.</div>
               <span class="org-role ghost">Fuera del alcance</span>
             </div>
           </div>
           <div class="org-branch">
-            <div class="org-node hot" style="flex: 1;">
+            <div class="org-node hot zoom-clickable" data-zoom="org-mantenimiento" style="flex: 1;">
               <div class="org-area">Mantenimiento</div>
               <div class="org-sub">Recibe los reclamos, coordina técnicos y responde a inquilinos y propietarios. <strong>El eje del proyecto.</strong></div>
               <span class="org-role mantis">En Mantis → Gestor comercial</span>
             </div>
           </div>
           <div class="org-branch">
-            <div class="org-node" style="flex: 1;">
+            <div class="org-node zoom-clickable" data-zoom="org-admin-fin" style="flex: 1;">
               <div class="org-area">Administración y finanzas</div>
               <div class="org-sub">Cobra las obras a inquilinos y propietarios, y paga a los técnicos.</div>
               <span class="org-role violet">En Mantis → Gestor financiero</span>
@@ -2277,12 +2346,12 @@
         <div class="org-ext-band">
           <div class="org-ext-label">Fuera de la estructura interna · el ecosistema del área</div>
           <div class="org-ext-row">
-            <div class="org-node ext">
+            <div class="org-node ext zoom-clickable" data-zoom="org-tecnicos">
               <div class="org-area">Red de técnicos externos</div>
               <div class="org-sub">Contratistas por especialidad (plomería, electricidad, gas…). No son empleados de ISBA.</div>
               <span class="org-role warm">En Mantis → Técnico · desde el celular</span>
             </div>
-            <div class="org-node ext">
+            <div class="org-node ext zoom-clickable" data-zoom="org-inquilinos">
               <div class="org-area">Inquilinos y propietarios</div>
               <div class="org-sub">Los clientes de la administración. Reportan por los canales de siempre.</div>
               <span class="org-role ghost">Sin usuario · reciben todo por email</span>
@@ -2295,10 +2364,11 @@
       <div>
         <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin-bottom: 4px;">La lectura del analista</p>
         <div class="stagger">
-          <div class="process-step"><div class="ps-num">01</div><div><div class="ps-title">El sistema no inventa un área nueva</div><div class="ps-desc">Mantis se calza sobre la estructura que ya existía: cada puesto real recibe un rol con exactamente los permisos de su función.</div></div></div>
-          <div class="process-step"><div class="ps-num">02</div><div><div class="ps-title">Mantenimiento es el eje</div><div class="ps-desc">Ahí estaba el caos del diagnóstico y ahí apunta el sistema: todo el funnel vive dentro de esa área.</div></div></div>
-          <div class="process-step"><div class="ps-num">03</div><div><div class="ps-title">Los límites son parte del diseño</div><div class="ps-desc">Comercial queda afuera a propósito, y los clientes no acceden: menos usuarios que educar, cero fricción para adoptar.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="lectura-1"><div class="ps-num">01</div><div><div class="ps-title">El sistema no inventa un área nueva</div><div class="ps-desc">Mantis se calza sobre la estructura que ya existía: cada puesto real recibe un rol con exactamente los permisos de su función.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="lectura-2"><div class="ps-num">02</div><div><div class="ps-title">Mantenimiento es el eje</div><div class="ps-desc">Ahí estaba el caos del diagnóstico y ahí apunta el sistema: todo el funnel vive dentro de esa área.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="lectura-3"><div class="ps-num">03</div><div><div class="ps-title">Los límites son parte del diseño</div><div class="ps-desc">Comercial queda afuera a propósito, y los clientes no acceden: menos usuarios que educar, cero fricción para adoptar.</div></div></div>
         </div>
+        <div class="zoom-hint">Tocá cada tarjeta para ampliar</div>
       </div>
     </div>
 
@@ -2342,13 +2412,14 @@
       <div>
         <span class="ad-label" style="color: var(--warm);">Los 6 problemas estructurales</span>
         <div class="stagger" style="margin-top: 4px;">
-          <div class="process-step"><div class="ps-num" style="color: var(--warm);">01</div><div><div class="ps-title">Estado fuera de control</div><div class="ps-desc">El seguimiento dependía de quien atendió; nadie tenía la vista global del avance.</div></div></div>
-          <div class="process-step"><div class="ps-num" style="color: var(--warm);">02</div><div><div class="ps-title">Sin registro formal</div><div class="ps-desc">No se sabía en qué etapa estaba cada reclamo ni quién debía actuar.</div></div></div>
-          <div class="process-step"><div class="ps-num" style="color: var(--warm);">03</div><div><div class="ps-title">Comunicación sin rastro</div><div class="ps-desc">Acuerdos con técnicos, inquilinos y propietarios imposibles de reconstruir.</div></div></div>
-          <div class="process-step"><div class="ps-num" style="color: var(--warm);">04</div><div><div class="ps-title">Sin base de técnicos</div><div class="ps-desc">Búsqueda improvisada por teléfono, sin criterio de especialidad ni desempeño.</div></div></div>
-          <div class="process-step"><div class="ps-num" style="color: var(--warm);">05</div><div><div class="ps-title">Información dispersa</div><div class="ps-desc">La info del caso repartida entre llamadas, WhatsApp, mails y papel.</div></div></div>
-          <div class="process-step"><div class="ps-num" style="color: var(--warm);">06</div><div><div class="ps-title">Cero estadísticas</div><div class="ps-desc">Decisiones basadas en la memoria y la experiencia, no en datos.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="problema-01"><div class="ps-num" style="color: var(--warm);">01</div><div><div class="ps-title">Estado fuera de control</div><div class="ps-desc">El seguimiento dependía de quien atendió; nadie tenía la vista global del avance.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="problema-02"><div class="ps-num" style="color: var(--warm);">02</div><div><div class="ps-title">Sin registro formal</div><div class="ps-desc">No se sabía en qué etapa estaba cada reclamo ni quién debía actuar.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="problema-03"><div class="ps-num" style="color: var(--warm);">03</div><div><div class="ps-title">Comunicación sin rastro</div><div class="ps-desc">Acuerdos con técnicos, inquilinos y propietarios imposibles de reconstruir.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="problema-04"><div class="ps-num" style="color: var(--warm);">04</div><div><div class="ps-title">Sin base de técnicos</div><div class="ps-desc">Búsqueda improvisada por teléfono, sin criterio de especialidad ni desempeño.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="problema-05"><div class="ps-num" style="color: var(--warm);">05</div><div><div class="ps-title">Información dispersa</div><div class="ps-desc">La info del caso repartida entre llamadas, WhatsApp, mails y papel.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="problema-06"><div class="ps-num" style="color: var(--warm);">06</div><div><div class="ps-title">Cero estadísticas</div><div class="ps-desc">Decisiones basadas en la memoria y la experiencia, no en datos.</div></div></div>
         </div>
+        <div class="zoom-hint">Tocá cada problema para ampliar</div>
       </div>
     </div>
 
@@ -2373,19 +2444,20 @@
     </div>
 
     <div class="stagger" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; flex: 1;">
-      <div class="ed-card card-lg with-shadow" style="border-left: 6px solid var(--warm); display: flex; flex-direction: column; justify-content: center;">
+      <div class="ed-card card-lg with-shadow zoom-clickable" data-zoom="juego-dinero" style="border-left: 6px solid var(--warm); display: flex; flex-direction: column; justify-content: center;">
         <p style="font-family: var(--mono); font-size: 13px; letter-spacing: 0.18em; color: var(--warm); text-transform: uppercase; font-weight: 700; margin: 0 0 14px;">Dinero sin respaldo</p>
         <p style="font-size: 18px; line-height: 1.4; margin: 0; color: var(--ink);">Sin registro formal, un pago sin verificar o un cobro sin reclamar podían pasar inadvertidos.</p>
       </div>
-      <div class="ed-card card-lg with-shadow" style="border-left: 6px solid var(--warm); display: flex; flex-direction: column; justify-content: center;">
+      <div class="ed-card card-lg with-shadow zoom-clickable" data-zoom="juego-confianza" style="border-left: 6px solid var(--warm); display: flex; flex-direction: column; justify-content: center;">
         <p style="font-family: var(--mono); font-size: 13px; letter-spacing: 0.18em; color: var(--warm); text-transform: uppercase; font-weight: 700; margin: 0 0 14px;">Confianza en juego</p>
         <p style="font-size: 18px; line-height: 1.4; margin: 0; color: var(--ink);">La administración vive de la confianza: un propietario que no ve respuesta podía terminar buscando otra.</p>
       </div>
-      <div class="ed-card card-lg with-shadow" style="border-left: 6px solid var(--warm); display: flex; flex-direction: column; justify-content: center;">
+      <div class="ed-card card-lg with-shadow zoom-clickable" data-zoom="juego-crecimiento" style="border-left: 6px solid var(--warm); display: flex; flex-direction: column; justify-content: center;">
         <p style="font-family: var(--mono); font-size: 13px; letter-spacing: 0.18em; color: var(--warm); text-transform: uppercase; font-weight: 700; margin: 0 0 14px;">Crecimiento limitado</p>
         <p style="font-size: 18px; line-height: 1.4; margin: 0; color: var(--ink);">Buena parte de las horas del equipo se iba en coordinar por teléfono, no en gestionar más reclamos.</p>
       </div>
     </div>
+    <div class="zoom-hint">Tocá cada tarjeta para ampliar</div>
 
     <div style="background: var(--ink); color: var(--paper); padding: 26px 40px; margin-top: 22px; border-left: 6px solid var(--warm); display: flex; align-items: center;">
       <p style="font-family: var(--display); font-size: clamp(21px, 1.7vw, 27px); line-height: 1.3; color: white; font-weight: 500; margin: 0; letter-spacing: -0.01em;">
@@ -2414,7 +2486,7 @@
     </div>
 
     <div class="ad-grid">
-      <div class="ad-col ad-before">
+      <div class="ad-col ad-before zoom-clickable" data-zoom="obvio">
         <span class="ad-label">La salida obvia</span>
         <h3>Digitalizar<br>el caos.</h3>
         <div class="ad-items">
@@ -2430,7 +2502,7 @@
 
       <div class="ad-arrow">→</div>
 
-      <div class="ad-col ad-after">
+      <div class="ad-col ad-after zoom-clickable" data-zoom="hicimos">
         <span class="ad-label" style="color: #34D399;">Lo que hicimos</span>
         <h3>Ordenar<br>el proceso.</h3>
         <div class="ad-items">
@@ -2444,6 +2516,7 @@
         </div>
       </div>
     </div>
+    <div class="zoom-hint">Tocá cada cuadro para ampliar</div>
 
     <div style="background: var(--ink); color: var(--paper); padding: 18px 32px; margin-top: 18px; border-left: 6px solid var(--mantis); display: flex; align-items: center;">
       <p style="font-family: var(--display); font-size: clamp(17px, 1.4vw, 22px); line-height: 1.3; color: white; font-weight: 500; margin: 0; letter-spacing: -0.01em;">
@@ -2471,8 +2544,10 @@
       <h2 class="display-lg">FODA del equipo<span class="mark-blue dot-end"></span></h2>
     </div>
 
+    <div class="zoom-hint" style="margin: -12px 0 16px;">Tocá cada cuadrado para ampliar</div>
+
     <div class="foda-grid">
-      <div class="foda-cell f">
+      <div class="foda-cell f zoom-clickable" data-foda-group="F">
         <span class="foda-letter">F</span>
         <div class="foda-title">Fortalezas</div>
         <ul class="foda-list">
@@ -2485,7 +2560,7 @@
         </ul>
       </div>
 
-      <div class="foda-cell o">
+      <div class="foda-cell o zoom-clickable" data-foda-group="O">
         <span class="foda-letter">O</span>
         <div class="foda-title">Oportunidades</div>
         <ul class="foda-list">
@@ -2495,29 +2570,26 @@
         </ul>
       </div>
 
-      <div class="foda-cell d">
+      <div class="foda-cell d zoom-clickable" data-foda-group="D">
         <span class="foda-letter">D</span>
         <div class="foda-title">Debilidades</div>
         <ul class="foda-list">
-          <li class="foda-clickable" data-foda="div">Divagación al momento de realizar tareas</li>
-          <li class="foda-clickable" data-foda="exp">Falta de experiencia en proyectos IT</li>
-          <li class="foda-clickable" data-foda="mot">Ritmo de trabajo vinculado a la motivación</li>
-          <li class="foda-clickable" data-foda="cono">Falta de conocimiento específico para desarrollar e implementar software</li>
-          <li class="foda-clickable" data-foda="disp">Conocimientos dispares entre los miembros</li>
-          <li class="foda-clickable" data-foda="tiempo">Tiempo limitado</li>
+          <li>Divagación al momento de realizar tareas</li>
+          <li>Falta de experiencia en proyectos IT</li>
+          <li>Ritmo de trabajo vinculado a la motivación</li>
+          <li>Falta de conocimiento específico para desarrollar e implementar software</li>
+          <li>Conocimientos dispares entre los miembros</li>
+          <li>Tiempo limitado</li>
         </ul>
       </div>
 
-      <div class="foda-cell a">
+      <div class="foda-cell a zoom-clickable" data-foda-group="A">
         <span class="foda-letter">A</span>
         <div class="foda-title">Amenazas</div>
         <ul class="foda-list">
-          <li class="foda-clickable" data-foda="fin">Finalización anticipada de la relación con la empresa</li>
-          <li class="foda-clickable" data-foda="ret">Retrasos administrativos de terceros (empresas o académicos)</li>
+          <li>Finalización anticipada de la relación con la empresa</li>
+          <li>Retrasos administrativos de terceros (empresas o académicos)</li>
         </ul>
-        <p style="margin-top: 14px; font-size: 10px; color: var(--ink-faded); border-top: 1px solid rgba(0,0,0,0.08); padding-top: 10px;">
-          Tocá cada ítem para ver la estrategia de mitigación aplicada
-        </p>
       </div>
     </div>
 
@@ -2539,10 +2611,11 @@
     <div style="padding-top: 62px; margin-bottom: 12px;">
       <div class="eyebrow">A qué nos comprometimos</div>
       <h2 class="display-xl">El mandato<span class="mark-blue dot-end"></span></h2>
+      <div class="zoom-hint">Tocá cualquier bloque para ampliar</div>
     </div>
 
     <!-- Banda 1 · El objetivo (protagonista) -->
-    <div style="background: var(--ink); color: var(--paper); padding: 34px 40px; margin-bottom: 14px; border-left: 6px solid var(--mantis); flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center;">
+    <div class="zoom-clickable" data-zoom="mandato-objetivo" style="background: var(--ink); color: var(--paper); padding: 34px 40px; margin-bottom: 14px; border-left: 6px solid var(--mantis); flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center;">
       <p style="font-family: var(--mono); font-size: 12px; letter-spacing: 0.3em; color: #34D399; text-transform: uppercase; margin-bottom: 16px; font-weight: 700;">El objetivo</p>
       <p style="font-family: var(--display); font-size: clamp(22px, 1.9vw, 30px); line-height: 1.3; color: white; font-weight: 500; margin: 0; letter-spacing: -0.01em;">
         Desarrollar un sistema que le permita a ISBA <em style="color: #34D399; font-style: normal; font-weight: 700;">gestionar el mantenimiento de punta a punta</em> — del reclamo al cobro y la liquidación — con un <em style="color: #34D399; font-style: normal; font-weight: 700;">funnel visual simple</em>, <em style="color: #34D399; font-style: normal; font-weight: 700;">seguimiento total</em> y <em style="color: #34D399; font-style: normal; font-weight: 700;">decisiones basadas en datos</em>.
@@ -2552,9 +2625,9 @@
     <!-- Banda 2 · Límites como línea de proceso -->
     <div style="display: grid; grid-template-columns: auto 1fr auto 1fr; align-items: center; gap: 12px; border: 1.5px solid var(--mantis); padding: 11px 18px; margin-bottom: 11px; background: white;">
       <span style="font-family: var(--mono); font-weight: 700; color: white; background: var(--mantis); font-size: 11px; letter-spacing: 0.2em; padding: 5px 10px;">DESDE</span>
-      <span style="font-size: 14px; line-height: 1.3; color: var(--ink);">El reclamo que llega a la casilla de mail exclusiva de mantenimiento.</span>
+      <span class="zoom-clickable" data-zoom="mandato-desde" style="font-size: 14px; line-height: 1.3; color: var(--ink);">El reclamo que llega a la casilla de mail exclusiva de mantenimiento.</span>
       <span style="font-family: var(--mono); font-weight: 700; color: white; background: var(--ink); font-size: 11px; letter-spacing: 0.2em; padding: 5px 10px;">HASTA</span>
-      <span style="font-size: 14px; line-height: 1.3; color: var(--ink);">La liquidación al técnico con comprobante, todo asentado en el legajo de la propiedad.</span>
+      <span class="zoom-clickable" data-zoom="mandato-hasta" style="font-size: 14px; line-height: 1.3; color: var(--ink);">La liquidación al técnico con comprobante, todo asentado en el legajo de la propiedad.</span>
     </div>
 
     <!-- Banda 3 · Qué construimos (chips) -->
@@ -2571,33 +2644,33 @@
     </div>
 
     <!-- Banda 4 · Qué NO -->
-    <div style="border-left: 6px solid var(--warm); background: #FFF7ED; padding: 10px 18px; margin-bottom: 13px; font-size: 13px; color: var(--ink); line-height: 1.35;">
+    <div class="zoom-clickable" data-zoom="mandato-fuera-alcance" style="border-left: 6px solid var(--warm); background: #FFF7ED; padding: 10px 18px; margin-bottom: 13px; font-size: 13px; color: var(--ink); line-height: 1.35;">
       <span style="font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.22em; color: var(--warm); text-transform: uppercase; font-weight: 700;">Fuera de alcance ·</span>
       acceso de inquilinos o propietarios al sistema · pagos online integrados (se registran cobros, no se procesan) · compensación contra el alquiler mensual · app nativa (es web, mobile-first).
     </div>
 
     <!-- Banda 5 · Con quiénes (4 roles + 2 entidades sin acceso) -->
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 10px;">
-      <div style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--ink); border-left: 6px solid var(--ink); padding: 10px 14px; background: white;">
+      <div class="zoom-clickable" data-zoom="rol-admin" style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--ink); border-left: 6px solid var(--ink); padding: 10px 14px; background: white;">
         <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: white; font-family: var(--display); font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">A</div>
         <div><p style="font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.1;">Administrador</p><p style="font-size: 11.5px; color: var(--ink-faded); margin: 0; line-height: 1.25;">Ve y puede accionar en todo</p></div>
       </div>
-      <div style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--mantis); border-left: 6px solid var(--mantis); padding: 10px 14px; background: white;">
+      <div class="zoom-clickable" data-zoom="rol-gestor-comercial" style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--mantis); border-left: 6px solid var(--mantis); padding: 10px 14px; background: white;">
         <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--mantis); color: white; font-family: var(--display); font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">G</div>
         <div><p style="font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.1;">Gestor comercial</p><p style="font-size: 11.5px; color: var(--ink-faded); margin: 0; line-height: 1.25;">Inbox, gestiones, técnicos</p></div>
       </div>
-      <div style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--violet); border-left: 6px solid var(--violet); padding: 10px 14px; background: white;">
+      <div class="zoom-clickable" data-zoom="rol-gestor-financiero" style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--violet); border-left: 6px solid var(--violet); padding: 10px 14px; background: white;">
         <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--violet); color: white; font-family: var(--display); font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">$</div>
         <div><p style="font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.1;">Gestor financiero</p><p style="font-size: 11.5px; color: var(--ink-faded); margin: 0; line-height: 1.25;">Cobros y liquidaciones</p></div>
       </div>
-      <div style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--warm); border-left: 6px solid var(--warm); padding: 10px 14px; background: white;">
+      <div class="zoom-clickable" data-zoom="rol-tecnico" style="display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--warm); border-left: 6px solid var(--warm); padding: 10px 14px; background: white;">
         <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--warm); color: white; font-family: var(--display); font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">T</div>
         <div><p style="font-size: 14px; font-weight: 700; color: var(--ink); margin: 0; line-height: 1.1;">Técnico</p><p style="font-size: 11.5px; color: var(--ink-faded); margin: 0; line-height: 1.25;">Solo sus trabajos · 100% celular</p></div>
       </div>
     </div>
 
     <!-- Banda 6 · Entidades sin acceso -->
-    <div style="display: flex; align-items: center; gap: 14px; border: 1.5px dashed var(--ink-faded); padding: 8px 16px; background: var(--paper-2);">
+    <div class="zoom-clickable" data-zoom="mandato-sin-acceso" style="display: flex; align-items: center; gap: 14px; border: 1.5px dashed var(--ink-faded); padding: 8px 16px; background: var(--paper-2);">
       <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; color: var(--ink-faded); text-transform: uppercase; font-weight: 700; white-space: nowrap;">Sin acceso al sistema ·</span>
       <span style="font-size: 13px; color: var(--ink); line-height: 1.3;"><strong>Inquilinos</strong> y <strong>propietarios</strong> son entidades administradas: reportan por los canales de siempre y reciben notas de cobro y documentación por email.</span>
     </div>
@@ -2636,7 +2709,7 @@
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--warm);"></span> Técnico</span>
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--violet);"></span> Gestor financiero</span>
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--ink);"></span> Administrador</span>
-      <span style="margin-left: auto; color: var(--ink);"><strong>Administrador</strong> = todos los casos de ambos gestores + los de gobierno</span>
+      <span style="margin-left: auto; color: var(--ink);"><strong>Administrador</strong> = todos los casos del funnel (ambos gestores + técnico) + los de gobierno</span>
     </div>
 
     <!-- Diagrama SVG UML -->
@@ -2752,6 +2825,21 @@
         <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="875" y2="537"/>
         <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="1145" y2="537"/>
         <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="740" y2="616"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="524" y2="260"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="740" y2="150"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="740" y2="260"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="956" y2="150"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="956" y2="260"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="956" y2="370"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="308" y2="150"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="308" y2="260"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="308" y2="370"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="524" y2="150"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="740" y2="370"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="1172" y2="140"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="1172" y2="235"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="1172" y2="330"/>
+        <line class="uc-assoc uc-assoc-adm" x1="120" y1="550" x2="1172" y2="425"/>
 
         <!-- ════ ACTORES (stick figures CLICKEABLES) ════ -->
         <!-- GESTOR COMERCIAL (izquierda arriba) -->
@@ -2763,7 +2851,7 @@
           <line class="uc-actor" x1="-20" y1="30" x2="20" y2="30"/>
           <line class="uc-actor" x1="0" y1="60" x2="-18" y2="90"/>
           <line class="uc-actor" x1="0" y1="60" x2="18" y2="90"/>
-          <text class="uc-actor-label" x="0" y="118">Gestor de mant.</text>
+          <text class="uc-actor-label" x="0" y="118">Gestor comercial</text>
           <text class="uc-actor-role" x="0" y="135">dueño de la operación</text>
         </g>
 
@@ -2802,7 +2890,7 @@
           <line class="uc-actor" x1="-20" y1="30" x2="20" y2="30"/>
           <line class="uc-actor" x1="0" y1="60" x2="-18" y2="90"/>
           <line class="uc-actor" x1="0" y1="60" x2="18" y2="90"/>
-          <text class="uc-actor-label" x="0" y="118">Gestor adm.</text>
+          <text class="uc-actor-label" x="0" y="118">Gestor financiero</text>
           <text class="uc-actor-role" x="0" y="135">cobros y liquidaciones</text>
         </g>
 
@@ -2829,18 +2917,18 @@
           <text x="524" y="146">Asignar técnico</text>
           <text x="524" y="160" style="font-size: 10.5px; fill: var(--ink-faded);">(viendo su agenda)</text>
         </g>
-        <g class="uc-node" data-uc="responder-asignacion" data-actors="tec">
+        <g class="uc-node" data-uc="responder-asignacion" data-actors="tec,adm">
           <ellipse cx="524" cy="260" rx="92" ry="28"/>
           <text x="524" y="256">Aceptar / rechazar</text>
           <text x="524" y="270" style="font-size: 10.5px; fill: var(--ink-faded);">asignación</text>
         </g>
 
         <!-- FASE PRESUPUESTO -->
-        <g class="uc-node" data-uc="registrar-inspeccion" data-actors="tec">
+        <g class="uc-node" data-uc="registrar-inspeccion" data-actors="tec,adm">
           <ellipse cx="740" cy="150" rx="92" ry="28"/>
           <text x="740" y="154">Registrar inspección</text>
         </g>
-        <g class="uc-node" data-uc="cargar-presupuesto" data-actors="tec">
+        <g class="uc-node" data-uc="cargar-presupuesto" data-actors="tec,adm">
           <ellipse cx="740" cy="260" rx="92" ry="28"/>
           <text x="740" y="264">Cargar presupuesto</text>
         </g>
@@ -2851,16 +2939,16 @@
         </g>
 
         <!-- FASE EJECUCIÓN -->
-        <g class="uc-node" data-uc="registrar-avance" data-actors="tec">
+        <g class="uc-node" data-uc="registrar-avance" data-actors="tec,adm">
           <ellipse cx="956" cy="150" rx="92" ry="28"/>
           <text x="956" y="146">Registrar avances</text>
           <text x="956" y="160" style="font-size: 10.5px; fill: var(--ink-faded);">(con fotos)</text>
         </g>
-        <g class="uc-node" data-uc="rendir-materiales" data-actors="tec">
+        <g class="uc-node" data-uc="rendir-materiales" data-actors="tec,adm">
           <ellipse cx="956" cy="260" rx="92" ry="28"/>
           <text x="956" y="264">Rendir materiales</text>
         </g>
-        <g class="uc-node" data-uc="subir-conformidad" data-actors="tec">
+        <g class="uc-node" data-uc="subir-conformidad" data-actors="tec,adm">
           <ellipse cx="956" cy="370" rx="92" ry="28"/>
           <text x="956" y="374">Subir conformidad</text>
         </g>
@@ -2950,65 +3038,65 @@
     <div class="stagger" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; flex: 1; min-height: 0;">
 
       <!-- Flujo 1 -->
-      <div style="border: 1px solid var(--ink); background: var(--paper-2); padding: 14px 16px; display: flex; gap: 12px; align-items: start;" data-flow="flow-01"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--ink-faded); letter-spacing: -0.04em; min-width: 36px;">01</div>
+      <div style="border: 1px solid var(--ink); background: var(--paper-2); padding: 14px 16px; display: flex; gap: 12px; align-items: start;" data-flow="flow-01"><div style="font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; color: var(--ink-faded); letter-spacing: -0.04em; min-width: 54px;">01</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.2; margin: 0 0 4px;">Administraciones y legajos</p>
+          <p style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.25; margin: 0 0 4px;">Administraciones y legajos</p>
         </div>
       </div>
 
       <!-- Flujo 2 -->
-      <div style="border: 1px solid var(--ink); background: var(--paper-2); padding: 14px 16px; display: flex; gap: 12px; align-items: start;" data-flow="flow-02"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--ink-faded); letter-spacing: -0.04em; min-width: 36px;">02</div>
+      <div style="border: 1px solid var(--ink); background: var(--paper-2); padding: 14px 16px; display: flex; gap: 12px; align-items: start;" data-flow="flow-02"><div style="font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; color: var(--ink-faded); letter-spacing: -0.04em; min-width: 54px;">02</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.2; margin: 0 0 4px;">Enrolamiento de técnicos</p>
+          <p style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.25; margin: 0 0 4px;">Enrolamiento de técnicos</p>
         </div>
       </div>
 
       <!-- Flujo 3 -->
-      <div style="border: 1px solid var(--ink); background: var(--paper-2); padding: 14px 16px; display: flex; gap: 12px; align-items: start;" data-flow="flow-03"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--ink-faded); letter-spacing: -0.04em; min-width: 36px;">03</div>
+      <div style="border: 1px solid var(--ink); background: var(--paper-2); padding: 14px 16px; display: flex; gap: 12px; align-items: start;" data-flow="flow-03"><div style="font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; color: var(--ink-faded); letter-spacing: -0.04em; min-width: 54px;">03</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.2; margin: 0 0 4px;">Especialidades y empleados</p>
+          <p style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.25; margin: 0 0 4px;">Especialidades y empleados</p>
         </div>
       </div>
 
       <!-- Flujo 4 -->
-      <div style="border: 1px solid var(--ink); background: var(--paper-2); padding: 14px 16px; display: flex; gap: 12px; align-items: start;" data-flow="flow-04"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--ink-faded); letter-spacing: -0.04em; min-width: 36px;">04</div>
+      <div style="border: 1px solid var(--ink); background: var(--paper-2); padding: 14px 16px; display: flex; gap: 12px; align-items: start;" data-flow="flow-04"><div style="font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; color: var(--ink-faded); letter-spacing: -0.04em; min-width: 54px;">04</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.2; margin: 0 0 4px;">Ingesta Gmail → Inbox</p>
+          <p style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.25; margin: 0 0 4px;">Ingesta Gmail → Inbox</p>
         </div>
       </div>
 
       <!-- Flujo 5 — CORE -->
-      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-05"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 36px;">05</div>
+      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-05"><div style="font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 54px;">05</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--mantis-deep); line-height: 1.2; margin: 0 0 4px;">Alta de la gestión <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
+          <p style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--mantis-deep); line-height: 1.25; margin: 0 0 4px;">Alta de la gestión <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
         </div>
       </div>
 
       <!-- Flujo 6 — CORE -->
-      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-06"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 36px;">06</div>
+      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-06"><div style="font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 54px;">06</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--mantis-deep); line-height: 1.2; margin: 0 0 4px;">Asignación del Técnico <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
+          <p style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--mantis-deep); line-height: 1.25; margin: 0 0 4px;">Asignación del Técnico <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
         </div>
       </div>
 
       <!-- Flujo 7 — CORE -->
-      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-07"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 36px;">07</div>
+      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-07"><div style="font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 54px;">07</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--mantis-deep); line-height: 1.2; margin: 0 0 4px;">Inspección y presupuesto <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
+          <p style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--mantis-deep); line-height: 1.25; margin: 0 0 4px;">Inspección y presupuesto <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
         </div>
       </div>
 
       <!-- Flujo 8 — CORE -->
-      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-08"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 36px;">08</div>
+      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-08"><div style="font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 54px;">08</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--mantis-deep); line-height: 1.2; margin: 0 0 4px;">Ejecución y conformidad <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
+          <p style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--mantis-deep); line-height: 1.25; margin: 0 0 4px;">Ejecución y conformidad <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
         </div>
       </div>
 
       <!-- Flujo 9 — CORE -->
-      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-09"><div style="font-family: var(--display); font-size: 28px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 36px;">09</div>
+      <div style="border: 2px solid var(--mantis); background: var(--mantis-soft); padding: 14px 16px; display: flex; gap: 12px; align-items: start; box-shadow: 4px 4px 0 var(--mantis);" data-flow="flow-09"><div style="font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; color: var(--mantis-deep); letter-spacing: -0.04em; min-width: 54px;">09</div>
         <div>
-          <p style="font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--mantis-deep); line-height: 1.2; margin: 0 0 4px;">Cobro y liquidación <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
+          <p style="font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--mantis-deep); line-height: 1.25; margin: 0 0 4px;">Cobro y liquidación <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; background: var(--mantis-deep); color: white; padding: 2px 5px; vertical-align: middle; margin-left: 4px;">DEMO</span></p>
         </div>
       </div>
     </div>
@@ -3196,16 +3284,16 @@
         </p>
 
         <!-- Roadmap de la sección -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
-          <div style="border: 1px solid rgba(52,211,153,0.5); padding: 18px 20px; background: rgba(255,255,255,0.04);">
-            <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: #34D399; margin-bottom: 8px; font-weight: 700;">PARTE 1</p>
-            <h3 style="font-family: var(--display); font-size: 22px; color: white; line-height: 1.1; margin-bottom: 6px;">Estructura</h3>
-            <p style="font-size: 12.5px; color: rgba(255,255,255,0.65); line-height: 1.4;">Stack, arquitectura, el mapa del sistema, roles, Inbox y Walter (el asistente IA).</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px;">
+          <div style="border: 1px solid rgba(52,211,153,0.5); padding: 30px 32px; background: rgba(255,255,255,0.04);">
+            <p style="font-family: var(--mono); font-size: 13px; letter-spacing: 0.3em; color: #34D399; margin-bottom: 12px; font-weight: 700;">PARTE 1</p>
+            <h3 style="font-family: var(--display); font-size: 30px; color: white; line-height: 1.1; margin-bottom: 12px;">Estructura</h3>
+            <p style="font-size: 16px; color: rgba(255,255,255,0.65); line-height: 1.45;">Stack, arquitectura, el mapa del sistema, roles, Inbox y Walter (el asistente IA).</p>
           </div>
-          <div style="border: 1px solid rgba(52,211,153,0.5); padding: 18px 20px; background: rgba(255,255,255,0.04);">
-            <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: #34D399; margin-bottom: 8px; font-weight: 700;">PARTE 2</p>
-            <h3 style="font-family: var(--display); font-size: 22px; color: white; line-height: 1.1; margin-bottom: 6px;">Demo guiada</h3>
-            <p style="font-size: 12.5px; color: rgba(255,255,255,0.65); line-height: 1.4;">El funnel completo recorrido en vivo, del mail al cierre.</p>
+          <div style="border: 1px solid rgba(52,211,153,0.5); padding: 30px 32px; background: rgba(255,255,255,0.04);">
+            <p style="font-family: var(--mono); font-size: 13px; letter-spacing: 0.3em; color: #34D399; margin-bottom: 12px; font-weight: 700;">PARTE 2</p>
+            <h3 style="font-family: var(--display); font-size: 30px; color: white; line-height: 1.1; margin-bottom: 12px;">Demo guiada</h3>
+            <p style="font-size: 16px; color: rgba(255,255,255,0.65); line-height: 1.45;">El funnel completo recorrido en vivo, del mail al cierre.</p>
           </div>
         </div>
       </div>
@@ -3548,15 +3636,18 @@
       <h2 class="display-lg">Un sistema,<br>cuatro roles conectados<span class="mark-blue dot-end"></span></h2>
     </div>
 
-    <div style="display: flex; gap: 8px; margin-bottom: 18px;">
-      <button class="portal-tab active" data-portal="gestor">Gestor comercial</button>
-      <button class="portal-tab" data-portal="administrativo">Gestor financiero</button>
-      <button class="portal-tab" data-portal="tecnico">Técnico</button>
-      <button class="portal-tab" data-portal="admin">Administrador</button>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 18px; flex-wrap: wrap;">
+      <div style="display: flex; gap: 8px;">
+        <button class="portal-tab active" data-portal="gestor">Gestor comercial</button>
+        <button class="portal-tab" data-portal="administrativo">Gestor financiero</button>
+        <button class="portal-tab" data-portal="tecnico">Técnico</button>
+        <button class="portal-tab" data-portal="admin">Administrador</button>
+      </div>
+      <div class="zoom-hint" style="margin-top: 0;">Tocá el panel para ampliar el texto</div>
     </div>
 
     <div class="ed-card with-shadow" style="flex: 1; padding: 32px; min-height: 360px;" id="portal-content">
-      <div class="portal-panel" data-portal="gestor">
+      <div class="portal-panel zoom-clickable" data-portal="gestor">
         <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin: 0 0 12px;">Dónde acciona este rol en el funnel</p>
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid var(--ink-faded);"><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Ingresado</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Asignación</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Presupuesto</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Ejecución</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Conformidad</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Cobro</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Liquidación</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Finalizado</span></div>
           <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 48px;">
@@ -3581,7 +3672,7 @@
         </div>
       </div>
 
-      <div class="portal-panel" data-portal="administrativo" style="display: none;">
+      <div class="portal-panel zoom-clickable" data-portal="administrativo" style="display: none;">
         <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin: 0 0 12px;">Dónde acciona este rol en el funnel</p>
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid var(--ink-faded);"><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Ingresado</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Asignación</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Presupuesto</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Ejecución</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Conformidad</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Cobro</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Liquidación</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Finalizado</span></div>
           <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 48px;">
@@ -3604,7 +3695,7 @@
         </div>
       </div>
 
-      <div class="portal-panel" data-portal="tecnico" style="display: none;">
+      <div class="portal-panel zoom-clickable" data-portal="tecnico" style="display: none;">
         <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin: 0 0 12px;">Dónde acciona este rol en el funnel</p>
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid var(--ink-faded);"><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Ingresado</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Asignación</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Presupuesto</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Ejecución</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Conformidad</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Cobro</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Liquidación</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 6px 10px; background: var(--paper-2); color: var(--ink-faded); border: 1px solid var(--ink-faded); letter-spacing: 0.04em;">Finalizado</span></div>
           <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 48px;">
@@ -3629,7 +3720,7 @@
         </div>
       </div>
 
-      <div class="portal-panel" data-portal="admin" style="display: none;">
+      <div class="portal-panel zoom-clickable" data-portal="admin" style="display: none;">
         <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; color: var(--ink-faded); text-transform: uppercase; margin: 0 0 12px;">Dónde acciona este rol en el funnel</p>
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid var(--ink-faded);"><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Ingresado</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Asignación</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Presupuesto</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Ejecución</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Conformidad</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Cobro</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Liquidación</span><span style="color: var(--ink-faded); font-weight: 700; font-size: 12px;">→</span><span style="font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 6px 10px; background: var(--mantis); color: white; letter-spacing: 0.04em;">Finalizado</span></div>
           <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 48px;">
@@ -3772,10 +3863,10 @@
       <div style="display: flex; flex-direction: column;">
         <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.25em; color: var(--ink-faded); text-transform: uppercase; margin-bottom: 4px;">Cómo funciona por adentro</p>
         <div class="stagger">
-          <div class="process-step"><div class="ps-num">01</div><div><div class="ps-title">Entiende la pregunta</div><div class="ps-desc">El modelo de IA — Claude, de Anthropic — lee lenguaje natural sabiendo quién pregunta y qué rol tiene.</div></div></div>
-          <div class="process-step"><div class="ps-num">02</div><div><div class="ps-title">Elige sus herramientas</div><div class="ps-desc">No consulta la base libremente: elige de un catálogo de <strong>18 consultas predefinidas</strong> — el patrón se llama <em>tool use</em> (function calling). Cada rol recibe solo las suyas.</div></div></div>
-          <div class="process-step"><div class="ps-num">03</div><div><div class="ps-title">El servidor ejecuta</div><div class="ps-desc">Cada consulta corre en el servidor con los permisos del usuario — los mismos que las pantallas. La IA nunca toca la base de datos directo.</div></div></div>
-          <div class="process-step"><div class="ps-num">04</div><div><div class="ps-title">Responde con evidencia</div><div class="ps-desc">Texto + gráfico calculado por el servidor + botones a la pantalla justa. Todo número sale de una herramienta: si no lo tiene, lo dice.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="walter-01"><div class="ps-num">01</div><div><div class="ps-title">Entiende la pregunta</div><div class="ps-desc">El modelo de IA — Claude, de Anthropic — lee lenguaje natural sabiendo quién pregunta y qué rol tiene.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="walter-02"><div class="ps-num">02</div><div><div class="ps-title">Elige sus herramientas</div><div class="ps-desc">No consulta la base libremente: elige de un catálogo de <strong>18 consultas predefinidas</strong> — el patrón se llama <em>tool use</em> (function calling). Cada rol recibe solo las suyas.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="walter-03"><div class="ps-num">03</div><div><div class="ps-title">El servidor ejecuta</div><div class="ps-desc">Cada consulta corre en el servidor con los permisos del usuario — los mismos que las pantallas. La IA nunca toca la base de datos directo.</div></div></div>
+          <div class="process-step zoom-clickable" data-zoom="walter-04"><div class="ps-num">04</div><div><div class="ps-title">Responde con evidencia</div><div class="ps-desc">Texto + gráfico calculado por el servidor + botones a la pantalla justa. Todo número sale de una herramienta: si no lo tiene, lo dice.</div></div></div>
         </div>
 
         <div id="waiWhyBtn" style="margin-top: 14px; padding: 13px 16px; background: var(--paper-2); border-left: 4px solid var(--mantis); font-size: 14.5px; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; transition: background 0.15s;">
@@ -3815,7 +3906,7 @@
 
       <div class="stagger" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
         <!-- Slide 1/5 = Flujo 5 -->
-        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
+        <div class="zoom-clickable" data-zoom="demo-1" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
           <p style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: #34D399; margin-bottom: 10px; font-weight: 700; display: flex; justify-content: space-between;"><span>1 / 5</span><span style="color: rgba(255,255,255,0.4);">Flujos 4+5</span></p>
           <h3 style="font-family: var(--display); font-size: 18px; color: white; margin-bottom: 6px; line-height: 1.1;">Del mail a la gestión</h3>
           <p style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.4;">El reclamo llega solo al Inbox y se convierte en tarjeta.</p>
@@ -3823,7 +3914,7 @@
         </div>
 
         <!-- Slide 2/5 = Flujo 6 -->
-        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
+        <div class="zoom-clickable" data-zoom="demo-2" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
           <p style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: #34D399; margin-bottom: 10px; font-weight: 700; display: flex; justify-content: space-between;"><span>2 / 5</span><span style="color: rgba(255,255,255,0.4);">Flujo 6</span></p>
           <h3 style="font-family: var(--display); font-size: 18px; color: white; margin-bottom: 6px; line-height: 1.1;">Asignación</h3>
           <p style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.4;">Elegir técnico viendo su agenda; él acepta desde el celular.</p>
@@ -3831,7 +3922,7 @@
         </div>
 
         <!-- Slide 3/5 = Flujo 7 -->
-        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
+        <div class="zoom-clickable" data-zoom="demo-3" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
           <p style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: #34D399; margin-bottom: 10px; font-weight: 700; display: flex; justify-content: space-between;"><span>3 / 5</span><span style="color: rgba(255,255,255,0.4);">Flujo 7</span></p>
           <h3 style="font-family: var(--display); font-size: 18px; color: white; margin-bottom: 6px; line-height: 1.1;">Inspección y presupuesto</h3>
           <p style="font-size: 12px; color: rgba(255,255,255,0.85); line-height: 1.4;">Inspección obligatoria, presupuesto y quién paga.</p>
@@ -3839,7 +3930,7 @@
         </div>
 
         <!-- Slide 4/5 = Flujo 8 -->
-        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
+        <div class="zoom-clickable" data-zoom="demo-4" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
           <p style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: #34D399; margin-bottom: 10px; font-weight: 700; display: flex; justify-content: space-between;"><span>4 / 5</span><span style="color: rgba(255,255,255,0.4);">Flujo 8</span></p>
           <h3 style="font-family: var(--display); font-size: 18px; color: white; margin-bottom: 6px; line-height: 1.1;">Ejecución y conformidad</h3>
           <p style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.4;">Avances con fotos, rendición y conformidad firmada.</p>
@@ -3847,7 +3938,7 @@
         </div>
 
         <!-- Slide 5/5 = Flujo 9 -->
-        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
+        <div class="zoom-clickable" data-zoom="demo-5" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(52,211,153,0.4); padding: 16px;">
           <p style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: #34D399; margin-bottom: 10px; font-weight: 700; display: flex; justify-content: space-between;"><span>5 / 5</span><span style="color: rgba(255,255,255,0.4);">Flujo 9</span></p>
           <h3 style="font-family: var(--display); font-size: 18px; color: white; margin-bottom: 6px; line-height: 1.1;">Cobro y liquidación</h3>
           <p style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.4;">Nota de cobro, liquidación al técnico y calificación.</p>
@@ -4206,7 +4297,7 @@
     <!-- Matriz de 6 áreas de valor -->
     <div class="val-grid stagger">
       <!-- 1. Operativo -->
-      <div class="val-card">
+      <div class="val-card zoom-clickable" data-zoom="valor-1">
         <div class="val-card-cat">Operativo</div>
         <h3 class="val-card-title">Un funnel, un solo lugar de la verdad</h3>
         <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Todo reclamo entra por un canal y recorre 8 etapas visibles en un tablero. Cero reclamos perdidos.</p></div>
@@ -4214,7 +4305,7 @@
       </div>
 
       <!-- 2. Seguimiento -->
-      <div class="val-card">
+      <div class="val-card zoom-clickable" data-zoom="valor-2">
         <div class="val-card-cat">Seguimiento</div>
         <h3 class="val-card-title">Historial inmutable por gestión</h3>
         <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Cada transición deja su evento con fecha cierta: evidencia ante conflictos por plazos de reparación.</p></div>
@@ -4222,7 +4313,7 @@
       </div>
 
       <!-- 3. Financiero -->
-      <div class="val-card">
+      <div class="val-card zoom-clickable" data-zoom="valor-3">
         <div class="val-card-cat">Financiero</div>
         <h3 class="val-card-title">Circuito económico documentado</h3>
         <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Nota de cobro y comprobante de liquidación en PDF, enviados por email. Montos congelados al cobrar.</p></div>
@@ -4230,7 +4321,7 @@
       </div>
 
       <!-- 4. Calidad / Riesgo -->
-      <div class="val-card">
+      <div class="val-card zoom-clickable" data-zoom="valor-4">
         <div class="val-card-cat">Calidad y riesgo</div>
         <h3 class="val-card-title">Técnicos medidos, no "de confianza"</h3>
         <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Enrolamiento con documentación + calificación por obra + cumplimiento de plazo y de presupuesto medidos.</p></div>
@@ -4238,7 +4329,7 @@
       </div>
 
       <!-- 5. Relación con propietarios -->
-      <div class="val-card">
+      <div class="val-card zoom-clickable" data-zoom="valor-5">
         <div class="val-card-cat">Relación con propietarios</div>
         <h3 class="val-card-title">La propiedad cuenta su historia</h3>
         <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Legajos por período de ocupación + PDF "Resumen de obras" + emails de estado automáticos a inquilino y propietario.</p></div>
@@ -4246,7 +4337,7 @@
       </div>
 
       <!-- 6. Adopción -->
-      <div class="val-card">
+      <div class="val-card zoom-clickable" data-zoom="valor-6">
         <div class="val-card-cat">Adopción · simplicidad</div>
         <h3 class="val-card-title">Nadie externo tiene que aprenderlo</h3>
         <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Inquilinos y propietarios siguen usando el mail. Solo 4 roles internos usan el sistema — y el técnico, desde el celular.</p></div>
@@ -4311,16 +4402,24 @@
   </div>
 </div>
 
-<!-- ───────── Modal FODA · mitigación ───────── -->
+<!-- ───────── Modal FODA · detalle del cuadrante completo ───────── -->
 <div class="tech-modal" id="fodaModal" role="dialog" aria-modal="true">
   <div class="foda-modal-inner">
     <button class="tech-modal-close" id="fodaModalClose" aria-label="Cerrar">×</button>
     <div class="foda-modal-badge" id="fodaModalBadge"></div>
     <div class="foda-modal-title" id="fodaModalTitle"></div>
-    <div class="foda-modal-section-label">Estrategia de mitigación aplicada</div>
-    <ul class="foda-modal-strats" id="fodaModalStrats"></ul>
-    <div class="foda-modal-detail" id="fodaModalDetail"></div>
-    <div class="foda-modal-result" id="fodaModalResult" style="display:none"></div>
+    <div id="fodaModalBody"></div>
+  </div>
+</div>
+
+<!-- ───────── Modal genérico de ampliación · lectura proyector ───────── -->
+<div class="tech-modal" id="zoomModal" role="dialog" aria-modal="true">
+  <div class="zoom-modal-inner">
+    <button class="tech-modal-close" id="zoomModalClose" aria-label="Cerrar">×</button>
+    <div class="zoom-modal-badge" id="zoomModalBadge" style="display:none"></div>
+    <div class="zoom-modal-eyebrow" id="zoomModalEyebrow" style="display:none"></div>
+    <div class="zoom-modal-title" id="zoomModalTitle" style="display:none"></div>
+    <div class="zoom-modal-body" id="zoomModalBody"></div>
   </div>
 </div>
 
@@ -4425,6 +4524,7 @@
     <div class="trace-modal-header">
       <div class="trace-modal-eyebrow" id="traceModalEyebrow"></div>
       <h2 class="trace-modal-title" id="traceModalTitle"></h2>
+      <div class="zoom-hint">Tocá cada cuadro del pipeline para ampliarlo</div>
     </div>
     <!-- Pipeline horizontal de 5 estaciones -->
     <div class="trace-pipe" id="tracePipe"></div>
@@ -4476,6 +4576,30 @@
         p.style.display = p.dataset.portal === target ? 'block' : 'none';
       });
     });
+  });
+
+  // ───── Portal panel → zoom con el texto ampliado ─────
+  function openPortalZoom(panelEl) {
+    const grid = panelEl.children[2];
+    if (!grid) return;
+    const left = grid.children[0];
+    const list = grid.children[1];
+    const rutaLabel = left.children[0].textContent.trim();
+    const rutaValor = left.children[1].textContent.trim();
+    const titulo = left.children[2].textContent.trim();
+    const descHTML = left.children[3].innerHTML.trim();
+    const itemsHTML = Array.from(list.children).map(li => `<li>${li.innerHTML}</li>`).join('');
+    zoomBadge.style.display = 'none';
+    zoomEyebrow.textContent = `${rutaLabel} · ${rutaValor}`;
+    zoomEyebrow.style.display = 'block';
+    zoomTitle.textContent = titulo;
+    zoomTitle.style.display = 'block';
+    zoomBody.innerHTML = `<p>${descHTML}</p><ul>${itemsHTML}</ul>`;
+    zoomModal.classList.add('open');
+  }
+
+  document.querySelectorAll('.portal-panel').forEach(panel => {
+    panel.addEventListener('click', () => openPortalZoom(panel));
   });
 
   // ───── Charts ─────
@@ -5064,9 +5188,13 @@
     }).join('') + '</div>';
   }
 
+  let currentTraceKey = null;
+  let currentTraceStations = [];
+
   function openTraceModal(key) {
     const info = TRACE_INFO[key];
     if (!info) return;
+    currentTraceKey = key;
     traceEyebrow.textContent = info.eyebrow;
     traceTitle.textContent = info.title;
     traceFooter.textContent = info.footer;
@@ -5077,6 +5205,7 @@
       { id: 'sistema',   step: 'Lo que construimos', label: 'Sistema', cls: 'st-sistema',    body: info.sistema },
       { id: 'valor',     step: 'Para ISBA', label: 'Valor',       cls: 'st-valor',      body: info.valor },
     ];
+    currentTraceStations = stations;
     tracePipe.innerHTML = stations.map(s => {
       let bodyHTML = '';
       if (typeof s.body === 'string') {
@@ -5085,7 +5214,7 @@
         bodyHTML = renderChips(s.body.chips) + (s.body.text || '');
       }
       return `
-        <div class="trace-station ${s.cls}">
+        <div class="trace-station ${s.cls} zoom-clickable" data-station-id="${s.id}">
           <div class="trace-station-icon">${TRACE_ICONS[s.id]}</div>
           <div class="trace-station-step">${s.step}</div>
           <div class="trace-station-label">${s.label}</div>
@@ -5094,6 +5223,29 @@
       `;
     }).join('');
     traceModal.classList.add('open');
+  }
+
+  function renderChipsStatic(chips) {
+    if (!chips) return '';
+    return '<div style="margin-bottom: 10px;">' + chips.map(([txt, kind]) => `<span class="chip chip-${kind}">${txt}</span>`).join('') + '</div>';
+  }
+
+  function openTraceStationZoom(stationId) {
+    const station = currentTraceStations.find(s => s.id === stationId);
+    if (!station) return;
+    let bodyHTML = '';
+    if (typeof station.body === 'string') {
+      bodyHTML = `<p>${station.body}</p>`;
+    } else if (station.body && typeof station.body === 'object') {
+      bodyHTML = renderChipsStatic(station.body.chips) + `<p>${station.body.text || ''}</p>`;
+    }
+    zoomBadge.style.display = 'none';
+    zoomEyebrow.textContent = station.step;
+    zoomEyebrow.style.display = 'block';
+    zoomTitle.textContent = station.label;
+    zoomTitle.style.display = 'block';
+    zoomBody.innerHTML = bodyHTML;
+    zoomModal.classList.add('open');
   }
 
   document.querySelectorAll('.traza-clickable').forEach(row => {
@@ -5121,40 +5273,44 @@
 
   tracePipe.addEventListener('click', (e) => {
     const chip = e.target.closest('[data-chip-uc],[data-chip-bpmn],[data-chip-hu],[data-chip-rf]');
-    if (!chip) return;
-    e.stopPropagation();
-    const ds = chip.dataset;
-    if (ds.chipUc !== undefined) {
-      const key = UC_CHIP_MAP[ds.chipUc];
-      if (!key) return;
-      const info = UC_INFO[key];
-      if (!info) return;
-      modalIcon.innerHTML = UC_ICON;
-      modalLayer.textContent = info.layer;
-      modalName.textContent = info.name;
-      modalDesc.textContent = info.desc;
-      modal.classList.add('open');
-    } else if (ds.chipBpmn !== undefined) {
-      const num = ds.chipBpmn.replace('Flujo ', '').trim();
-      const key = BPMN_NUM_MAP[num];
-      if (key) openFlowModal(key);
-    } else if (ds.chipHu !== undefined) {
-      const info = HU_INFO_TRACE[ds.chipHu];
-      if (!info) return;
-      modalIcon.innerHTML = HU_ICON_SVG;
-      modalLayer.textContent = 'HISTORIA DE USUARIO';
-      modalName.textContent = info.name;
-      modalDesc.textContent = info.desc;
-      modal.classList.add('open');
-    } else if (ds.chipRf !== undefined) {
-      const info = RF_INFO_TRACE[ds.chipRf];
-      if (!info) return;
-      modalIcon.innerHTML = RF_ICON_SVG;
-      modalLayer.textContent = 'REQUERIMIENTO FUNCIONAL';
-      modalName.textContent = info.name;
-      modalDesc.textContent = info.desc;
-      modal.classList.add('open');
+    if (chip) {
+      e.stopPropagation();
+      const ds = chip.dataset;
+      if (ds.chipUc !== undefined) {
+        const key = UC_CHIP_MAP[ds.chipUc];
+        if (!key) return;
+        const info = UC_INFO[key];
+        if (!info) return;
+        modalIcon.innerHTML = UC_ICON;
+        modalLayer.textContent = info.layer;
+        modalName.textContent = info.name;
+        modalDesc.textContent = info.desc;
+        modal.classList.add('open');
+      } else if (ds.chipBpmn !== undefined) {
+        const num = ds.chipBpmn.replace('Flujo ', '').trim();
+        const key = BPMN_NUM_MAP[num];
+        if (key) openFlowModal(key);
+      } else if (ds.chipHu !== undefined) {
+        const info = HU_INFO_TRACE[ds.chipHu];
+        if (!info) return;
+        modalIcon.innerHTML = HU_ICON_SVG;
+        modalLayer.textContent = 'HISTORIA DE USUARIO';
+        modalName.textContent = info.name;
+        modalDesc.textContent = info.desc;
+        modal.classList.add('open');
+      } else if (ds.chipRf !== undefined) {
+        const info = RF_INFO_TRACE[ds.chipRf];
+        if (!info) return;
+        modalIcon.innerHTML = RF_ICON_SVG;
+        modalLayer.textContent = 'REQUERIMIENTO FUNCIONAL';
+        modalName.textContent = info.name;
+        modalDesc.textContent = info.desc;
+        modal.classList.add('open');
+      }
+      return;
     }
+    const station = e.target.closest('.trace-station');
+    if (station) openTraceStationZoom(station.dataset.stationId);
   });
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -5625,35 +5781,38 @@
     }
   };
 
-  const fodaModal   = document.getElementById('fodaModal');
-  const fodaBadge   = document.getElementById('fodaModalBadge');
-  const fodaTitle   = document.getElementById('fodaModalTitle');
-  const fodaStrats  = document.getElementById('fodaModalStrats');
-  const fodaDetail  = document.getElementById('fodaModalDetail');
-  const fodaResult  = document.getElementById('fodaModalResult');
+  const FODA_GROUP_KEYS  = { D: ['div','exp','mot','cono','disp','tiempo'], A: ['fin','ret'] };
+  const FODA_GROUP_LABEL = { F: 'Fortalezas', O: 'Oportunidades', D: 'Debilidades', A: 'Amenazas' };
+  const FODA_GROUP_BADGE = { F: 'fort', O: 'opo', D: 'deb', A: 'ame' };
 
-  function openFodaModal(key) {
-    const info = FODA_MITIG[key];
-    if (!info) return;
+  const fodaModal = document.getElementById('fodaModal');
+  const fodaBadge = document.getElementById('fodaModalBadge');
+  const fodaTitle = document.getElementById('fodaModalTitle');
+  const fodaBody  = document.getElementById('fodaModalBody');
 
-    fodaBadge.textContent = info.tipo;
-    fodaBadge.className = 'foda-modal-badge ' + (info.tipo === 'DEBILIDAD' ? 'deb' : 'ame');
-    fodaTitle.textContent = info.titulo;
+  function openFodaGroupModal(group, cellEl) {
+    fodaBadge.textContent = FODA_GROUP_LABEL[group].toUpperCase();
+    fodaBadge.className = 'foda-modal-badge ' + FODA_GROUP_BADGE[group];
+    fodaTitle.textContent = FODA_GROUP_LABEL[group];
 
-    fodaStrats.innerHTML = info.estrategias
-      .map(s => `<li>${s}</li>`)
-      .join('');
-
-    fodaDetail.innerHTML = info.detalle
-      ? '<div class="foda-modal-section-label">Capacitación ejecutada por miembro</div>' +
-        info.detalle.map(d => `<div class="foda-modal-detail-item">${d}</div>`).join('')
-      : '';
-
-    if (info.resultado) {
-      fodaResult.textContent = info.resultado;
-      fodaResult.style.display = 'block';
+    if (group === 'D' || group === 'A') {
+      fodaBody.innerHTML = FODA_GROUP_KEYS[group].map(key => {
+        const info = FODA_MITIG[key];
+        const detalle = info.detalle
+          ? '<div class="foda-modal-section-label">Capacitación ejecutada por miembro</div>' +
+            info.detalle.map(d => `<div class="foda-modal-detail-item">${d}</div>`).join('')
+          : '';
+        const resultado = info.resultado ? `<div class="foda-modal-result">${info.resultado}</div>` : '';
+        return `<div class="foda-modal-item">
+          <div class="foda-modal-item-title">${info.titulo}</div>
+          <div class="foda-modal-section-label">Estrategia de mitigación aplicada</div>
+          <ul class="foda-modal-strats">${info.estrategias.map(s => `<li>${s}</li>`).join('')}</ul>
+          ${detalle}${resultado}
+        </div>`;
+      }).join('');
     } else {
-      fodaResult.style.display = 'none';
+      const items = Array.from(cellEl.querySelectorAll('.foda-list li')).map(li => li.textContent);
+      fodaBody.innerHTML = '<ul class="foda-modal-strats">' + items.map(t => `<li>${t}</li>`).join('') + '</ul>';
     }
 
     fodaModal.classList.add('open');
@@ -5661,11 +5820,146 @@
 
   document.getElementById('fodaModalClose').addEventListener('click', () => fodaModal.classList.remove('open'));
   fodaModal.addEventListener('click', e => { if (e.target === fodaModal) fodaModal.classList.remove('open'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') fodaModal.classList.remove('open'); });
 
-  document.querySelectorAll('.foda-clickable').forEach(li => {
-    li.addEventListener('click', (e) => {
+  document.querySelectorAll('[data-foda-group]').forEach(cell => {
+    cell.addEventListener('click', () => openFodaGroupModal(cell.dataset.fodaGroup, cell));
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // ZOOM MODAL GENÉRICO · ampliar texto chico para lectura en proyector
+  // ═══════════════════════════════════════════════════════════════
+  const ZOOM_DATA = {
+    'diseno-clave': {
+      eyebrow: 'Decisión de diseño clave',
+      body: '<strong>Inquilinos y propietarios no usan el sistema.</strong> Reportan por los canales de siempre y reciben todo por email — el sistema es 100% para la <strong>operación interna</strong> de la inmobiliaria. Menos usuarios que educar, cero fricción para adoptarlo.'
+    },
+    'org-gerencia': {
+      title: 'Gerencia general',
+      body: 'Dirección de la inmobiliaria: define las reglas y controla toda la operación.<p><strong>En Mantis → Administrador</strong></p>'
+    },
+    'org-comercial': {
+      title: 'Comercial',
+      body: 'Venta y alquiler de propiedades. Acá no estaba el problema.<p><strong>Fuera del alcance</strong></p>'
+    },
+    'org-mantenimiento': {
+      title: 'Mantenimiento',
+      body: 'Recibe los reclamos, coordina técnicos y responde a inquilinos y propietarios. <strong>El eje del proyecto.</strong><p><strong>En Mantis → Gestor comercial</strong></p>'
+    },
+    'org-admin-fin': {
+      title: 'Administración y finanzas',
+      body: 'Cobra las obras a inquilinos y propietarios, y paga a los técnicos.<p><strong>En Mantis → Gestor financiero</strong></p>'
+    },
+    'org-tecnicos': {
+      title: 'Red de técnicos externos',
+      body: 'Contratistas por especialidad (plomería, electricidad, gas…). No son empleados de ISBA.<p><strong>En Mantis → Técnico · desde el celular</strong></p>'
+    },
+    'org-inquilinos': {
+      title: 'Inquilinos y propietarios',
+      body: 'Los clientes de la administración. Reportan por los canales de siempre.<p><strong>Sin usuario · reciben todo por email</strong></p>'
+    },
+    'lectura-1': {
+      eyebrow: 'La lectura del analista · 01',
+      title: 'El sistema no inventa un área nueva',
+      body: 'Mantis se calza sobre la estructura que ya existía: cada puesto real recibe un rol con exactamente los permisos de su función.'
+    },
+    'lectura-2': {
+      eyebrow: 'La lectura del analista · 02',
+      title: 'Mantenimiento es el eje',
+      body: 'Ahí estaba el caos del diagnóstico y ahí apunta el sistema: todo el funnel vive dentro de esa área.'
+    },
+    'lectura-3': {
+      eyebrow: 'La lectura del analista · 03',
+      title: 'Los límites son parte del diseño',
+      body: 'Comercial queda afuera a propósito, y los clientes no acceden: menos usuarios que educar, cero fricción para adoptar.'
+    },
+    'problema-01': { eyebrow: 'Los 6 problemas estructurales · 01', title: 'Estado fuera de control', body: 'El seguimiento dependía de quien atendió; nadie tenía la vista global del avance.' },
+    'problema-02': { eyebrow: 'Los 6 problemas estructurales · 02', title: 'Sin registro formal', body: 'No se sabía en qué etapa estaba cada reclamo ni quién debía actuar.' },
+    'problema-03': { eyebrow: 'Los 6 problemas estructurales · 03', title: 'Comunicación sin rastro', body: 'Acuerdos con técnicos, inquilinos y propietarios imposibles de reconstruir.' },
+    'problema-04': { eyebrow: 'Los 6 problemas estructurales · 04', title: 'Sin base de técnicos', body: 'Búsqueda improvisada por teléfono, sin criterio de especialidad ni desempeño.' },
+    'problema-05': { eyebrow: 'Los 6 problemas estructurales · 05', title: 'Información dispersa', body: 'La info del caso repartida entre llamadas, WhatsApp, mails y papel.' },
+    'problema-06': { eyebrow: 'Los 6 problemas estructurales · 06', title: 'Cero estadísticas', body: 'Decisiones basadas en la memoria y la experiencia, no en datos.' },
+    'walter-01': { eyebrow: 'Cómo funciona por adentro · 01', title: 'Entiende la pregunta', body: 'El modelo de IA — Claude, de Anthropic — lee lenguaje natural sabiendo quién pregunta y qué rol tiene.' },
+    'walter-02': { eyebrow: 'Cómo funciona por adentro · 02', title: 'Elige sus herramientas', body: 'No consulta la base libremente: elige de un catálogo de <strong>18 consultas predefinidas</strong> — el patrón se llama <em>tool use</em> (function calling). Cada rol recibe solo las suyas.' },
+    'walter-03': { eyebrow: 'Cómo funciona por adentro · 03', title: 'El servidor ejecuta', body: 'Cada consulta corre en el servidor con los permisos del usuario — los mismos que las pantallas. La IA nunca toca la base de datos directo.' },
+    'walter-04': { eyebrow: 'Cómo funciona por adentro · 04', title: 'Responde con evidencia', body: 'Texto + gráfico calculado por el servidor + botones a la pantalla justa. Todo número sale de una herramienta: si no lo tiene, lo dice.' },
+    'demo-1': { eyebrow: 'Demo guiada · 1/5 · Flujos 4+5', title: 'Del mail a la gestión', body: 'El reclamo llega solo al Inbox y se convierte en tarjeta.<p><strong>Gestor</strong></p>' },
+    'demo-2': { eyebrow: 'Demo guiada · 2/5 · Flujo 6', title: 'Asignación', body: 'Elegir técnico viendo su agenda; él acepta desde el celular.<p><strong>Gestor + Técnico</strong></p>' },
+    'demo-3': { eyebrow: 'Demo guiada · 3/5 · Flujo 7', title: 'Inspección y presupuesto', body: 'Inspección obligatoria, presupuesto y quién paga.<p><strong>Técnico + Gestor</strong></p>' },
+    'demo-4': { eyebrow: 'Demo guiada · 4/5 · Flujo 8', title: 'Ejecución y conformidad', body: 'Avances con fotos, rendición y conformidad firmada.<p><strong>Técnico · celular</strong></p>' },
+    'demo-5': { eyebrow: 'Demo guiada · 5/5 · Flujo 9', title: 'Cobro y liquidación', body: 'Nota de cobro, liquidación al técnico y calificación.<p><strong>Financiero</strong></p>' },
+    'valor-1': { eyebrow: 'Valor agregado · Operativo', title: 'Un funnel, un solo lugar de la verdad', body: 'Todo reclamo entra por un canal y recorre 8 etapas visibles en un tablero. Cero reclamos perdidos.<p><strong>KPI</strong> tiempo de ciclo + gestiones estancadas por etapa</p>' },
+    'valor-2': { eyebrow: 'Valor agregado · Seguimiento', title: 'Historial inmutable por gestión', body: 'Cada transición deja su evento con fecha cierta: evidencia ante conflictos por plazos de reparación.<p><strong>KPI</strong> 100% de gestiones con timeline completo</p>' },
+    'valor-3': { eyebrow: 'Valor agregado · Financiero', title: 'Circuito económico documentado', body: 'Nota de cobro y comprobante de liquidación en PDF, enviados por email. Montos congelados al cobrar.<p><strong>KPI</strong> cobrado vs liquidado por mes · fee de la casa separado</p>' },
+    'valor-4': { eyebrow: 'Valor agregado · Calidad y riesgo', title: 'Técnicos medidos, no "de confianza"', body: 'Enrolamiento con documentación + calificación por obra + cumplimiento de plazo y de presupuesto medidos.<p><strong>KPI</strong> score del técnico: estrellas + desvío de plazo + rendición</p>' },
+    'valor-5': { eyebrow: 'Valor agregado · Relación con propietarios', title: 'La propiedad cuenta su historia', body: 'Legajos por período de ocupación + PDF "Resumen de obras" + emails de estado automáticos a inquilino y propietario.<p><strong>KPI</strong> retención de propiedades administradas</p>' },
+    'valor-6': { eyebrow: 'Valor agregado · Adopción · simplicidad', title: 'Nadie externo tiene que aprenderlo', body: 'Inquilinos y propietarios siguen usando el mail. Solo 4 roles internos usan el sistema — y el técnico, desde el celular.<p><strong>KPI</strong> reclamos gestionados por empleado (capacidad)</p>' },
+    'juego-dinero': { title: 'Dinero sin respaldo', body: 'Sin registro formal, un pago sin verificar o un cobro sin reclamar podían pasar inadvertidos.' },
+    'juego-confianza': { title: 'Confianza en juego', body: 'La administración vive de la confianza: un propietario que no ve respuesta podía terminar buscando otra.' },
+    'juego-crecimiento': { title: 'Crecimiento limitado', body: 'Buena parte de las horas del equipo se iba en coordinar por teléfono, no en gestionar más reclamos.' },
+    'obvio': { eyebrow: 'La salida obvia', title: 'Digitalizar el caos', body: '<ul>'
+      + '<li>Pasar el papel y el Excel a una app: el mismo proceso, en otra pantalla.</li>'
+      + '<li>El reclamo se seguiría perdiendo entre canales, solo que más rápido.</li>'
+      + '<li>El estado seguiría viviendo en la memoria de quien atendió.</li>'
+      + '<li>Las métricas seguirían sin existir: nadie carga datos a mano.</li>'
+      + '</ul>' },
+    'hicimos': { eyebrow: 'Lo que hicimos', title: 'Ordenar el proceso', body: '<ul>'
+      + '<li>Una sola puerta de entrada: si no está en el sistema, no existe.</li>'
+      + '<li>Un funnel de etapas explícitas que no se pueden saltear: el sistema las hace cumplir.</li>'
+      + '<li>Cada acción deja evidencia sola: historial y métricas sin carga manual.</li>'
+      + '<li>Cada rol sabe qué le toca, y el sistema le avisa cuándo.</li>'
+      + '</ul>' },
+    'mandato-objetivo': {
+      eyebrow: 'El objetivo',
+      body: 'Desarrollar un sistema que le permita a ISBA <strong>gestionar el mantenimiento de punta a punta</strong> — del reclamo al cobro y la liquidación — con un <strong>funnel visual simple</strong>, <strong>seguimiento total</strong> y <strong>decisiones basadas en datos</strong>.'
+    },
+    'mandato-desde': { eyebrow: 'DESDE', body: 'El reclamo que llega a la casilla de mail exclusiva de mantenimiento.' },
+    'mandato-hasta': { eyebrow: 'HASTA', body: 'La liquidación al técnico con comprobante, todo asentado en el legajo de la propiedad.' },
+    'mandato-fuera-alcance': {
+      eyebrow: 'Fuera de alcance',
+      body: 'Acceso de inquilinos o propietarios al sistema · pagos online integrados (se registran cobros, no se procesan) · compensación contra el alquiler mensual · app nativa (es web, mobile-first).'
+    },
+    'rol-admin': { title: 'Administrador', body: 'Ve y puede accionar en todo' },
+    'rol-gestor-comercial': { title: 'Gestor comercial', body: 'Inbox, gestiones, técnicos' },
+    'rol-gestor-financiero': { title: 'Gestor financiero', body: 'Cobros y liquidaciones' },
+    'rol-tecnico': { title: 'Técnico', body: 'Solo sus trabajos · 100% celular' },
+    'mandato-sin-acceso': {
+      eyebrow: 'Sin acceso al sistema',
+      body: '<strong>Inquilinos</strong> y <strong>propietarios</strong> son entidades administradas: reportan por los canales de siempre y reciben notas de cobro y documentación por email.'
+    },
+  };
+
+  const zoomModal   = document.getElementById('zoomModal');
+  const zoomBadge   = document.getElementById('zoomModalBadge');
+  const zoomEyebrow = document.getElementById('zoomModalEyebrow');
+  const zoomTitle   = document.getElementById('zoomModalTitle');
+  const zoomBody    = document.getElementById('zoomModalBody');
+
+  function openZoomModal(key) {
+    const info = ZOOM_DATA[key];
+    if (!info) return;
+
+    if (info.badge) { zoomBadge.textContent = info.badge; zoomBadge.style.display = 'inline-block'; }
+    else { zoomBadge.style.display = 'none'; }
+
+    if (info.eyebrow) { zoomEyebrow.textContent = info.eyebrow; zoomEyebrow.style.display = 'block'; }
+    else { zoomEyebrow.style.display = 'none'; }
+
+    if (info.title) { zoomTitle.innerHTML = info.title; zoomTitle.style.display = 'block'; }
+    else { zoomTitle.style.display = 'none'; }
+
+    zoomBody.innerHTML = info.body;
+    zoomModal.classList.add('open');
+  }
+
+  document.getElementById('zoomModalClose').addEventListener('click', () => zoomModal.classList.remove('open'));
+  zoomModal.addEventListener('click', e => { if (e.target === zoomModal) zoomModal.classList.remove('open'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') zoomModal.classList.remove('open'); });
+
+  document.querySelectorAll('[data-zoom]').forEach(el => {
+    el.addEventListener('click', (e) => {
       e.stopPropagation();
-      openFodaModal(li.dataset.foda);
+      openZoomModal(el.dataset.zoom);
     });
   });
 
