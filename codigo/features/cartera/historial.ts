@@ -3,8 +3,9 @@
 // de la propiedad y el PDF "Resumen de obras". Módulo puro — sin 'use server'.
 
 import {
-  repartoCompartido,
+  repartoGestion,
   type AmpliacionReparto,
+  type PagadorObra,
 } from "@/features/finanzas/consultas-types";
 
 export type EstadoObra = "terminada" | "en_curso" | "cancelada";
@@ -45,31 +46,27 @@ export function costoObra(g: {
   return null;
 }
 
-// STORY-1031: cuánto de una obra pagó cada parte — con pago compartido el
-// costo se reparte por el % anclado (mismo redondeo que la nota: centavos,
-// el propietario absorbe el resto); con pagador único va entero a un balde.
-// STORY-1038: las ampliaciones con pagador propio se imputan a su pagador
-// (mismo helper único que la nota y el cobro).
+// STORY-1031/1038/1039: cuánto de una obra pagó cada parte — un solo helper
+// (repartoGestion): la obra base va a su pagador y cada ampliación con pagador
+// propio al suyo. Una obra de pagador único con una ampliación de otra parte
+// reparte entre las dos. Redondeo a centavos; el propietario absorbe el resto.
 export function parteObra(
   o: {
     costo: number | null;
     pagador: string | null;
     pagador_pct_inquilino: number | null;
-    ampliaciones?: import("@/features/finanzas/consultas-types").AmpliacionReparto[];
+    ampliaciones?: AmpliacionReparto[];
   },
   parte: "inquilino" | "propietario"
 ): number {
   if (o.costo == null) return 0;
-  if (o.pagador === parte) return o.costo;
-  if (o.pagador === "compartido") {
-    const { montoInquilino, montoPropietario } = repartoCompartido(
-      o.costo,
-      o.pagador_pct_inquilino ?? 50,
-      o.ampliaciones ?? []
-    );
-    return parte === "inquilino" ? montoInquilino : montoPropietario;
-  }
-  return 0;
+  const { montoInquilino, montoPropietario } = repartoGestion(
+    o.costo,
+    o.pagador as PagadorObra | null,
+    o.pagador_pct_inquilino,
+    o.ampliaciones ?? []
+  );
+  return parte === "inquilino" ? montoInquilino : montoPropietario;
 }
 
 export interface ObraHistorial {

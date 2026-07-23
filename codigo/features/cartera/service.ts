@@ -522,18 +522,19 @@ async function obrasDe(
   const filas = (data ?? []) as unknown as FilaObra[];
   if (filas.length === 0) return [];
 
-  // STORY-1038: ampliaciones aprobadas con pagador propio (obras compartidas)
-  // — se imputan a su pagador en el reparto por parte del historial.
+  // STORY-1038/1039: ampliaciones aprobadas con pagador propio — se imputan a
+  // su pagador en el reparto por parte del historial. Se traen para CUALQUIER
+  // obra (una de pagador único con una ampliación de otra parte también reparte).
   const ampliacionesPorGestion = new Map<
     string,
     import("./historial").ObraHistorial["ampliaciones"]
   >();
-  const compartidas = filas.filter((f) => f.pagador === "compartido").map((f) => f.id);
-  if (compartidas.length > 0) {
+  const idsObras = filas.map((f) => f.id);
+  if (idsObras.length > 0) {
     const { data: amps } = await admin
       .from("ampliaciones")
       .select("gestion_id, monto, pagador, pagador_pct_inquilino")
-      .in("gestion_id", compartidas)
+      .in("gestion_id", idsObras)
       .eq("estado", "aprobada")
       .not("pagador", "is", null);
     for (const a of (amps ?? []) as {

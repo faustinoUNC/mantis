@@ -185,15 +185,13 @@ export async function listarCobros(): Promise<CobrosData> {
   };
   const cerrFilas = (cerrRaw ?? []) as unknown as CerrFila[];
 
-  // STORY-1036: los cobros por parte de las compartidas viven en los eventos
-  // — una sola query para pendientes (marca "falta X") y cerrados (fila por
-  // parte). Las compartidas cobradas antes de la story no tienen eventos con
-  // parte y conservan su fila única.
-  const idsCompartido = [
-    ...pendFilas.filter((g) => g.pagador === "compartido").map((g) => g.id),
-    ...cerrFilas.filter((g) => g.pagador === "compartido").map((g) => g.id),
-  ];
-  const partesPorGestion = await partesCobradasPorGestion(admin, idsCompartido);
+  // STORY-1036/1039: los cobros por parte de un cobro dividido viven en los
+  // eventos (una gestión de pagador único con una ampliación de otra parte
+  // también se cobra dividida) — una sola query para pendientes (marca "falta
+  // X") y cerrados (fila por parte). Las cobradas de una sola vez no tienen
+  // eventos con parte y conservan su fila única.
+  const idsCobro = [...pendFilas.map((g) => g.id), ...cerrFilas.map((g) => g.id)];
+  const partesPorGestion = await partesCobradasPorGestion(admin, idsCobro);
 
   const pendientes = pendFilas.map((g) => {
     const total =
@@ -238,11 +236,10 @@ export async function listarCobros(): Promise<CobrosData> {
       descripcion: g.descripcion,
       direccion: g.propiedades?.direccion ?? "—",
     };
-    // Compartida cobrada por partes → una fila por parte (quién, cuándo y
-    // con qué medio). El nombre por parte sale del rótulo combinado de la
-    // 1031: "Ana (40%) + Pedro (60%)".
+    // Cobro dividido cobrado por partes → una fila por parte (quién, cuándo y
+    // con qué medio).
     const partes = partesPorGestion.get(g.id) ?? [];
-    if (g.pagador === "compartido" && partes.length > 0) {
+    if (partes.length > 0) {
       return partes.map((p) => ({
         ...base,
         id: `${g.id}:${p.parte}`,

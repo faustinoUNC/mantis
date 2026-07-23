@@ -36,11 +36,11 @@ export default async function GestionPage({
     gestion.etapa === "liquidacion_tecnico" &&
     gestion.tecnico_id != null &&
     (usuario.rol === "administrador" || usuario.rol === "gestor_administrativo");
-  // STORY-1036: cobro compartido — qué partes ya se cobraron (derivado en el
-  // server desde los eventos, la card de cobro solo lo muestra).
+  // STORY-1036/1039: cobro dividido — qué partes ya se cobraron (derivado en el
+  // server desde los eventos; devuelve [] si no hay cobros por parte). Se pide
+  // en facturación para cualquier gestión: si no se cobra dividida, es [].
   const necesitaCobrosParciales =
     gestion.etapa === "facturacion_cobro" &&
-    gestion.pagador === "compartido" &&
     (usuario.rol === "administrador" || usuario.rol === "gestor_administrativo");
   const [tecnicos, empleados, deudasTecnico, cobrosParciales] = await Promise.all([
     necesitaTecnicos ? tecnicosDisponibles(gestion.especialidad_id) : [],

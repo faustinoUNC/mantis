@@ -1315,14 +1315,29 @@ function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
   const [mailEnviado, setMailEnviado] = useState(false);
   // STORY-1038: en obras compartidas el gestor re-elige quién paga la
   // ampliación — arranca heredando el pagador/% de la obra (default de Fausti).
-  const esObraCompartida = gestion.pagador === "compartido";
-  const [pagAmp, setPagAmp] = useState<Pagador>(
-    esObraCompartida ? "compartido" : (gestion.pagador ?? "propietario")
-  );
-  const [pctAmp, setPctAmp] = useState(String(gestion.pagador_pct_inquilino ?? 50));
   const enviada = gestion.ampliaciones.find((a) => a.estado === "enviada");
+  // STORY-1039: SIEMPRE se puede elegir quién paga la ampliación (antes solo en
+  // obras compartidas). Default: el pagador de la obra; si ya se envió, lo
+  // anclado. (enviada se computa antes de los hooks — no es un hook.)
+  const [pagAmp, setPagAmp] = useState<Pagador>(
+    (enviada?.pagador as Pagador | null) ??
+      (gestion.pagador as Pagador | null) ??
+      "propietario"
+  );
+  const [pctAmp, setPctAmp] = useState(
+    String(enviada?.pagador_pct_inquilino ?? gestion.pagador_pct_inquilino ?? 50)
+  );
   if (!enviada) return null;
   const enviadaPagador = mailEnviado || Boolean(enviada.enviada_pagador_en);
+  // STORY-1039 (espejo de STORY-1037): si ya se envió el aviso y después cambiás
+  // quién paga la ampliación, hay que reenviar antes de poder autorizar — el
+  // pagador aprueba lo que recibió.
+  const terminosCambiados =
+    enviadaPagador &&
+    enviada.pagador != null &&
+    (pagAmp !== enviada.pagador ||
+      (pagAmp === "compartido" &&
+        Number(pctAmp) !== (enviada.pagador_pct_inquilino ?? 50)));
 
   const aprobado = gestion.presupuestos.find((p) => p.estado === "aprobado");
   const aprobadoTotal = aprobado
@@ -1360,33 +1375,32 @@ function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
         <p className="text-sm leading-relaxed">“{enviada.motivo}”</p>
       </div>
 
-      {/* STORY-1038: solo en obras compartidas — quién paga ESTA ampliación
-          (default: el pagador de la obra). En pagador único no se re-elige. */}
-      {esObraCompartida && (
-        <div className="flex flex-wrap items-end gap-3 max-w-md">
-          <div className="min-w-48">
-            <Select
-              label="¿Quién paga esta ampliación?"
-              value={pagAmp}
-              onChange={(e) => setPagAmp(e.target.value as Pagador)}
-            >
-              <option value="compartido">Compartido (inquilino y propietario)</option>
-              <option value="inquilino">Solo el inquilino</option>
-              <option value="propietario">Solo el propietario</option>
-            </Select>
-          </div>
-          {pagAmp === "compartido" && (
-            <div className="w-32">
-              <InputNumerico
-                label="% del inquilino"
-                value={pctAmp}
-                onChange={(e) => setPctAmp(e.currentTarget.value)}
-                decimales={false}
-              />
-            </div>
-          )}
+      {/* STORY-1039: SIEMPRE se puede elegir quién paga ESTA ampliación
+          (default: el pagador de la obra). Si en una obra de pagador único se
+          la atribuís a la otra parte, la gestión se cobra dividida. */}
+      <div className="flex flex-wrap items-end gap-3 max-w-md">
+        <div className="min-w-48">
+          <Select
+            label="¿Quién paga esta ampliación?"
+            value={pagAmp}
+            onChange={(e) => setPagAmp(e.target.value as Pagador)}
+          >
+            <option value="compartido">Compartido (inquilino y propietario)</option>
+            <option value="inquilino">Solo el inquilino</option>
+            <option value="propietario">Solo el propietario</option>
+          </Select>
         </div>
-      )}
+        {pagAmp === "compartido" && (
+          <div className="w-32">
+            <InputNumerico
+              label="% del inquilino"
+              value={pctAmp}
+              onChange={(e) => setPctAmp(e.currentTarget.value)}
+              decimales={false}
+            />
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button
@@ -1394,13 +1408,10 @@ function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
           disabled={cargando}
           onClick={async () => {
             const ok = await correr(() =>
-              enviarAmpliacionEmail(
-                gestion.id,
-                enviada.id,
-                esObraCompartida
-                  ? { pagador: pagAmp, pctInquilino: Number(pctAmp) || undefined }
-                  : undefined
-              )
+              enviarAmpliacionEmail(gestion.id, enviada.id, {
+                pagador: pagAmp,
+                pctInquilino: pagAmp === "compartido" ? Number(pctAmp) || undefined : undefined,
+              })
             );
             if (ok) setMailEnviado(true);
           }}
@@ -1434,7 +1445,7 @@ function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
       ) : (
         <div className="flex flex-wrap items-end gap-3">
           <Button
-            disabled={cargando || !enviadaPagador}
+            disabled={cargando || !enviadaPagador || terminosCambiados}
             onClick={() => correr(() => resolverAmpliacion(enviada.id, gestion.id, true))}
           >
             Registrar autorización
@@ -1446,6 +1457,13 @@ function AmpliacionGestor({ gestion }: { gestion: GestionDetalle }) {
             <p className="w-full text-[12px] text-muted">
               Para registrar la autorización, primero enviá la ampliación al{" "}
               {etiquetaPagador(gestion.pagador) ?? "pagador"} por email — autoriza lo que recibió.
+            </p>
+          )}
+          {/* STORY-1039: cambió quién paga después de enviar → reenviar antes de autorizar */}
+          {enviadaPagador && terminosCambiados && (
+            <p className="w-full text-[12px] text-urgente-fuerte">
+              Cambiaste quién paga la ampliación después de enviarla — reenviá el
+              aviso para poder autorizar.
             </p>
           )}
         </div>

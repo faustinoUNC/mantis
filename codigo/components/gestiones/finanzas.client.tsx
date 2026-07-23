@@ -16,11 +16,13 @@ import {
 } from "@/features/finanzas/medios";
 import {
   claveDeuda,
+  esRepartido,
   PARTE_COBRO_LABEL,
-  repartoCompartido,
+  repartoGestion,
   type AmpliacionReparto,
   type CobroParcial,
   type ParteCobro,
+  type PagadorObra,
 } from "@/features/finanzas/consultas-types";
 // STORY-1038: ampliaciones aprobadas del técnico actual con pagador propio —
 // las que inciden en el reparto del cobro compartido (el costo_final las
@@ -40,6 +42,20 @@ function ampliacionesReparto(
       pagador: a.pagador as AmpliacionReparto["pagador"],
       pagadorPctInquilino: a.pagador_pct_inquilino,
     }));
+}
+
+// STORY-1039: "cobro dividido" (ambas partes deben plata) — reemplaza al viejo
+// `pagador === "compartido"` para decidir el flujo de dos notas / dos cobros.
+function cobroDividido(
+  gestion: import("@/features/gestiones/types").GestionDetalle,
+  total: number
+): boolean {
+  return esRepartido(
+    total,
+    (gestion.pagador as PagadorObra | null) ?? null,
+    gestion.pagador_pct_inquilino,
+    ampliacionesReparto(gestion)
+  );
 }
 import {
   descargarDocumento,
@@ -419,9 +435,10 @@ function CobroPorPartes({
   // STORY-1038: se muestra el MONTO de cada parte, no el % — con una
   // ampliación atribuida a una sola parte el % de la obra deja de describir el
   // reparto real; el monto (que sí contempla la ampliación) es la verdad.
-  const { montoInquilino, montoPropietario } = repartoCompartido(
+  const { montoInquilino, montoPropietario } = repartoGestion(
     total,
-    gestion.pagador_pct_inquilino ?? 50,
+    (gestion.pagador as PagadorObra | null) ?? null,
+    gestion.pagador_pct_inquilino,
     ampliacionesReparto(gestion)
   );
   const partes: { parte: ParteCobro; monto: number }[] = [
@@ -568,9 +585,10 @@ export function FinanzasAcciones({
         </div>
 
         {/* STORY-972: el cargo también se respalda con la nota de cobro de
-            siempre (vista previa + envío por mail al pagador). STORY-1036:
-            con pago compartido, una nota y un cobro por parte. */}
-        {gestion.pagador === "compartido" ? (
+            siempre (vista previa + envío por mail al pagador). STORY-1036/1039:
+            si el cargo se cobra dividido (compartido o ampliación de otra
+            parte), una nota y un cobro por parte. */}
+        {cobroDividido(gestion, cargo) ? (
           <>
             <NotasCobroCompartido gestion={gestion} />
             <CobroPorPartes
@@ -653,17 +671,23 @@ export function FinanzasAcciones({
               <span className="font-mono">{plata(cargoAdmin)}</span>
             </div>
             <div className="flex justify-between pt-1 border-t border-border font-semibold">
-              <span>Total a cobrar al {etiquetaPagador(gestion.pagador) ?? "pagador"}</span>
+              <span>
+                Total a cobrar
+                {cobroDividido(gestion, trabajo + cargoAdmin)
+                  ? " al inquilino y propietario"
+                  : ` al ${etiquetaPagador(gestion.pagador) ?? "pagador"}`}
+              </span>
               <span className="font-mono">{plata(trabajo + cargoAdmin)}</span>
             </div>
-            {/* STORY-1031: con pago compartido, el reparto a la vista del
-                administrativo (mismo redondeo que la nota). STORY-1038: las
-                ampliaciones con pagador propio se imputan a su pagador — se
-                muestra el MONTO, no el %, que dejaría de describir el total. */}
-            {gestion.pagador === "compartido" && (() => {
-              const { montoInquilino, montoPropietario } = repartoCompartido(
+            {/* STORY-1031/1039: con cobro dividido, el reparto a la vista del
+                administrativo (mismo redondeo que la nota). Las ampliaciones con
+                pagador propio se imputan a su pagador — se muestra el MONTO, no
+                el %, que dejaría de describir el total. */}
+            {cobroDividido(gestion, trabajo + cargoAdmin) && (() => {
+              const { montoInquilino, montoPropietario } = repartoGestion(
                 trabajo + cargoAdmin,
-                gestion.pagador_pct_inquilino ?? 50,
+                (gestion.pagador as PagadorObra | null) ?? null,
+                gestion.pagador_pct_inquilino,
                 ampliacionesReparto(gestion)
               );
               return (
@@ -682,9 +706,9 @@ export function FinanzasAcciones({
           </div>
         </div>
 
-        {/* STORY-1036: compartido — una nota y un cobro por parte, cada uno
-            cuando efectivamente entra la plata. */}
-        {gestion.pagador === "compartido" ? (
+        {/* STORY-1036/1039: cobro dividido — una nota y un cobro por parte,
+            cada uno cuando efectivamente entra la plata. */}
+        {cobroDividido(gestion, trabajo + cargoAdmin) ? (
           <>
             <NotasCobroCompartido gestion={gestion} />
             <CobroPorPartes

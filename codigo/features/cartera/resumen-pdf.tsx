@@ -143,7 +143,7 @@ function ResumenDoc({ datos }: { datos: DatosResumen }) {
                 {o.pagador &&
                   `  ·  Pagó: ${
                     o.pagador === "compartido"
-                      ? `compartido (inquilino ${o.pagador_pct_inquilino ?? 50}% / propietario ${100 - (o.pagador_pct_inquilino ?? 50)}%)`
+                      ? "compartido (inquilino y propietario)"
                       : o.pagador
                   }`}
               </Text>
