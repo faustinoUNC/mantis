@@ -67,7 +67,7 @@ En la **vista del técnico**, cuando la propiedad está desocupada, el contacto 
 
 ## Dev Agent Record
 
-- **Implementada** (2026-07-23). Sin migración. `tsc --noEmit` y `eslint` verdes. Sin commitear aún.
+- **Commit:** `42c439a` (2026-07-23). Sin migración. `tsc --noEmit` y `eslint` verdes.
 - **Verificación E2E** (navegador, dev local, data real, 2026-07-23):
   - Técnico + #108 **desocupada** (Ituzaingó 1435): "Propiedad desocupada · Coordiná el acceso con la inmobiliaria"; sin nombre/tel/email del propietario Alberto Sánchez; cero `tel:`/`mailto:`. ✅
   - Técnico + #120 **ocupada** (Belgrano 1288): "Inquilino: Paula Giordano" con `tel:351-7701309` + mailto (STORY-938 intacta). ✅
