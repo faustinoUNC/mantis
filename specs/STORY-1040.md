@@ -50,7 +50,7 @@ Dos causas de raíz:
 
 ## Dev Agent Record
 
-- **Commit:** _pendiente_ (código); migración `story_1040_tenencia_desde_tecnico` ya aplicada en Supabase (`ejwokycbyjtlxwusbhtt`).
+- **Commit:** `7b1bb29` (2026-07-23); migración `story_1040_tenencia_desde_tecnico` aplicada en Supabase (`ejwokycbyjtlxwusbhtt`).
 - **Archivos:**
   - Migración `story_1040_tenencia_desde_tecnico`: `alter table gestiones add column tenencia_desde timestamptz` + backfill (última desasignación o `creado_en`). Backfill sobre 215 gestiones: 22 con boundary de reasignación, 193 en creación, 0 nulls.
   - `codigo/features/gestiones/service.ts`: `asignarTecnico` agrega `tenencia_desde: new Date().toISOString()` al update; `obtenerGestion` trae `tenencia_desde` y, para `rol === "tecnico"`, filtra server-side `eventos`/`avances`/`conformidades` por `creado_en >= tenencia_desde` (helper `enTenencia`, comparación por `Date.getTime()`; fail-open si null). Se filtra ANTES de `nombrarSalientes` (no se resuelven nombres de eventos ocultos).
