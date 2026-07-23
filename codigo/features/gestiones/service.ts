@@ -791,7 +791,7 @@ export async function estadisticasTecnicos(
     admin
       .from("gestiones")
       .select(
-        "id, tecnico_id, etapa, asignacion_aceptada, costo_final, materiales_total, presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias)"
+        "id, tecnico_id, etapa, asignacion_aceptada, costo_final, materiales_total, presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado)"
       )
       .in("tecnico_id", ids),
     // STORY-966: abandonos desde los eventos congelados — el tecnico_id de la
@@ -839,6 +839,7 @@ export async function estadisticasTecnicos(
       monto_mano_obra: number;
       plazo_dias: number | null;
     }[] | null;
+    conformidades: { estado: string }[] | null;
   };
 
   // STORY-966: cumplimiento de plazo del picker — días reales de la ÚLTIMA
@@ -904,8 +905,17 @@ export async function estadisticasTecnicos(
     for (const g of gs) {
       const aprob = (g.presupuestos ?? []).find((p) => p.estado === "aprobado");
       if (!aprob) continue;
-      const real =
-        Number(aprob.monto_materiales) <= 0
+      // STORY-1046: el gasto solo cuenta en el DESVÍO cuando la inmobiliaria
+      // aprobó la conformidad (mismo gate que la card de Informes). Antes de eso
+      // un typo del técnico inflaba su desvío sin decisión de la inmobiliaria.
+      // Nota: NO usar `continue` — abajo se computa la métrica de plazo, que
+      // tiene su propio criterio y no debe gatearse por conformidad.
+      const conformidadAprobada = (g.conformidades ?? []).some(
+        (c) => c.estado === "aprobada"
+      );
+      const real = !conformidadAprobada
+        ? null
+        : Number(aprob.monto_materiales) <= 0
           ? null
           : g.materiales_total != null
             ? Number(g.materiales_total)

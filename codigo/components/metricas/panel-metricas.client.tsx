@@ -551,6 +551,10 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     const acum = new Map<string, { reales: number; presup: number; n: number }>();
     for (const f of filasEsp) {
       if (!f.matPresupuestada || f.matPresupuestada <= 0 || !f.tecnicoNombre) continue;
+      // STORY-1046: el gasto solo cuenta cuando la inmobiliaria aprobó la
+      // conformidad. Antes de eso (rendido en etapa `conformidad`, o rechazado)
+      // un typo del técnico inflaba su desvío sin decisión de la inmobiliaria.
+      if (!f.conformidades.includes("aprobada")) continue;
       const reales =
         f.materialesTotal != null
           ? f.materialesTotal
