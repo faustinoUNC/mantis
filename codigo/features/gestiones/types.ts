@@ -184,6 +184,11 @@ export interface GestionDetalle extends GestionResumen {
   // STORY-967: cargo por cancelación tardía — null = cancelación sin cargo.
   // Con cargo, la gestión pasa por Cobro y cierra en `cancelada`.
   cargo_cancelacion: number | null;
+  // STORY-1047: a quién se le factura el cargo por cancelación — INDEPENDIENTE
+  // del pagador de la obra (que se ancla al presupuestar y puede ser null).
+  // Solo inquilino/propietario (nunca compartido); se elige en el modal de
+  // cancelación cuando hay cargo. null = sin cargo.
+  cargo_cancelacion_pagador: Pagador | null;
   // STORY-934/965: rendición del técnico al terminar la ejecución — total
   // gastado en la obra + fotos de los comprobantes (una por ticket)
   materiales_total: number | null;

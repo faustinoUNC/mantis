@@ -329,7 +329,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_DETALLE}, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, fotos_reporte_paths, adelanto_materiales, nota_emitida_en, presupuesto_enviado_en, archivada_en, aviso_no_continua_motivo, gestor_id, tecnico_id, tenencia_desde, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_DETALLE}, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, cargo_cancelacion_pagador, materiales_total, materiales_fotos_paths, fotos_reporte_paths, adelanto_materiales, nota_emitida_en, presupuesto_enviado_en, archivada_en, aviso_no_continua_motivo, gestor_id, tecnico_id, tenencia_desde, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -402,6 +402,7 @@ export async function obtenerGestion(
     costo_final: number | null;
     cargo_admin: number | null;
     cargo_cancelacion: number | null;
+    cargo_cancelacion_pagador: Pagador | null;
     materiales_total: number | null;
     materiales_fotos_paths: string[] | null;
     fotos_reporte_paths: string[] | null;
@@ -436,6 +437,7 @@ export async function obtenerGestion(
     cargo_admin: fila.cargo_admin,
     cargo_cancelacion:
       fila.cargo_cancelacion == null ? null : Number(fila.cargo_cancelacion),
+    cargo_cancelacion_pagador: fila.cargo_cancelacion_pagador,
     materiales_total: fila.materiales_total == null ? null : Number(fila.materiales_total),
     adelanto_materiales:
       fila.adelanto_materiales == null ? null : Number(fila.adelanto_materiales),
@@ -536,7 +538,10 @@ export async function avanzarEtapa(
 export async function cancelarGestion(
   gestionId: string,
   motivo: string,
-  cargo?: number
+  cargo?: number,
+  // STORY-1047: a quién se le factura el cargo — independiente del pagador de
+  // la obra. Obligatorio cuando hay cargo; solo inquilino/propietario.
+  cargoPagador?: Pagador
 ): Promise<ActionResult> {
   if (!motivo?.trim()) return { ok: false, error: "Indicá el motivo de la cancelación." };
   const supabase = await createClient();
@@ -546,11 +551,16 @@ export async function cancelarGestion(
     if (!Number.isFinite(Number(cargo))) {
       return { ok: false, error: "El cargo por cancelación no es un monto válido." };
     }
+    // STORY-1047: sin destinatario no hay cargo — la nota/cobro no pueden salir
+    // a nadie. El modal lo exige; acá se valida server-side.
+    if (cargoPagador !== "inquilino" && cargoPagador !== "propietario") {
+      return { ok: false, error: "Elegí a quién se le cobra el cargo por cancelación." };
+    }
     // RLS (admin o gestor owner) decide quién puede; el guard de etapa evita
     // marcar cargo donde no corresponde (el técnico aceptó = presupuesto+).
     const { data, error } = await supabase
       .from("gestiones")
-      .update({ cargo_cancelacion: Number(cargo) })
+      .update({ cargo_cancelacion: Number(cargo), cargo_cancelacion_pagador: cargoPagador })
       .eq("id", gestionId)
       .in("etapa", ["presupuesto", "en_ejecucion", "conformidad"])
       .select("id");
@@ -571,7 +581,7 @@ export async function cancelarGestion(
     if (conCargo) {
       await supabase
         .from("gestiones")
-        .update({ cargo_cancelacion: null })
+        .update({ cargo_cancelacion: null, cargo_cancelacion_pagador: null })
         .eq("id", gestionId);
     }
     const mensajes: Record<string, string> = {

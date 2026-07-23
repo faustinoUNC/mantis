@@ -118,7 +118,7 @@ async function datosDocumento(
   const { data: g } = await admin
     .from("gestiones")
     .select(
-      "id, numero, descripcion, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, materiales_total, adelanto_materiales, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, tecnico_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
+      "id, numero, descripcion, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, cargo_cancelacion_pagador, materiales_total, adelanto_materiales, liq_monto, liq_factura_ref, liq_medio, liq_pagada_en, legajo_id, tecnico_id, creado_en, propiedades(direccion, propietarios(nombre, email)), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre, email), presupuestos(monto_materiales, monto_mano_obra, descripcion_trabajo, plazo_dias, notas, estado, creado_en)"
     )
     .eq("id", gestionId)
     .single();
@@ -200,8 +200,12 @@ async function datosDocumento(
     tipo === "nota"
       ? await ampliacionesRepartoDeGestion(admin, gestionId, g.tecnico_id ?? null)
       : [];
+  // STORY-1047: la nota de una cancelación NO se reparte por el pagador de la
+  // obra — el cargo lo paga la parte elegida al cancelar (una sola).
   const reparto =
-    tipo === "nota" ? repartoGestion(total, obraPagador, pctInquilino, ampliacionesReparto) : null;
+    tipo === "nota" && !esCancelacion
+      ? repartoGestion(total, obraPagador, pctInquilino, ampliacionesReparto)
+      : null;
 
   // Pagador EFECTIVO del documento: en la nota, quién debe plata (una parte o
   // las dos, STORY-1039); en el presupuesto, el pagador elegido (con la defensa
@@ -209,6 +213,10 @@ async function datosDocumento(
   let pagadorEfectivo: PagadorObra | null;
   if (tipo === "detalle") {
     pagadorEfectivo = null;
+  } else if (esCancelacion) {
+    // STORY-1047: destinatario = pagador del cargo, independiente de la obra.
+    pagadorEfectivo = (g.cargo_cancelacion_pagador as PagadorObra | null) ?? null;
+    if (pagadorEfectivo === "inquilino" && !inq) pagadorEfectivo = "propietario";
   } else if (tipo === "nota" && reparto) {
     const inqDebe = reparto.montoInquilino > 0 && inq != null;
     const propDebe = reparto.montoPropietario > 0 || !inq;
@@ -892,7 +900,11 @@ export async function registrarCobro(
     g?.pagador_pct_inquilino == null ? null : Number(g.pagador_pct_inquilino),
     ampliaciones
   );
-  const esRepartido = reparto.montoInquilino > 0 && reparto.montoPropietario > 0;
+  // STORY-1047: una cancelación con cargo NUNCA se cobra dividida — el cargo lo
+  // paga la parte elegida al cancelar (cargo_cancelacion_pagador), no el pagador
+  // de la obra. Aunque la obra fuera compartida, es un cobro de una sola parte.
+  const esRepartido =
+    cargoCancelacion == null && reparto.montoInquilino > 0 && reparto.montoPropietario > 0;
   if (esRepartido && !datos.parte) {
     return { ok: false, error: "Indicá qué parte está pagando." };
   }

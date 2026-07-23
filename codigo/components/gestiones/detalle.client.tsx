@@ -319,15 +319,24 @@ function DatosGestion({
             reparto es el real, incluye ampliaciones con pagador propio). Acá
             solo el "quién" — el % de la obra se volvía incompleto con una
             ampliación de otro pagador. */}
-        <Dato label="Paga" wrap={gestion.pagador === "compartido"}>
-          {gestion.pagador
-            ? gestion.pagador === "propietario"
-              ? "Propietario"
-              : gestion.pagador === "inquilino"
-                ? "Inquilino"
-                : "Compartido (inquilino y propietario)"
-            : <span className="text-muted font-normal">Se define al presupuestar</span>}
-        </Dato>
+        {/* STORY-1047: en una cancelación con cargo, "Paga" es el pagador del
+            CARGO (elegido al cancelar), no el de la obra — que puede no existir. */}
+        {(() => {
+          const esCancelConCargo =
+            gestion.cargo_cancelacion != null && gestion.cargo_cancelacion_pagador != null;
+          const p = esCancelConCargo ? gestion.cargo_cancelacion_pagador : gestion.pagador;
+          return (
+            <Dato label={esCancelConCargo ? "Paga la cancelación" : "Paga"} wrap={p === "compartido"}>
+              {p
+                ? p === "propietario"
+                  ? "Propietario"
+                  : p === "inquilino"
+                    ? "Inquilino"
+                    : "Compartido (inquilino y propietario)"
+                : <span className="text-muted font-normal">Se define al presupuestar</span>}
+            </Dato>
+          );
+        })()}
         <Dato label={gestion.costo_final != null ? "Costo final" : "Creada"}>
           {gestion.costo_final != null ? (
             <span className="font-mono text-[14px]">{plata(gestion.costo_final)}</span>
@@ -1857,6 +1866,15 @@ function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
   const [abierto, setAbierto] = useState(false);
   // El técnico aceptó = la gestión pasó de Asignación (ahí se ancla el cargo).
   const admiteCargo = ["presupuesto", "en_ejecucion", "conformidad"].includes(gestion.etapa);
+  // STORY-1047: el select de "quién paga el cargo" aparece solo con cargo > 0.
+  const [cargoStr, setCargoStr] = useState("");
+  const hayCargo = Number(cargoStr) > 0;
+  const hayInquilino = Boolean(gestion.inquilino_nombre);
+  // Default editable: el pagador de la obra si es soltero (inquilino/propietario);
+  // vacío si es null o "compartido" (el cargo nunca se reparte).
+  const defaultCargoPagador =
+    gestion.pagador === "inquilino" || gestion.pagador === "propietario" ? gestion.pagador : "";
+  const [cargoPagador, setCargoPagador] = useState<Pagador | "">(defaultCargoPagador);
 
   if (!abierto) {
     return (
@@ -1879,8 +1897,9 @@ function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
           e.preventDefault();
           const form = new FormData(e.currentTarget);
           const motivo = String(form.get("motivo"));
-          const cargo = admiteCargo ? Number(form.get("cargo") || 0) : 0;
-          correr(() => cancelarGestion(gestion.id, motivo, cargo));
+          const cargo = admiteCargo ? Number(cargoStr || 0) : 0;
+          const cargoPag = cargo > 0 && cargoPagador ? cargoPagador : undefined;
+          correr(() => cancelarGestion(gestion.id, motivo, cargo, cargoPag));
         }}
       >
         <p className="text-[13px] font-medium text-muted">
@@ -1888,16 +1907,36 @@ function CancelarGestion({ gestion }: { gestion: GestionDetalle }) {
         </p>
         <Input label="Motivo de la cancelación" name="motivo" required placeholder="Por qué no continúa" />
         {admiteCargo && (
-          <div className="max-w-xs">
-            <InputNumerico
-              label="Cargo por cancelación ($) — opcional"
-              name="cargo"
-              placeholder="0 = sin cargo"
-            />
-            <p className="mt-1 text-[12px] text-muted">
-              Con cargo, la gestión pasa por Cobro (lo registra la administración) y
-              recién ahí queda cancelada. Sin cargo, se cancela ahora.
-            </p>
+          <div className="max-w-xs flex flex-col gap-3">
+            <div>
+              <InputNumerico
+                label="Cargo por cancelación ($) — opcional"
+                name="cargo"
+                placeholder="0 = sin cargo"
+                value={cargoStr}
+                onChange={(e) => setCargoStr(e.currentTarget.value)}
+              />
+              <p className="mt-1 text-[12px] text-muted">
+                Con cargo, la gestión pasa por Cobro (lo registra la administración) y
+                recién ahí queda cancelada. Sin cargo, se cancela ahora.
+              </p>
+            </div>
+            {/* STORY-1047: a quién se le cobra el cargo — independiente del
+                pagador de la obra (que acá quizá todavía no se eligió). */}
+            {hayCargo && (
+              <Select
+                label="¿A quién se le cobra el cargo?"
+                value={cargoPagador}
+                onChange={(e) => setCargoPagador(e.target.value as Pagador | "")}
+                required
+              >
+                <option value="" disabled>
+                  Elegí quién paga el cargo…
+                </option>
+                <option value="propietario">Propietario</option>
+                {hayInquilino && <option value="inquilino">Inquilino</option>}
+              </Select>
+            )}
           </div>
         )}
         <div className="flex gap-2">

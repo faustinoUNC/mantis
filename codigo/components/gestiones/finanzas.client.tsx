@@ -595,12 +595,15 @@ export function FinanzasAcciones({
   // en cancelada (no pasa por liquidación: no hay técnico que liquidar).
   if (gestion.etapa === "facturacion_cobro" && gestion.cargo_cancelacion != null) {
     const cargo = Number(gestion.cargo_cancelacion);
+    // STORY-1047: el cargo lo paga la parte elegida al cancelar (independiente
+    // del pagador de la obra) y SIEMPRE es de una sola parte — nunca dividido.
+    const cargoPagador = gestion.cargo_cancelacion_pagador;
     return (
       <div className="flex flex-col gap-5">
         <div className="max-w-md">
           <div className="rounded-md border border-border bg-surface-2/50 px-4 py-3 text-sm flex flex-col gap-1">
             <div className="flex justify-between font-semibold">
-              <span>Cargo por cancelación a cobrar al {etiquetaPagador(gestion.pagador) ?? "responsable"}</span>
+              <span>Cargo por cancelación a cobrar al {etiquetaPagador(cargoPagador) ?? "responsable"}</span>
               <span className="font-mono">{plata(cargo)}</span>
             </div>
             <p className="text-[12px] text-muted">
@@ -609,43 +612,26 @@ export function FinanzasAcciones({
           </div>
         </div>
 
-        {/* STORY-972: el cargo también se respalda con la nota de cobro de
-            siempre (vista previa + envío por mail al pagador). STORY-1036/1039:
-            si el cargo se cobra dividido (compartido o ampliación de otra
-            parte), una nota y un cobro por parte. */}
-        {cobroDividido(gestion, cargo) ? (
-          <>
-            <NotasCobroCompartido gestion={gestion} />
-            <CobroPorPartes
-              gestion={gestion}
-              total={cargo}
-              cobrosParciales={cobrosParciales}
-              cargando={cargando}
-              error={error}
-              correr={correr}
-              ctaFinal="Registrar cobro → Cancelada"
-            />
-          </>
-        ) : (
-          <>
-            <EnvioDocumento
-              etiqueta="nota de cobro"
-              destinatarioEtiqueta={etiquetaPagador(gestion.pagador) ?? "pagador"}
-              yaEnviado={Boolean(gestion.nota_emitida_en)}
-              generar={() => descargarDocumento(gestion.id, "nota")}
-              enviar={() => emitirNotaCobro(gestion.id)}
-            />
+        {/* STORY-972: el cargo se respalda con la nota de cobro de siempre
+            (vista previa + envío por mail al pagador del cargo). STORY-1047: el
+            cargo de cancelación no se reparte — una nota, un cobro, a la parte
+            elegida al cancelar. */}
+        <EnvioDocumento
+          etiqueta="nota de cobro"
+          destinatarioEtiqueta={etiquetaPagador(cargoPagador) ?? "pagador"}
+          yaEnviado={Boolean(gestion.nota_emitida_en)}
+          generar={() => descargarDocumento(gestion.id, "nota")}
+          enviar={() => emitirNotaCobro(gestion.id)}
+        />
 
-            <FormCobro
-              total={cargo}
-              pagador={gestion.pagador}
-              cargando={cargando}
-              error={error}
-              onSubmit={(datos) => correr("cobro", () => registrarCobro(gestion.id, datos))}
-              cta="Registrar cobro → Cancelada"
-            />
-          </>
-        )}
+        <FormCobro
+          total={cargo}
+          pagador={cargoPagador}
+          cargando={cargando}
+          error={error}
+          onSubmit={(datos) => correr("cobro", () => registrarCobro(gestion.id, datos))}
+          cta="Registrar cobro → Cancelada"
+        />
       </div>
     );
   }
