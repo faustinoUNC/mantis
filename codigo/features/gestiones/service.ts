@@ -313,7 +313,7 @@ export async function obtenerGestion(
   const { data: g } = await supabase
     .from("gestiones")
     .select(
-      `${SELECT_DETALLE}, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, fotos_reporte_paths, adelanto_materiales, nota_emitida_en, presupuesto_enviado_en, archivada_en, aviso_no_continua_motivo, gestor_id, tecnico_id, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
+      `${SELECT_DETALLE}, pagador, pagador_pct_inquilino, costo_final, cargo_admin, cargo_cancelacion, materiales_total, materiales_fotos_paths, fotos_reporte_paths, adelanto_materiales, nota_emitida_en, presupuesto_enviado_en, archivada_en, aviso_no_continua_motivo, gestor_id, tecnico_id, tenencia_desde, propiedad_id, especialidad_id, calificaciones(estrellas, comentario)`
     )
     .eq("id", id)
     .single();
@@ -362,6 +362,22 @@ export async function obtenerGestion(
         .eq("gestion_origen_id", id)
         .order("creado_en", { ascending: true }),
     ]);
+
+  // STORY-1040: el técnico entrante solo ve SU tenencia del timeline (desde que
+  // se lo asignó). Se filtra en el server —no en el cliente— eventos, avances y
+  // conformidades del/los técnico(s) anterior(es). La inmobiliaria ve todo.
+  // Fail-open si tenencia_desde fuese null (defensivo): no acota.
+  const actual = await obtenerUsuarioActual();
+  const tenenciaDesde = (g as unknown as { tenencia_desde: string | null })
+    .tenencia_desde;
+  const acotarTenencia = actual?.rol === "tecnico" && !!tenenciaDesde;
+  const desdeMs = tenenciaDesde ? new Date(tenenciaDesde).getTime() : 0;
+  const enTenencia = (x: { creado_en: string }) =>
+    !acotarTenencia || new Date(x.creado_en).getTime() >= desdeMs;
+
+  const eventosVisibles = (eventos ?? []).filter(enTenencia);
+  const avancesVisibles = (avances ?? []).filter(enTenencia);
+  const conformidadesVisibles = (conformidades ?? []).filter(enTenencia);
 
   const base = normalizarFila(g as unknown as Record<string, unknown>);
   const fila = g as unknown as {
@@ -427,7 +443,7 @@ export async function obtenerGestion(
     // STORY-1002: los eventos con comprobante (adelanto de materiales)
     // ganan su URL firmada para el link del timeline.
     eventos: (await Promise.all(
-      (await nombrarSalientes(eventos ?? [], supabase)).map(async (e) => ({
+      (await nombrarSalientes(eventosVisibles, supabase)).map(async (e) => ({
         ...e,
         actor: Array.isArray(e.actor) ? (e.actor[0] ?? null) : e.actor,
         comprobante_url:
@@ -442,7 +458,7 @@ export async function obtenerGestion(
       monto: Number(a.monto),
     })) as GestionDetalle["ampliaciones"],
     avances: await Promise.all(
-      (avances ?? []).map(async (a) => ({
+      avancesVisibles.map(async (a) => ({
         id: a.id,
         tecnico_id: a.tecnico_id,
         tipo: a.tipo,
@@ -452,7 +468,7 @@ export async function obtenerGestion(
       }))
     ),
     conformidades: await Promise.all(
-      (conformidades ?? []).map(async (c) => ({
+      conformidadesVisibles.map(async (c) => ({
         id: c.id,
         tecnico_id: c.tecnico_id,
         estado: c.estado,
@@ -939,9 +955,15 @@ export async function asignarTecnico(
   }
 
   // RLS: solo admin o gestor owner pueden actualizar la gestión.
+  // STORY-1040: la (re)asignación mueve el inicio de tenencia del técnico —
+  // el entrante solo verá el timeline desde acá (filtrado en obtenerGestion).
   const { error } = await supabase
     .from("gestiones")
-    .update({ tecnico_id: tecnicoId, asignacion_aceptada: null })
+    .update({
+      tecnico_id: tecnicoId,
+      asignacion_aceptada: null,
+      tenencia_desde: new Date().toISOString(),
+    })
     .eq("id", gestionId);
   if (error) return { ok: false, error: "No se pudo asignar." };
   await supabase.from("eventos_gestion").insert({
