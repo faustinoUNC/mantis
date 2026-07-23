@@ -49,15 +49,28 @@ Evolución del MANTIS original (`/Users/fausti/Downloads/projects/tesis/sist_ges
 
 ### 6. Presentación de la tesis — dónde vive y cómo se publica al link original
 - **Fuente de verdad: `presentacion/` de ESTE repo** (`index.html` + `mantis-icon.png`). Toda edición se hace acá. Al pushear a `main`, Vercel la despliega solo (proyecto `mantis-presentacion`).
-- **El link original del jurado** sale del repo viejo (`tesisausi-gif/tesis`, clonado en `/Users/fausti/Downloads/projects/tesis/sist_gestion_incidentes`), que también tiene auto-deploy de Vercel. Para actualizarlo hay que **sincronizar** (copiar, no editar allá):
+- **El link original del jurado** sale de OTRO repo (el viejo de la tesis), que también tiene auto-deploy de Vercel. Para actualizarlo hay que **sincronizar** (copiar, no editar allá). Los dos repos se identifican por su **URL de git remote** (igual en cualquier máquina), NO por una ruta local:
+  - MANTIS 2 (fuente): `https://github.com/faustinoUNC/mantis.git` — es ESTE repo.
+  - Tesis (destino del link del jurado): `https://github.com/tesisausi-gif/tesis.git`.
+- **Cómo lo hace un Claude en CUALQUIER máquina** (no asumir rutas de nadie: derivarlas). Corré este bloque tal cual:
   ```bash
-  cd /Users/fausti/Downloads/projects/tesis/sist_gestion_incidentes
-  git fetch origin && git pull --rebase origin main   # ¡siempre! main se fuerza-pushea seguido
-  cp /Users/fausti/Downloads/projects/mantis/presentacion/index.html presentacion/
-  cp /Users/fausti/Downloads/projects/mantis/presentacion/mantis-icon.png presentacion/
+  # 1) Raíz del repo MANTIS 2 = este repo (donde corre Claude). Portable, sin hardcodear:
+  MANTIS="$(git rev-parse --show-toplevel)"
+
+  # 2) Clon local del repo tesis. Por defecto, un directorio hermano de MANTIS.
+  #    Si el compañero ya lo tiene clonado en otro lado, cambiá esta línea por su ruta.
+  TESIS="$(dirname "$MANTIS")/tesis-presentacion"
+  [ -d "$TESIS/.git" ] || git clone https://github.com/tesisausi-gif/tesis.git "$TESIS"
+
+  # 3) Sincronizar (el main del repo tesis se fuerza-pushea seguido → pull --rebase SIEMPRE)
+  cd "$TESIS"
+  git fetch origin && git pull --rebase origin main
+  cp "$MANTIS/presentacion/index.html" presentacion/
+  cp "$MANTIS/presentacion/mantis-icon.png" presentacion/
   git add presentacion/ && git commit -m "docs(presentacion): sync desde el repo de MANTIS 2" && git push origin main
   ```
-- Reglas: (1) **NUNCA editar la presentación en el repo tesis** — se pisa en el próximo sync; (2) copiar SIEMPRE con `cp`, no copiar/pegar contenido en el editor (el 2026-07-17 una copia a mano quedó con el encoding roto: "GestiÃ³n", "Â·"); (3) si el sync da conflicto en `presentacion/index.html`, gana la versión del repo MANTIS 2.
+  Nota: el paso 2 clona el repo tesis si no está; el push del paso 3 requiere que el compañero tenga permiso de escritura en `tesisausi-gif/tesis` (si no, el `git push` falla — pedir acceso o que lo pushee alguien con permiso).
+- Reglas (valen en cualquier máquina): (1) **NUNCA editar la presentación en el repo tesis** — se pisa en el próximo sync; (2) copiar SIEMPRE con `cp`, no copiar/pegar contenido en el editor (el 2026-07-17 una copia a mano quedó con el encoding roto: "GestiÃ³n", "Â·"); (3) si el sync da conflicto en `presentacion/index.html`, gana la versión del repo MANTIS 2.
 
 ### 7. Tarjetas de Trello — formato obligatorio
 - Las cards se escriben **sintéticas, simples y a alto nivel** — las leen testers (Rami/Giuliano), no devs. NADA de citas `archivo:línea`, ni números internos de investigación, ni jerga de código.
