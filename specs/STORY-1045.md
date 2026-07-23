@@ -59,7 +59,7 @@ Los otros dos (`presupuesto_pendiente`, `conformidad_rechazada`) no tienen badge
 
 ## Dev Agent Record
 
-- **Commit:** `PENDIENTE` (2026-07-23). Sin migración.
+- **Commit:** `1db71d5` (2026-07-23). Sin migración.
 - **Archivos:**
   - `codigo/features/gestiones/service.ts` (`normalizarFila`): los tres flags derivados de tablas hijas se acotan por etapa **en el origen** — `presupuesto_pendiente` solo `presupuesto`, `ampliacion_pendiente` solo `en_ejecucion`, `conformidad_rechazada` solo `conformidad` (modelo `calificacion_pendiente`). Arregla también el consumo crudo del asistente.
   - `codigo/components/gestiones/tablero.client.tsx`: guarda de Urgente en terminales (`!ETAPAS_TERMINALES.has(gestion.etapa)`); fila de badges con `flex-wrap` y `shrink-0 whitespace-nowrap` unificado en Urgente y Reasignar.
