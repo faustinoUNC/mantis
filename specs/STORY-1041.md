@@ -46,7 +46,7 @@ Resultado: quedan en un limbo, accesibles solo por URL directa. Verificado en DB
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente — se completa post-push)_; migración `story_1041_cancelada_auto_archiva` aplicada en Supabase (`ejwokycbyjtlxwusbhtt`).
+- **Commit:** `f279a4b` (2026-07-23); migración `story_1041_cancelada_auto_archiva` aplicada en Supabase (`ejwokycbyjtlxwusbhtt`).
 - **Archivos:**
   - Migración `story_1041_cancelada_auto_archiva`: recrea `avanzar_etapa` con `archivada_en = case when p_nueva = 'cancelada' then now() else archivada_en end` en el update final + backfill de canceladas huérfanas (fecha del evento de transición a `cancelada`, fallback `now()`). Backfill: 21 canceladas → archivadas.
   - `scripts/avanzar_etapa.sql`: copia de referencia del repo sincronizada con el mismo cambio.
