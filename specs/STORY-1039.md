@@ -32,6 +32,7 @@
 
 ## Dev Agent Record
 
+- **Commit:** `a937398` (2026-07-23).
 - **Implementación (2026-07-23):** 8 archivos, cero migraciones (reusa las columnas de STORY-1038).
   - `features/finanzas/consultas-types.ts`: `repartoCompartido` → **`repartoGestion(total, obraPagador, obraPct, ampliaciones)`** (la obra base a su pagador + cada ampliación al suyo) + **`esRepartido(...)`** (ambas partes deben plata) + tipo `PagadorObra`.
   - `features/finanzas/service.ts`: `datosDocumento` reescrito — resuelve ambos contactos y elige destinatario(s) por quién DEBE plata (nota), no por el pagador de la obra; `registrarCobro` usa `esRepartido` (antes `pagador === "compartido"`); `enviarAmpliacionEmail` acepta y ancla el pagador de la ampliación SIEMPRE (removido el gate de obra compartida).
