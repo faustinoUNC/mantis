@@ -167,12 +167,12 @@ export interface Conformidad {
 
 // STORY-938: contacto para coordinar la visita — inquilino si la gestión
 // tiene legajo vigente, si no el propietario (propiedad desocupada).
-export interface ContactoCliente {
-  tipo: "inquilino" | "propietario";
-  nombre: string;
-  telefono: string | null;
-  email: string | null;
-}
+// STORY-1048: el técnico no ve los datos personales del propietario de una
+// propiedad vacía — coordina el acceso con la inmobiliaria (que tiene las
+// llaves). Ese caso es el centinela `{ tipo: "inmobiliaria" }`, sin datos.
+export type ContactoCliente =
+  | { tipo: "inquilino" | "propietario"; nombre: string; telefono: string | null; email: string | null }
+  | { tipo: "inmobiliaria" };
 
 export interface GestionDetalle extends GestionResumen {
   // null hasta que el gestor lo decide al aprobar/enviar el presupuesto

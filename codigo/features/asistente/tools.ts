@@ -341,9 +341,14 @@ export function crearTools(usuario: UsuarioActual) {
         direccion_completa: g.propiedad_unidad ? `${g.direccion} — ${g.propiedad_unidad}` : g.direccion,
         propietario: g.propietario_nombre,
         inquilino: g.inquilino_nombre,
-        contacto_para_visita: g.contacto_cliente
-          ? { tipo: g.contacto_cliente.tipo, nombre: g.contacto_cliente.nombre, telefono: g.contacto_cliente.telefono }
-          : null,
+        // STORY-1048: al técnico en una propiedad desocupada, Walter tampoco le
+        // filtra al propietario — coordina el acceso con la inmobiliaria.
+        contacto_para_visita:
+          g.contacto_cliente?.tipo === "inmobiliaria"
+            ? { tipo: "inmobiliaria", nota: "Propiedad desocupada — coordinar el acceso con la inmobiliaria" }
+            : g.contacto_cliente
+              ? { tipo: g.contacto_cliente.tipo, nombre: g.contacto_cliente.nombre, telefono: g.contacto_cliente.telefono }
+              : null,
         // STORY-1031: con pago compartido se informa el reparto
         pagador:
           g.pagador === "compartido"

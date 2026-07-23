@@ -122,7 +122,14 @@ const SELECT_DETALLE =
   "id, numero, descripcion, etapa, urgencia, asignacion_aceptada, desasignada_en, aviso_no_continua_en, creado_en, gestion_origen_id, origen:gestion_origen_id(id, descripcion, etapa), vinculadas:gestiones!gestion_origen_id(id), propiedades(direccion, tipo, unidad, propietarios(nombre, email, telefono)), legajos(fecha_fin, inquilinos(nombre, email, telefono)), especialidades(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), presupuestos(estado), conformidades(estado, creado_en)";
 
 // Inquilino si la gestión tiene legajo vigente; si no, el propietario.
-function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_cliente"] {
+// STORY-1048: en la vista del TÉCNICO, una propiedad desocupada no muestra los
+// datos del propietario (no hay que molestar al dueño; la inmobiliaria tiene las
+// llaves) → línea de coordinación genérica. El gestor/admin sí ve al propietario
+// porque en una propiedad vacía es el pagador de la obra.
+function resolverContacto(
+  g: Record<string, unknown>,
+  rol: Rol | null
+): GestionDetalle["contacto_cliente"] {
   const propiedad = g.propiedades as {
     propietarios?: { nombre: string; email: string | null; telefono: string | null } | null;
   } | null;
@@ -138,6 +145,7 @@ function resolverContacto(g: Record<string, unknown>): GestionDetalle["contacto_
     return { tipo: "inquilino", nombre: inquilino.nombre, telefono: inquilino.telefono, email: inquilino.email };
   }
   if (propietario) {
+    if (rol === "tecnico") return { tipo: "inmobiliaria" };
     return { tipo: "propietario", nombre: propietario.nombre, telefono: propietario.telefono, email: propietario.email };
   }
   return null;
@@ -430,7 +438,10 @@ export async function obtenerGestion(
   return {
     ...base,
     calificacion: calif ?? null,
-    contacto_cliente: resolverContacto(g as unknown as Record<string, unknown>),
+    contacto_cliente: resolverContacto(
+      g as unknown as Record<string, unknown>,
+      actual?.rol ?? null
+    ),
     pagador: fila.pagador,
     pagador_pct_inquilino: fila.pagador_pct_inquilino,
     costo_final: fila.costo_final,

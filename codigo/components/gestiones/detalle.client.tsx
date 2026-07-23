@@ -281,7 +281,16 @@ function DatosGestion({
             </p>
           )}
         </div>
-        {gestion.contacto_cliente && (
+        {/* STORY-1048: al técnico, en una propiedad desocupada, no se le muestran
+            los datos del propietario — coordina el acceso con la inmobiliaria. */}
+        {gestion.contacto_cliente?.tipo === "inmobiliaria" ? (
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-muted">Acceso</p>
+            <p className="mt-0.5 text-[15px] font-medium">
+              Propiedad desocupada · Coordiná el acceso con la inmobiliaria
+            </p>
+          </div>
+        ) : gestion.contacto_cliente ? (
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-muted">
               {gestion.contacto_cliente.tipo === "inquilino" ? "Inquilino" : "Propietario"}
@@ -310,7 +319,7 @@ function DatosGestion({
               </p>
             )}
           </div>
-        )}
+        ) : null}
         <Dato label="Gestor">{gestion.gestor_nombre}</Dato>
         <Dato label="Técnico">{gestion.tecnico_nombre ?? "Sin asignar"}</Dato>
         {/* STORY-943: "Paga" recién existe cuando la inmobiliaria lo decidió
