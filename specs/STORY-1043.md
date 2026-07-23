@@ -49,7 +49,7 @@ Las validaciones existentes (`seExcede = monto2Num >= total`, `mismoMedio`, subm
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente)_
+- **Commit:** `c5ddca4` (2026-07-23). Sin migración (fix 100% cliente).
 - **Archivos:**
   - `codigo/components/gestiones/finanzas.client.tsx`: `formatearPesos` reescrita para decimales + nuevas `normalizarMonto` y `montoADecimal`; `onChange` del 2º medio usa `normalizarMonto`, `monto2Num` usa `montoADecimal`.
 - **Verificación:**
