@@ -48,6 +48,13 @@ Además, hoy **nada en la card de la gestión** avisa que se pidió una ampliaci
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente)_
-- **Archivos:** _(pendiente)_
-- **Verificación:** _(pendiente)_
+- **Commit:** `c6dfe2c` (2026-07-23). Sin migración (el índice único `ampliaciones_un_enviada_por_gestion` ya existía).
+- **Archivos:**
+  - `codigo/features/gestiones/service.ts`: gate en `subirConformidad` (si `terminando` y hay ampliación `enviada` en la gestión → error, antes de subir/avanzar); `SELECT_RESUMEN` suma `ampliaciones(estado)`; `normalizarFila` deriva `ampliacion_pendiente = ampliaciones.some((a) => a.estado === "enviada")`.
+  - `codigo/features/gestiones/types.ts`: `ampliacion_pendiente: boolean` en `GestionResumen`.
+  - `codigo/components/gestiones/detalle.client.tsx`: `AccionConformidadTecnico` calcula `ampliacionPendiente` (solo `terminando`), muestra cartel ámbar y deshabilita "Terminar y subir conformidad".
+  - `codigo/components/gestiones/tablero.client.tsx`: badge `<Badge tono="urgente">Ampliación</Badge>` en la card del gestor.
+  - `codigo/components/gestiones/mis-trabajos.client.tsx`: mismo badge en `TarjetaAccion` (card del técnico).
+- **Verificación:**
+  - `tsc --noEmit` y `eslint` verdes sobre los 5 archivos tocados.
+  - Click-through en la app pendiente (card de Trello para Giuli).
