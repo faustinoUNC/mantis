@@ -2,6 +2,7 @@
 
 import { obtenerUsuarioActual } from "@/features/auth/service";
 import { ETAPAS_TERMINALES } from "@/features/gestiones/types";
+import { sumaAmpliacionesAprobadas } from "@/features/gestiones/desvio";
 import { createClient } from "@/shared/lib/supabase/server";
 
 // STORY-914 — El service entrega datos GRANULARES (una fila por gestión +
@@ -39,6 +40,9 @@ export interface FilaMetrica {
   materialesTotal: number | null; // rendición del técnico (STORY-934)
   matPresupuestada: number | null; // monto_materiales del aprobado
   moPresupuestada: number | null; // monto_mano_obra del aprobado (para el fallback)
+  // STORY-1049: Σ ampliaciones aprobadas de la obra. El denominador del desvío
+  // es matPresupuestada + ampliacionesAprobadas (materiales autorizados).
+  ampliacionesAprobadas: number;
 }
 
 export interface EventoMetrica {
@@ -104,7 +108,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     supabase
       .from("gestiones")
       .select(
-        "id, descripcion, etapa, urgencia, pagador, tecnico_id, gestor_id, propiedad_id, costo_final, cargo_admin, cargo_cancelacion, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), calificaciones(estrellas)"
+        "id, descripcion, etapa, urgencia, pagador, tecnico_id, gestor_id, propiedad_id, costo_final, cargo_admin, cargo_cancelacion, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), ampliaciones(monto, estado), calificaciones(estrellas)"
       ),
     todosLosEventos(supabase),
     // STORY-954: capacidad = técnicos aprobados y activos por especialidad.
@@ -147,6 +151,8 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     gestor: { nombre: string } | null;
     presupuestos: { estado: string; monto_materiales: number; monto_mano_obra: number; plazo_dias: number | null }[] | null;
     conformidades: { estado: string }[] | null;
+    ampliaciones: { monto: number; estado: string }[] | null; // STORY-1049
+
     // PostgREST resuelve calificaciones como to-ONE (gestion_id es UNIQUE):
     // devuelve un objeto, no un array. Contemplamos ambas formas.
     calificaciones: { estrellas: number } | { estrellas: number }[] | null;
@@ -187,6 +193,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       materialesTotal: g.materiales_total == null ? null : Number(g.materiales_total),
       matPresupuestada: aprob ? Number(aprob.monto_materiales) : null,
       moPresupuestada: aprob ? Number(aprob.monto_mano_obra) : null,
+      ampliacionesAprobadas: sumaAmpliacionesAprobadas(g.ampliaciones),
     };
   });
 

@@ -19,6 +19,7 @@ import type {
 import { ETAPAS_TERMINALES } from "./types";
 import { ejecucionParaPlazoDias, type EventoPausa, type TransicionEjecucion } from "./ejecucion";
 import { nombrarSalientes } from "./salientes";
+import { sumaAmpliacionesAprobadas } from "./desvio";
 
 const BUCKET = "gestiones";
 const MIME_FOTOS: Record<string, string> = {
@@ -812,7 +813,7 @@ export async function estadisticasTecnicos(
     admin
       .from("gestiones")
       .select(
-        "id, tecnico_id, etapa, asignacion_aceptada, costo_final, materiales_total, presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado)"
+        "id, tecnico_id, etapa, asignacion_aceptada, costo_final, materiales_total, presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), ampliaciones(monto, estado)"
       )
       .in("tecnico_id", ids),
     // STORY-966: abandonos desde los eventos congelados — el tecnico_id de la
@@ -861,6 +862,8 @@ export async function estadisticasTecnicos(
       plazo_dias: number | null;
     }[] | null;
     conformidades: { estado: string }[] | null;
+    // STORY-1049: ampliaciones aprobadas → materiales autorizados en el desvío.
+    ampliaciones: { monto: number; estado: string }[] | null;
   };
 
   // STORY-966: cumplimiento de plazo del picker — días reales de la ÚLTIMA
@@ -916,6 +919,8 @@ export async function estadisticasTecnicos(
     // STORY-937: desvío SOLO de materiales (la mano de obra es fija por
     // diseño), ponderado por plata: Σ reales / Σ presupuestados − 1.
     // Reales = rendición; fallback para viejas: costo_final − mano de obra.
+    // STORY-1049: el presupuestado suma las ampliaciones APROBADAS de la obra
+    // (materiales autorizados) — un gasto extra autorizado no es sobrecosto.
     let matReales = 0;
     let matPresupuestados = 0;
     let nDesvio = 0;
@@ -945,7 +950,8 @@ export async function estadisticasTecnicos(
               : null;
       if (real != null && real >= 0) {
         matReales += real;
-        matPresupuestados += Number(aprob.monto_materiales);
+        matPresupuestados +=
+          Number(aprob.monto_materiales) + sumaAmpliacionesAprobadas(g.ampliaciones);
         nDesvio += 1;
       }
       const diasReales = ejecucionDias.get(g.id);

@@ -565,7 +565,9 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       const cur = acum.get(f.tecnicoNombre) ?? { reales: 0, presup: 0, n: 0 };
       acum.set(f.tecnicoNombre, {
         reales: cur.reales + reales,
-        presup: cur.presup + f.matPresupuestada,
+        // STORY-1049: presupuestado = materiales autorizados (original +
+        // ampliaciones aprobadas). Una ampliación aprobada no es sobrecosto.
+        presup: cur.presup + f.matPresupuestada + f.ampliacionesAprobadas,
         n: cur.n + 1,
       });
     }

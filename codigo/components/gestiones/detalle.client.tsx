@@ -63,6 +63,7 @@ import type {
   TecnicoDisponible,
 } from "@/features/gestiones/types";
 import { ETAPAS_TERMINALES, etiquetaPagador } from "@/features/gestiones/types";
+import { sumaAmpliacionesAprobadas } from "@/features/gestiones/desvio";
 import { Icono } from "@/components/ui/iconos";
 
 // Formato manual determinístico: toLocaleString mete un espacio invisible
@@ -1642,7 +1643,11 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
   // STORY-1003: "rendido" es SOLO materiales (la mano de obra presupuestada
   // se suma aparte en costo final y liquidación) — el desvío se mide contra
   // los materiales presupuestados, igual que la métrica de Informes.
-  const desvioMat = rendido != null ? rendido - matPresupuestados : null;
+  // STORY-1049: el desvío se mide contra los materiales AUTORIZADOS (presupuesto
+  // original + ampliaciones aprobadas) — un gasto extra autorizado no es desvío.
+  const ampliacionesAprobadas = sumaAmpliacionesAprobadas(gestion.ampliaciones);
+  const matAutorizados = matPresupuestados + ampliacionesAprobadas;
+  const desvioMat = rendido != null ? rendido - matAutorizados : null;
 
   if (!subida) {
     return <p className="text-sm text-muted">Esperando que el técnico suba la conformidad.</p>;
@@ -1700,13 +1705,23 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
               <span className="text-muted">Materiales presupuestados</span>
               <span className="font-mono">{plata(matPresupuestados)}</span>
             </div>
+            {/* STORY-1049: la ampliación aprobada agranda el techo autorizado,
+                por eso se muestra — así el desvío de abajo cierra a la vista. */}
+            {ampliacionesAprobadas > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted">Ampliación aprobada</span>
+                <span className="font-mono">+{plata(ampliacionesAprobadas)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted">Gastado real en materiales</span>
               <span className="font-mono font-semibold">{plata(rendido)}</span>
             </div>
-            {desvioMat != null && matPresupuestados > 0 && (
+            {desvioMat != null && matAutorizados > 0 && (
               <div className="flex justify-between pt-1 border-t border-border">
-                <span className="text-muted">Desvío sobre materiales</span>
+                <span className="text-muted">
+                  Desvío sobre materiales{ampliacionesAprobadas > 0 ? " autorizados" : ""}
+                </span>
                 <span
                   className={`font-mono font-semibold ${
                     desvioMat > 0 ? "text-urgente-fuerte" : "text-brand"
@@ -1714,7 +1729,7 @@ function AccionConformidadGestor({ gestion }: { gestion: GestionDetalle }) {
                 >
                   {desvioMat >= 0 ? "+" : "−"}{plata(Math.abs(desvioMat))} (
                   {desvioMat >= 0 ? "+" : "−"}
-                  {Math.abs(Math.round((desvioMat / matPresupuestados) * 100))}%)
+                  {Math.abs(Math.round((desvioMat / matAutorizados) * 100))}%)
                 </span>
               </div>
             )}
