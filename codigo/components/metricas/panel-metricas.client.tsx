@@ -978,7 +978,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
         </MetricCard>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-        <MetricCard titulo="Desvíos de presupuesto" ayuda="Por técnico: cuánto se pasó de lo presupuestado en materiales. +20% = gastó $120 por cada $100." n={nDesvio} alcance="historico">
+        <MetricCard titulo="Desvíos de presupuesto" ayuda="Desvío del gasto en materiales frente al presupuesto autorizado, por técnico." n={nDesvio} alcance="historico">
           {desvio.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Faltan gestiones cerradas con presupuesto para medir.</p>
           ) : (
@@ -1006,9 +1006,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           {desvioPlazo.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Ningún técnico se pasó del plazo que comprometió.</p>
           ) : (
-            <>
-              {/* Se ven ~5 técnicos; el resto se scrollea dentro de la card. */}
-              <div className="overflow-y-auto" style={{ maxHeight: desvioPlazo.length > 5 ? 5 * 42 : undefined }}>
+            // Se ven ~5 técnicos; el resto se scrollea dentro de la card.
+            <div className="overflow-y-auto" style={{ maxHeight: desvioPlazo.length > 5 ? 5 * 42 : undefined }}>
               <ResponsiveContainer width="100%" height={Math.max(160, desvioPlazo.length * 42)}>
                 <BarChart data={desvioPlazo} layout="vertical" margin={{ left: 12, right: 24 }}>
                   <CartesianGrid stroke={GRID} horizontal={false} />
@@ -1020,9 +1019,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-              </div>
-              <p className="text-[12px] text-muted mt-2">Más intenso = más se pasó del plazo comprometido.</p>
-            </>
+            </div>
           )}
         </MetricCard>
         </div>
