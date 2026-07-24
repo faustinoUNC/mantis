@@ -982,6 +982,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           {desvio.length === 0 ? (
             <p className="text-sm text-muted py-16 text-center">Faltan gestiones cerradas con presupuesto para medir.</p>
           ) : (
+            // Se ven ~5 técnicos; el resto se scrollea dentro de la card.
+            <div className="overflow-y-auto" style={{ maxHeight: desvio.length > 5 ? 5 * 42 : undefined }}>
             <ResponsiveContainer width="100%" height={Math.max(160, desvio.length * 42)}>
               <BarChart data={desvio} layout="vertical" margin={{ left: 12, right: 24 }}>
                 <CartesianGrid stroke={GRID} horizontal={false} />
@@ -996,6 +998,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            </div>
           )}
         </MetricCard>
 
@@ -1004,6 +1007,8 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
             <p className="text-sm text-muted py-16 text-center">Ningún técnico se pasó del plazo que comprometió.</p>
           ) : (
             <>
+              {/* Se ven ~5 técnicos; el resto se scrollea dentro de la card. */}
+              <div className="overflow-y-auto" style={{ maxHeight: desvioPlazo.length > 5 ? 5 * 42 : undefined }}>
               <ResponsiveContainer width="100%" height={Math.max(160, desvioPlazo.length * 42)}>
                 <BarChart data={desvioPlazo} layout="vertical" margin={{ left: 12, right: 24 }}>
                   <CartesianGrid stroke={GRID} horizontal={false} />
@@ -1015,6 +1020,7 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              </div>
               <p className="text-[12px] text-muted mt-2">Más intenso = más se pasó del plazo comprometido.</p>
             </>
           )}
