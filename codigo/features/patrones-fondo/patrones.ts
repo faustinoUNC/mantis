@@ -49,12 +49,12 @@ export interface PatronFondo {
   direccion: string;
   cantidad: number;
   obras: ObraDelPatron[]; // de la más nueva a la más vieja
-  // El patrón volvió a la bandeja porque entró una obra nueva después de
-  // haberlo atendido. `motivoReaparicion` explica por qué (Sally: la fila no
-  // vuelve muda). El caso estrella: tras una gestión de fondo terminada = "el
-  // arreglo no aguantó".
+  // El patrón volvió a la bandeja porque entró una obra nueva del rubro después
+  // de haberlo atendido. Es un aviso NEUTRO ("Volvió"): NO afirmamos por qué
+  // volvió — la obra nueva puede ser el mismo problema o algo distinto del mismo
+  // rubro, y la detección (que agrupa por rubro, no por causa) no puede saberlo.
+  // Quien juzga si es la misma causa es el humano, o Walter leyendo las notas.
   reaparecida: boolean;
-  motivoReaparicion: string | null;
 }
 
 export interface OpcionesBandeja {
@@ -83,11 +83,8 @@ export function armarPatrones(
   // → la marca de atendida-vía-gestión deja de valer). Una obra cancelada
   // tampoco cuenta como reiteración ni dispara reaparición.
   const canceladas = new Set<string>();
-  const terminadas = new Set<string>();
   for (const o of obras) {
-    const est = estadoObra(o.etapa, o.cargoCancelacion);
-    if (est === "cancelada") canceladas.add(o.id);
-    else if (est === "terminada") terminadas.add(o.id);
+    if (estadoObra(o.etapa, o.cargoCancelacion) === "cancelada") canceladas.add(o.id);
   }
 
   const desde =
@@ -132,21 +129,14 @@ export function armarPatrones(
     // Ciclo de vida: ¿está atendida (oculta) o reaparece?
     const rev = revisionPorClave.get(k);
     let reaparecida = false;
-    let motivoReaparicion: string | null = null;
     if (rev) {
       const atendidaMs = new Date(rev.atendidaEn).getTime();
       if (newestEn <= atendidaMs) continue; // atendida y sin novedad → oculta
-      // Entró una obra nueva después de atenderla → reaparece.
+      // Entró una obra nueva del rubro después de atenderla → reaparece, con un
+      // aviso NEUTRO ("Volvió"). No afirmamos por qué volvió: la obra nueva
+      // puede ser el mismo problema o algo distinto del rubro, y la detección no
+      // puede saberlo. El juicio queda para el humano o para Walter.
       reaparecida = true;
-      const fondoTerminada =
-        rev.resultado === "gestion_iniciada" &&
-        rev.gestionFondoId &&
-        terminadas.has(rev.gestionFondoId);
-      motivoReaparicion = fondoTerminada
-        ? "El arreglo de fondo no aguantó: entró una obra nueva de este rubro."
-        : rev.resultado === "descartada"
-          ? "Descartada antes, pero entró una obra nueva de este rubro."
-          : "Entró una obra nueva de este rubro desde que la atendiste.";
     }
 
     const primero = orden[orden.length - 1];
@@ -163,7 +153,6 @@ export function armarPatrones(
         fecha: o.creadoEn,
       })),
       reaparecida,
-      motivoReaparicion,
     });
   }
 

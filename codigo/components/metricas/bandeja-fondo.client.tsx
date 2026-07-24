@@ -74,9 +74,6 @@ function FilaPatron({
           </span>
           <span className="block text-[12px] text-muted truncate">
             {patron.especialidad} · {patron.cantidad} obras
-            {patron.reaparecida && patron.motivoReaparicion
-              ? ` · ${patron.motivoReaparicion}`
-              : ""}
           </span>
         </span>
         <span className="text-sm text-muted tabular-nums whitespace-nowrap">
