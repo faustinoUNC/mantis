@@ -2622,7 +2622,7 @@
     <div class="zoom-clickable" data-zoom="mandato-objetivo" style="background: var(--ink); color: var(--paper); padding: 34px 40px; margin-bottom: 14px; border-left: 6px solid var(--mantis); flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center;">
       <p style="font-family: var(--mono); font-size: 12px; letter-spacing: 0.3em; color: #34D399; text-transform: uppercase; margin-bottom: 16px; font-weight: 700;">El objetivo</p>
       <p style="font-family: var(--display); font-size: clamp(22px, 1.9vw, 30px); line-height: 1.3; color: white; font-weight: 500; margin: 0; letter-spacing: -0.01em;">
-        Desarrollar un sistema que le permita a ISBA <em style="color: #34D399; font-style: normal; font-weight: 700;">gestionar el mantenimiento de punta a punta</em> — del reclamo al cobro y la liquidación — con un <em style="color: #34D399; font-style: normal; font-weight: 700;">funnel visual simple</em>, <em style="color: #34D399; font-style: normal; font-weight: 700;">seguimiento total</em> y <em style="color: #34D399; font-style: normal; font-weight: 700;">decisiones basadas en datos</em>.
+        Desarrollar un sistema que le permita a ISBA <em style="color: #34D399; font-style: normal; font-weight: 700;">gestionar el mantenimiento de punta a punta</em> — del reclamo al cobro y la liquidación — mejorando la <em style="color: #34D399; font-style: normal; font-weight: 700;">eficiencia del seguimiento</em> y la <em style="color: #34D399; font-style: normal; font-weight: 700;">calidad del servicio</em>, con información confiable para <em style="color: #34D399; font-style: normal; font-weight: 700;">decidir con datos</em>.
       </p>
     </div>
 
@@ -3178,7 +3178,7 @@
         <div class="cell"><strong>Cero estadísticas</strong> para decidir</div>
         <div class="cell">Métricas que salen solas de la operación — nada se carga a mano</div>
         <div class="cell">Módulo Informes</div>
-        <div class="cell">Embudo, tiempo de ciclo, cuellos de botella, dinero, desempeño</div>
+        <div class="cell">Carga por etapa, tiempo de ciclo, cuellos de botella, dinero, desempeño</div>
         <div class="cell cell-valor">Decisiones con datos</div>
       </div>
     </div>
@@ -4123,7 +4123,7 @@
           <div class="demo-step"><span class="num">01</span><p>Desde el <strong>celular del técnico</strong>: registrar la <strong>inspección</strong> (nota + foto). Sin ella no se puede presupuestar.</p></div>
           <div class="demo-step"><span class="num">02</span><p>Cargar el <strong>presupuesto</strong>: materiales, mano de obra y <strong>plazo en días</strong>.</p></div>
           <div class="demo-step"><span class="num">03</span><p>Como <strong>gestor</strong>: revisar el presupuesto con el detalle completo.</p></div>
-          <div class="demo-step"><span class="num">04</span><p>Aprobar definiendo <strong>quién paga</strong> (inquilino o propietario, según la causa) y el <strong>cargo administrativo</strong>.</p></div>
+          <div class="demo-step"><span class="num">04</span><p>Aprobar definiendo <strong>quién paga</strong> (inquilino o propietario, según corresponda) y el <strong>cargo administrativo</strong>.</p></div>
           <div class="demo-step"><span class="num">05</span><p>Mostrar la tarjeta avanzando a <strong>En ejecución</strong> con su evento en el timeline.</p></div>
         </div>
         <div class="demo-panel-foot">Roles · <span class="role">Técnico (celular) → Gestor</span></div>
@@ -4754,7 +4754,7 @@
     'responder-asignacion': { layer: 'ACTOR · TÉCNICO  ·  ETAPA ASIGNACIÓN', name: 'Aceptar / rechazar asignación', desc: 'El técnico revisa el trabajo propuesto desde su celular y acepta o rechaza. Si acepta, la gestión avanza a Presupuesto; si rechaza, vuelve a Asignación y el gestor reasigna. Todo queda notificado y registrado.' },
     'registrar-inspeccion': { layer: 'ACTOR · TÉCNICO  ·  ETAPA PRESUPUESTO', name: 'Registrar inspección', desc: 'Antes de presupuestar, el técnico visita la propiedad y registra la inspección: diagnóstico y foto. Es obligatoria — sin inspección no se puede cargar presupuesto.' },
     'cargar-presupuesto': { layer: 'ACTOR · TÉCNICO  ·  ETAPA PRESUPUESTO', name: 'Cargar presupuesto', desc: 'El técnico arma el presupuesto desde su celular: materiales, mano de obra, plazo en días y descripción del trabajo. Al enviarlo queda esperando la evaluación del gestor.' },
-    'evaluar-presupuesto': { layer: 'ACTOR · GESTOR COMERCIAL  ·  ETAPA PRESUPUESTO', name: 'Evaluar presupuesto y definir quién paga', desc: 'El gestor aprueba o rechaza el presupuesto. Al aprobar define el pagador — inquilino o propietario, según la causa del deterioro — y el cargo administrativo de la inmobiliaria. Ese fee queda congelado: los informes históricos no cambian aunque después cambien las reglas.' },
+    'evaluar-presupuesto': { layer: 'ACTOR · GESTOR COMERCIAL  ·  ETAPA PRESUPUESTO', name: 'Evaluar presupuesto y definir quién paga', desc: 'El gestor aprueba o rechaza el presupuesto. Al aprobar define el pagador — inquilino o propietario, según corresponda — y el cargo administrativo de la inmobiliaria. Ese fee queda congelado: los informes históricos no cambian aunque después cambien las reglas.' },
     'registrar-avance': { layer: 'ACTOR · TÉCNICO  ·  ETAPA EJECUCIÓN', name: 'Registrar avances con fotos', desc: 'Durante la obra, el técnico registra avances con notas y fotos desde el celular (las fotos se comprimen en el dispositivo antes de subir). Cada avance queda en el timeline, visible para el gestor.' },
     'rendir-materiales': { layer: 'ACTOR · TÉCNICO  ·  ETAPA EJECUCIÓN', name: 'Rendir materiales', desc: 'Al terminar la obra, el técnico rinde los materiales realmente gastados con las fotos de los comprobantes. La rendición se compara contra lo presupuestado — alimenta la métrica de cumplimiento de presupuesto del técnico.' },
     'subir-conformidad': { layer: 'ACTOR · TÉCNICO  ·  ETAPA CONFORMIDAD', name: 'Subir conformidad', desc: 'El técnico sube la foto de la conformidad firmada. Es la evidencia de que el trabajo se hizo y fue recibido — la gestión queda esperando la validación del gestor.' },
@@ -5150,7 +5150,7 @@
       problema: 'No había reportes estadísticos ni históricos. Decisiones basadas en la memoria del administrador.',
       mandato: 'Métricas calculadas del propio registro de eventos — no cargadas a mano — y cada rol ve las de su área.',
       modelacion: { chips: [['Event log','blue'],['Informes por rol','blue']], text: 'Las métricas se derivan de los eventos reales del funnel: nada que mantener, imposible que mientan.' },
-      sistema: { chips: [['Embudo','blue'],['Tiempo de ciclo','blue'],['Cuellos de botella','blue'],['Dinero','blue']], text: 'Informes en el Inicio de cada rol: flujo del trabajo, dinero cobrado, desempeño de técnicos, cobertura de especialidades.' },
+      sistema: { chips: [['Carga por etapa','blue'],['Tiempo de ciclo','blue'],['Cuellos de botella','blue'],['Dinero','blue']], text: 'Informes en el Inicio de cada rol: flujo del trabajo, dinero cobrado, desempeño de técnicos, cobertura de especialidades.' },
       valor: 'Decisiones con datos reales, en vivo.'
     },
   };
@@ -5908,7 +5908,7 @@
       + '</ul>' },
     'mandato-objetivo': {
       eyebrow: 'El objetivo',
-      body: 'Desarrollar un sistema que le permita a ISBA <strong>gestionar el mantenimiento de punta a punta</strong> — del reclamo al cobro y la liquidación — con un <strong>funnel visual simple</strong>, <strong>seguimiento total</strong> y <strong>decisiones basadas en datos</strong>.'
+      body: 'Desarrollar un sistema que le permita a ISBA <strong>gestionar el mantenimiento de punta a punta</strong> — del reclamo al cobro y la liquidación — mejorando la <strong>eficiencia del seguimiento</strong> y la <strong>calidad del servicio</strong>, con información confiable para <strong>decidir con datos</strong>.'
     },
     'mandato-desde': { eyebrow: 'DESDE', body: 'El reclamo que llega a la casilla de mantenimiento —filtrada por el asunto «mantenimiento»— o que el gestor carga a mano.' },
     'mandato-hasta': { eyebrow: 'HASTA', body: 'La liquidación al técnico con comprobante, todo asentado en el legajo de la propiedad.' },
@@ -5979,7 +5979,7 @@
       { id: 'administraciones', label: 'Administraciones', sub: 'propiedades y legajos', subShort: 'propiedades', labelSize: 12.5, r: 56, ax: 150, ay: 420,
         desc: 'El contexto del negocio: las propiedades administradas, sus propietarios, inquilinos y legajos vigentes. Cada gestión nace anclada a una administración real.' },
       { id: 'informes', label: 'Informes', sub: 'métricas en vivo', r: 54, ax: 700, ay: 545,
-        desc: 'Las métricas operativas calculadas en vivo sobre los hechos: embudo, tiempos de ciclo, cuellos de botella, desempeño de técnicos e ingresos.' },
+        desc: 'Las métricas operativas calculadas en vivo sobre los hechos: carga por etapa, tiempos de ciclo, cuellos de botella, desempeño de técnicos e ingresos.' },
       { id: 'eventos', label: 'Eventos', sub: 'historial · auditoría', r: 48, ax: 450, ay: 560,
         desc: 'La columna vertebral silenciosa: cada acción inserta un evento inmutable, en la misma transacción. De acá salen la auditoría, las notificaciones y los informes.' },
       { id: 'notificaciones', label: 'Avisos', sub: 'tiempo real', r: 46, ax: 230, ay: 560,
