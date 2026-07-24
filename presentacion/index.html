@@ -3126,7 +3126,7 @@
     <div class="traza-header">
       <div class="cell">#</div>
       <div class="cell">Problema</div>
-      <div class="cell">Mandato</div>
+      <div class="cell">Lo que prometimos</div>
       <div class="cell">Modelación</div>
       <div class="cell">Sistema</div>
       <div class="cell">Valor</div>
@@ -3136,7 +3136,7 @@
       <div class="traza traza-clickable" data-trace="01">
         <div class="cell cell-num">01</div>
         <div class="cell"><strong>Estado fuera de control</strong> — sin visibilidad del avance</div>
-        <div class="cell">Tablero visual con etapa explícita y seguimiento de cada gestión</div>
+        <div class="cell">Tablero visual con una etapa clara y seguimiento de cada gestión</div>
         <div class="cell">Funnel de 8 etapas · UC Ver Timeline</div>
         <div class="cell">Tablero Kanban + avanzar_etapa() con evento en cada transición</div>
         <div class="cell cell-valor">Cualquiera responde el estado en segundos</div>
@@ -5098,7 +5098,7 @@
       title: 'Estado fuera de control',
       footer: 'La etapa vive en la base de datos como campo explícito + event log — nunca se deriva en pantalla',
       problema: 'El seguimiento dependía de quien atendió el caso. Nadie más sabía en qué etapa estaba cada reclamo.',
-      mandato: 'Un tablero simple donde cada gestión tiene UNA etapa explícita, y toda transición queda registrada.',
+      mandato: 'Un tablero simple donde cada gestión tiene una etapa clara y todo su historial queda registrado.',
       modelacion: { chips: [['Funnel de 8 etapas','blue'],['UC Ver Timeline','blue'],['Flujo 6','warm']], text: 'Toda transición pasa por avanzar_etapa(): valida el permiso del rol e inserta el evento, en una sola transacción.' },
       sistema: { chips: [['Tablero Kanban','blue'],['Event log','blue']], text: 'El tablero muestra el funnel completo de un vistazo; el timeline de cada gestión muestra quién hizo qué y cuándo.' },
       valor: 'Cualquiera en ISBA responde el estado de una gestión en segundos.'
