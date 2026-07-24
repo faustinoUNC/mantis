@@ -2405,7 +2405,7 @@
           <div class="ad-item">El reclamo llega por WhatsApp, llamada o mail.</div>
           <div class="ad-item">Se anota en papel o Excel según quién atiende.</div>
           <div class="ad-item">El técnico se busca de memoria, por teléfono.</div>
-          <div class="ad-item">Presupuesto y conformidad quedan en papel.</div>
+          <div class="ad-item">Presupuesto y conformidad en papel suelto: se traspapelan y no respaldan ante un reclamo.</div>
           <div class="ad-item">El estado del caso lo sabe solo quien atendió.</div>
         </div>
         <div class="ad-conclusion warm">
@@ -3144,7 +3144,7 @@
       <div class="traza traza-clickable" data-trace="02">
         <div class="cell cell-num">02</div>
         <div class="cell"><strong>Reclamos que se perdían</strong> entre canales</div>
-        <div class="cell">La casilla como canal oficial de entrada, con registro automático de cada reclamo</div>
+        <div class="cell">La casilla como canal oficial de entrada: el mail se registra solo, el resto lo carga el gestor</div>
         <div class="cell">Flujo 4 · UC Procesar inbox</div>
         <div class="cell">Casilla de mantenimiento + Inbox: gestión o descarte con motivo</div>
         <div class="cell cell-valor">Cero mails sin destino</div>
@@ -3756,7 +3756,7 @@
         <div class="eyebrow">La puerta de entrada de los reclamos</div>
         <h2 class="display-xl" style="margin-top: 4px; line-height: 0.95;">Inbox<span class="mark-blue dot-end"></span></h2>
         <p class="text-body" style="margin-top: 10px; max-width: 720px;">
-          Una casilla de mail de mantenimiento, sincronizada sola con el sistema. Ningún reclamo depende de que alguien lo anote.
+          Una casilla de mail de mantenimiento, sincronizada sola con el sistema. El mail entra solo; lo que llega por otros canales lo registra el gestor — nada vive fuera del sistema.
         </p>
       </div>
       <div id="pollBtn" style="align-self: flex-end; cursor: pointer; border: 1px solid var(--ink); background: white; padding: 10px 14px; transition: all 0.15s;">
@@ -4908,7 +4908,7 @@
     },
     'flow-04': {
       eyebrow: 'Flujo 4 de 9 · Soporte', title: 'Ingesta Gmail → Inbox',
-      sub: 'La casilla de mantenimiento se sincroniza sola con el sistema. Ningún reclamo depende de que alguien lo anote.',
+      sub: 'La casilla de mantenimiento se sincroniza sola con el sistema. El mail entra solo; lo que llega por otros canales lo registra el gestor — nada vive fuera del sistema.',
       bpmn: [
         {type:'start', text:'Inquilino o propietario escriben<br>a la casilla de mantenimiento'},
         {type:'sys',   text:'Cron consulta la Gmail API<br>cada 1 minuto'},
