@@ -229,6 +229,32 @@
   }
   .mantis-mark-lg img { width: 100%; height: 100%; object-fit: cover; }
 
+  /* ─────────── Slide 0 · Screensaver DVD ─────────── */
+  #dvd-slide { padding: 0; }
+  .dvd-stage {
+    position: absolute; inset: 0; overflow: hidden;
+    background: #000;
+  }
+  .dvd-logo {
+    position: absolute; top: 0; left: 0;
+    will-change: transform;
+  }
+  .dvd-logo .mantis-mark {
+    width: 128px; height: 128px; border-radius: 28px;
+  }
+  .dvd-hint {
+    position: absolute; bottom: 32px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: rgba(255,255,255,0.26);
+    animation: dvd-hint-pulse 3.2s ease-in-out infinite;
+  }
+  @keyframes dvd-hint-pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.9; }
+  }
+
   /* ─────────── Pills / badges ─────────── */
   .pill {
     display: inline-flex; align-items: center; gap: 8px;
@@ -2145,9 +2171,23 @@
 <div class="slides">
 
 <!-- ═══════════════════════════════════════════════════════════════
+     00 — SCREENSAVER (logo rebotando estilo DVD, fondo negro)
+     ═══════════════════════════════════════════════════════════════ -->
+<section id="dvd-slide" data-no-anim="true" data-background-color="#000000">
+  <div class="dvd-stage">
+    <div class="dvd-logo" id="dvdLogo">
+      <div class="mantis-mark">
+        <img src="mantis-icon.png" alt="Mantis">
+      </div>
+    </div>
+    <div class="dvd-hint">Presioná → para comenzar</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
      01 — PORTADA
      ═══════════════════════════════════════════════════════════════ -->
-<section class="slide-hero">
+<section id="s-portada" class="slide-hero">
   <div class="slide-pad" style="justify-content: space-between;">
     <div class="slide-corner">
       <span class="dot"></span>
@@ -5585,9 +5625,8 @@
   document.addEventListener('mousemove', (e) => {
     const slide = document.querySelector('.reveal .slides section.present');
     if (!slide || !slide.classList.contains('slide-hero')) return;
-    // Excluir slide de cierre (Gracias) y otras intermedias — sólo portada (index 0)
-    const allSlides = Array.from(document.querySelectorAll('.reveal .slides > section'));
-    if (allSlides.indexOf(slide) !== 0) return;
+    // Excluir slide de cierre (Gracias) y otras intermedias — sólo portada
+    if (slide.id !== 's-portada') return;
     const cx = (e.clientX / window.innerWidth - 0.5) * 2;
     const cy = (e.clientY / window.innerHeight - 0.5) * 2;
     const marks = slide.querySelectorAll('.mantis-mark, .mantis-mark-lg');
@@ -5596,6 +5635,74 @@
       m.style.transition = 'transform 0.4s ease-out';
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════
+  // SLIDE 0 · Screensaver estilo DVD — el logo rebota contra las paredes
+  // ═══════════════════════════════════════════════════════════════
+  (function dvdScreensaver() {
+    const slide = document.getElementById('dvd-slide');
+    const logo = document.getElementById('dvdLogo');
+    if (!slide || !logo) return;
+    const mark = logo.querySelector('.mantis-mark');
+
+    // Paleta de glow que va rotando en cada choque (guiño al DVD que cambia de color)
+    const glows = [
+      '0 0 44px 4px rgba(5,150,105,0.55)',   // esmeralda (brand)
+      '0 0 44px 4px rgba(52,211,153,0.55)',  // esmeralda claro
+      '0 0 44px 4px rgba(245,158,11,0.55)',  // ámbar
+      '0 0 44px 4px rgba(56,189,248,0.55)',  // celeste
+      '0 0 44px 4px rgba(167,139,250,0.55)', // violeta
+      '0 0 44px 4px rgba(244,114,182,0.55)', // rosa
+    ];
+    let glowIdx = 0;
+    const nextGlow = () => {
+      glowIdx = (glowIdx + 1) % glows.length;
+      if (mark) mark.style.boxShadow = glows[glowIdx];
+    };
+
+    const SPEED = 200; // px por segundo
+    let x = 120, y = 90, vx = 1, vy = 1;
+    let started = false, rafId = null, lastTs = null;
+
+    function frame(ts) {
+      if (lastTs == null) lastTs = ts;
+      const dt = Math.min((ts - lastTs) / 1000, 0.05); // cap por si hubo un stall
+      lastTs = ts;
+
+      const W = slide.clientWidth, H = slide.clientHeight;
+      const w = logo.offsetWidth, h = logo.offsetHeight;
+      const maxX = W - w, maxY = H - h;
+
+      x += vx * SPEED * dt;
+      y += vy * SPEED * dt;
+
+      let hit = false;
+      if (x <= 0)      { x = 0;    vx = Math.abs(vx);  hit = true; }
+      else if (x >= maxX) { x = maxX; vx = -Math.abs(vx); hit = true; }
+      if (y <= 0)      { y = 0;    vy = Math.abs(vy);  hit = true; }
+      else if (y >= maxY) { y = maxY; vy = -Math.abs(vy); hit = true; }
+      if (hit) nextGlow();
+
+      logo.style.transform = `translate(${x}px, ${y}px)`;
+      rafId = requestAnimationFrame(frame);
+    }
+
+    function start() {
+      if (started) return;
+      started = true;
+      if (mark) { mark.style.boxShadow = glows[0]; mark.style.transition = 'box-shadow 0.4s ease-out'; }
+      lastTs = null;
+      rafId = requestAnimationFrame(frame);
+    }
+    function stop() {
+      started = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    }
+
+    const sync = (curr) => { (curr === slide) ? start() : stop(); };
+    deck.on('ready', (e) => sync(e.currentSlide));
+    deck.on('slidechanged', (e) => sync(e.currentSlide));
+  })();
 
   // ═══════════════════════════════════════════════════════════════
   // CONTADORES animados (en slides con números grandes data-count)
