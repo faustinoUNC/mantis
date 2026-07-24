@@ -2164,7 +2164,7 @@
           MANTIS<span style="color: #34D399;">.</span>
         </h1>
         <p style="font-size: clamp(20px, 1.8vw, 30px); color: rgba(255,255,255,0.75); font-weight: 300; line-height: 1.3; max-width: 720px;">
-          Cada reclamo de mantenimiento, <span style="color: white; font-weight: 500;">del mail al cobro</span>, en un solo tablero visual.
+          Cada reclamo de mantenimiento, <span style="color: white; font-weight: 500;">del mail al cierre</span>, en un solo tablero visual.
         </p>
 
         <div style="margin-top: 56px; display: flex; gap: 28px; align-items: center;">
@@ -2352,7 +2352,7 @@
           <div class="org-ext-row">
             <div class="org-node ext zoom-clickable" data-zoom="org-tecnicos">
               <div class="org-area">Red de técnicos externos</div>
-              <div class="org-sub">Contratistas por especialidad (plomería, electricidad, gas…). No son empleados de ISBA.</div>
+              <div class="org-sub">Contratistas por especialidad (plomería, electricidad, gas…), por lo general externos a ISBA.</div>
               <span class="org-role warm">En Mantis → Técnico · desde el celular</span>
             </div>
             <div class="org-node ext zoom-clickable" data-zoom="org-inquilinos">
@@ -2703,7 +2703,7 @@
         </p>
       </div>
       <p style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--ink-faded); text-transform: uppercase; text-align: right;">
-        4 actores · 19 casos de uso<br>+ 1 transversal
+        4 actores · casos de uso principales<br>+ 1 transversal
       </p>
     </div>
 
@@ -2713,7 +2713,7 @@
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--warm);"></span> Técnico</span>
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--violet);"></span> Gestor financiero</span>
       <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 18px; height: 2px; background: var(--ink);"></span> Administrador</span>
-      <span style="margin-left: auto; color: var(--ink);"><strong>Administrador</strong> = todos los casos del funnel (ambos gestores + técnico) + los de gobierno</span>
+      <span style="margin-left: auto; color: var(--ink);"><strong>Administrador</strong> = ve e interviene en todo el funnel (ambos gestores + técnico) + los casos de gobierno</span>
     </div>
 
     <!-- Diagrama SVG UML -->
@@ -2994,7 +2994,7 @@
       Toda transición de etapa pasa por avanzar_etapa() — permiso validado por rol y evento registrado, siempre
     </p>
 
-    <div class="slide-footer"><span>06 · CASOS DE USO</span><span>UML · 4 ACTORES · 19 UC + 1 TRANSVERSAL</span></div>
+    <div class="slide-footer"><span>06 · CASOS DE USO</span><span>UML · 4 ACTORES · CASOS DE USO PRINCIPALES</span></div>
   </div>
 </section>
 
@@ -3440,7 +3440,7 @@
     <div style="padding-top: 80px; margin-bottom: 12px;">
       <div class="eyebrow">Patrón cliente–servidor en 3 capas</div>
       <h2 class="display-lg">Arquitectura<span class="mark-blue dot-end"></span></h2>
-      <p class="text-body" style="margin-top: 6px; max-width: 860px;">La separación clásica en tres capas: <strong style="color: var(--ink);">el cliente muestra</strong>, <strong style="color: var(--ink);">el servidor decide</strong> y <strong style="color: var(--ink);">los datos persisten</strong>. Cada capa solo habla con la siguiente — por eso ninguna regla del negocio puede saltearse. Cliqueá cualquier pieza para el detalle.</p>
+      <p class="text-body" style="margin-top: 6px; max-width: 860px;">La separación clásica en tres capas: <strong style="color: var(--ink);">el cliente muestra</strong>, <strong style="color: var(--ink);">el servidor decide</strong> y <strong style="color: var(--ink);">los datos persisten</strong>. Ninguna escritura ni regla del negocio saltea el servidor; el cliente solo lee, y RLS lo limita a lo suyo. Cliqueá cualquier pieza para el detalle.</p>
     </div>
 
     <div class="arch-v2 stagger">
@@ -3587,9 +3587,9 @@
     <div class="sysmap-wrap">
       <div class="sysmap-panel">
         <div class="sysmap-info" id="sysmapInfo">
-          <div class="si-kicker">9 módulos · un solo flujo</div>
+          <div class="si-kicker">9 componentes · un solo flujo</div>
           <h3>Todo conectado</h3>
-          <p class="si-desc">Cada nodo es un módulo real del sistema, con Gestiones —el funnel— en el centro. Un reclamo entra por el Inbox, se vuelve gestión, moviliza técnicos y dinero — y cada movimiento queda registrado.</p>
+          <p class="si-desc">Cada nodo es un componente real del sistema, con Gestiones —el funnel— en el centro. Un reclamo entra por el Inbox, se vuelve gestión, moviliza técnicos y dinero — y cada movimiento queda registrado.</p>
           <div class="sysmap-conns">
             <div class="sc-label">Para explorar</div>
             <div class="sysmap-conn">Pasá el mouse por un nodo para ver <strong>qué hace y con quién se conecta</strong>.</div>
@@ -3733,7 +3733,7 @@
       </div>
     </div>
 
-    <p style="margin-top: 14px; text-align: center; font-family: var(--display); font-size: 17px; color: var(--ink); font-weight: 500;">Los cuatro roles leen y escriben el <em style="color: var(--mantis); font-style: normal; font-weight: 700;">mismo dato</em> — nadie pregunta, todos ven.</p>
+    <p style="margin-top: 14px; text-align: center; font-family: var(--display); font-size: 17px; color: var(--ink); font-weight: 500;">Los cuatro roles trabajan sobre el <em style="color: var(--mantis); font-style: normal; font-weight: 700;">mismo dato</em> — nadie pregunta por el estado; cada uno ve lo que su rol habilita.</p>
     <div class="slide-footer"><span>10 · ESTRUCTURA</span><span>4 ROLES CONECTADOS</span></div>
   </div>
 </section>
@@ -3966,7 +3966,7 @@
           <div class="bn-vbar"></div>
           <div class="bn bn-sys">Sincronización automática<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">Gmail API · cada 1 minuto</span></div>
           <div class="bn-vbar"></div>
-          <div class="bn bn-sys">El reporte aparece en el Inbox<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">en tiempo real · sin duplicados · con sus fotos adjuntas</span></div>
+          <div class="bn bn-sys">El reporte aparece en el Inbox<br><span style="font-family: var(--mono); font-size: 10px; opacity: 0.85;">en menos de un minuto · sin duplicados · con sus fotos adjuntas</span></div>
           <div class="bn-vbar"></div>
           <div class="bn bn-proc">El gestor abre el reporte<br>(formulario precargado)</div>
           <div class="bn-vbar"></div>
@@ -4288,7 +4288,7 @@
       <div class="val-card zoom-clickable" data-zoom="valor-1">
         <div class="val-card-cat">Operativo</div>
         <h3 class="val-card-title">Un funnel, un solo lugar de la verdad</h3>
-        <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Todo reclamo entra por un canal y recorre 8 etapas visibles en un tablero. Cero reclamos perdidos.</p></div>
+        <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Cada reclamo entra por una sola puerta y se sigue por etapas visibles en un tablero. Cero reclamos perdidos.</p></div>
         <div class="val-card-kpi"><span class="kpi-label">KPI</span> tiempo de ciclo + gestiones estancadas por etapa</div>
       </div>
 
@@ -4328,7 +4328,7 @@
       <div class="val-card zoom-clickable" data-zoom="valor-6">
         <div class="val-card-cat">Adopción · simplicidad</div>
         <h3 class="val-card-title">Nadie externo tiene que aprenderlo</h3>
-        <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Inquilinos y propietarios siguen usando el mail. Solo 4 roles internos usan el sistema — y el técnico, desde el celular.</p></div>
+        <div class="val-ba ahora"><span class="val-ba-tag ahora">Ahora</span><p>Inquilinos y propietarios siguen usando los canales de siempre. Solo 4 roles internos usan el sistema — y el técnico, desde el celular.</p></div>
         <div class="val-card-kpi"><span class="kpi-label">KPI</span> 4 roles internos · cero usuarios externos que capacitar</div>
       </div>
 
@@ -4363,7 +4363,7 @@
         </div>
       </div>
 
-      <p class="eyebrow" style="color: #34D399; text-align: center;">DE LA PÉRDIDA DE INFORMACIÓN AL CONTROL TOTAL</p>
+      <p class="eyebrow" style="color: #34D399; text-align: center;">DE LA PÉRDIDA DE INFORMACIÓN AL CONTROL DEL PROCESO</p>
       <h1 class="display-xxl" style="text-align: center; margin-bottom: 56px;">Gracias<span style="color: #34D399;">.</span></h1>
 
       <div style="display: flex; justify-content: center; gap: 32px; font-family: var(--display); font-size: 18px; font-weight: 500; color: white;">
@@ -4491,7 +4491,7 @@
 
     <!-- Cierra la objeción de procesamiento en una línea -->
     <div style="margin-top: 18px; background: var(--ink); color: var(--paper); padding: 18px 24px; text-align: center;">
-      <p style="font-size: 15px; line-height: 1.5; margin: 0; color: rgba(255,255,255,0.92);">El chequeo no recorre toda la casilla: mira solo los correos recientes con un <strong style="color: #34D399;">tope fijo</strong>, así que no se agranda aunque haya miles. El trabajo pesado — bajar y guardar — corre <strong style="color: white;">solo con uno nuevo, igual que con push</strong>.</p>
+      <p style="font-size: 15px; line-height: 1.5; margin: 0; color: rgba(255,255,255,0.92);">Cada chequeo re-escanea los mails de mantenimiento y <strong style="color: #34D399;">saltea los ya ingresados</strong> (por su ID), con un tope de seguridad — el pedido es liviano y acotado. El trabajo pesado — bajar y guardar — corre <strong style="color: white;">solo con uno nuevo, igual que con push</strong>.</p>
     </div>
   </div>
 </div>
@@ -5323,7 +5323,7 @@
       eyebrow: 'Paso 01 · Ingesta automática',
       title: 'El reclamo llega solo',
       desc: 'Inquilino o propietario escriben a la casilla de mantenimiento, como escribirían cualquier mail. No tienen que aprender ningún sistema: la puerta de entrada es la de siempre.',
-      chat: { q: 'Asunto: Mantenimiento — Se rompió el calefón · Urquiza 1550 · 📎 2 fotos', tool: 'sincronización automática · cada 1 minuto', a: 'El reporte aparece en el Inbox del gestor al instante, sin duplicados, con remitente, asunto, cuerpo y las fotos adjuntas — que después viajan a la gestión y las ve hasta el técnico.' },
+      chat: { q: 'Asunto: Mantenimiento — Se rompió el calefón · Urquiza 1550 · 📎 2 fotos', tool: 'sincronización automática · cada 1 minuto', a: 'El reporte aparece en el Inbox del gestor en menos de un minuto, sin duplicados, con remitente, asunto, cuerpo y las fotos adjuntas — que después viajan a la gestión y las ve hasta el técnico.' },
     },
     'paso-gestion': {
       eyebrow: 'Paso 02 · Del reporte a la tarjeta',
@@ -5848,7 +5848,7 @@
     },
     'org-tecnicos': {
       title: 'Red de técnicos externos',
-      body: 'Contratistas por especialidad (plomería, electricidad, gas…). No son empleados de ISBA.<p><strong>En Mantis → Técnico · desde el celular</strong></p>'
+      body: 'Contratistas por especialidad (plomería, electricidad, gas…), por lo general externos a ISBA.<p><strong>En Mantis → Técnico · desde el celular</strong></p>'
     },
     'org-inquilinos': {
       title: 'Inquilinos y propietarios',
@@ -5884,12 +5884,12 @@
     'demo-3': { eyebrow: 'Demo guiada · 3/5 · Flujo 7', title: 'Inspección y presupuesto', body: 'Inspección obligatoria, presupuesto y quién paga.<p><strong>Técnico + Gestor</strong></p>' },
     'demo-4': { eyebrow: 'Demo guiada · 4/5 · Flujo 8', title: 'Ejecución y conformidad', body: 'Avances con fotos, rendición y conformidad firmada.<p><strong>Técnico · celular</strong></p>' },
     'demo-5': { eyebrow: 'Demo guiada · 5/5 · Flujo 9', title: 'Cobro y liquidación', body: 'Nota de cobro, liquidación al técnico y calificación.<p><strong>Financiero</strong></p>' },
-    'valor-1': { eyebrow: 'Valor agregado · Operativo', title: 'Un funnel, un solo lugar de la verdad', body: 'Todo reclamo entra por un canal y recorre 8 etapas visibles en un tablero. Cero reclamos perdidos.<p><strong>KPI</strong> tiempo de ciclo + gestiones estancadas por etapa</p>' },
+    'valor-1': { eyebrow: 'Valor agregado · Operativo', title: 'Un funnel, un solo lugar de la verdad', body: 'Cada reclamo entra por una sola puerta y se sigue por etapas visibles en un tablero. Cero reclamos perdidos.<p><strong>KPI</strong> tiempo de ciclo + gestiones estancadas por etapa</p>' },
     'valor-2': { eyebrow: 'Valor agregado · Seguimiento', title: 'Historial inmutable por gestión', body: 'Cada transición deja su evento con fecha cierta: evidencia ante conflictos por plazos de reparación.<p><strong>KPI</strong> 100% de gestiones con timeline completo</p>' },
     'valor-3': { eyebrow: 'Valor agregado · Financiero', title: 'Circuito económico documentado', body: 'Nota de cobro y comprobante de liquidación en PDF, enviados por email. Montos congelados al cobrar.<p><strong>KPI</strong> cobrado vs liquidado por mes · fee de la casa separado</p>' },
     'valor-4': { eyebrow: 'Valor agregado · Calidad y riesgo', title: 'Técnicos medidos, no "de confianza"', body: 'Enrolamiento con documentación + calificación por obra + cumplimiento de plazo y de presupuesto medidos.<p><strong>KPI</strong> score del técnico: estrellas + desvío de plazo + rendición</p>' },
     'valor-5': { eyebrow: 'Valor agregado · Relación con propietarios', title: 'La propiedad cuenta su historia', body: 'Legajos por período de ocupación + PDF "Resumen de obras" + emails de estado automáticos a inquilino y propietario.<p><strong>KPI</strong> historial de obras por propiedad · PDF "Resumen de obras"</p>' },
-    'valor-6': { eyebrow: 'Valor agregado · Adopción · simplicidad', title: 'Nadie externo tiene que aprenderlo', body: 'Inquilinos y propietarios siguen usando el mail. Solo 4 roles internos usan el sistema — y el técnico, desde el celular.<p><strong>KPI</strong> 4 roles internos · cero usuarios externos que capacitar</p>' },
+    'valor-6': { eyebrow: 'Valor agregado · Adopción · simplicidad', title: 'Nadie externo tiene que aprenderlo', body: 'Inquilinos y propietarios siguen usando los canales de siempre. Solo 4 roles internos usan el sistema — y el técnico, desde el celular.<p><strong>KPI</strong> 4 roles internos · cero usuarios externos que capacitar</p>' },
     'valor-7': { eyebrow: 'Valor agregado · Inteligencia · Walter', title: 'Preguntale al sistema en lenguaje natural', body: 'Walter (IA) responde lo que ningún informe fijo arma —los pendientes del día, la agenda de un técnico, "¿cómo registro un cobro?"— sobre los mismos datos que los informes, y te deja en la pantalla justa para accionar.<p><strong>KPI</strong> 18 herramientas acotadas por rol · sobre las mismas fuentes que los informes</p>' },
     'juego-dinero': { title: 'Trabajo sin respaldo', body: 'Cada reclamo vivía en mails y anotaciones sueltas; ante un conflicto de plazos, no había registro con qué respaldarse.' },
     'juego-confianza': { title: 'Decisiones a ojo', body: 'Sin reportes ni métricas, a quién asignar o dónde se traba el proceso se decidía por intuición, no con datos.' },
