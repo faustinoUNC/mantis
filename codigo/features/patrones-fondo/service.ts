@@ -103,19 +103,23 @@ export async function analizarPatronFondo(
   if (!actual || actual.rol === "tecnico") return { ok: false, error: "Sin acceso." };
 
   const supabase = await createClient();
-  // Resolver propiedad (RLS scopea) y especialidad por nombre.
-  const { data: props } = await supabase
-    .from("propiedades")
-    .select("id, direccion")
-    .ilike("direccion", direccion.trim());
-  const propiedad = props?.[0];
-  if (!propiedad) return { ok: false, error: `No encontré la propiedad "${direccion}".` };
+  // Resolver propiedad y rubro por nombre (RLS scopea). Primero match EXACTO
+  // (lo que manda el botón de la bandeja, con la dirección completa) y si no,
+  // COINCIDENCIA PARCIAL — tolerante a que el usuario le tipee a Walter la
+  // dirección sin la unidad/sufijo ("Laprida 234" vs "Laprida 234 2°B ...") o
+  // el rubro corto ("cerrajería" vs "Herrería y cerrajería").
+  const dir = direccion.trim();
+  const propiedad =
+    (await supabase.from("propiedades").select("id, direccion").ilike("direccion", dir)).data?.[0] ??
+    (await supabase.from("propiedades").select("id, direccion").ilike("direccion", `%${dir}%`)).data?.[0];
+  if (!propiedad) {
+    return { ok: false, error: `No encontré la propiedad "${direccion}". Probá con la dirección como figura en la cartera.` };
+  }
 
-  const { data: esps } = await supabase
-    .from("especialidades")
-    .select("id, nombre")
-    .ilike("nombre", especialidad.trim());
-  const esp = esps?.[0];
+  const rubro = especialidad.trim();
+  const esp =
+    (await supabase.from("especialidades").select("id, nombre").ilike("nombre", rubro)).data?.[0] ??
+    (await supabase.from("especialidades").select("id, nombre").ilike("nombre", `%${rubro}%`)).data?.[0];
   if (!esp) return { ok: false, error: `No encontré el rubro "${especialidad}".` };
 
   const { data: gestiones } = await supabase
