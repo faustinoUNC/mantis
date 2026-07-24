@@ -39,6 +39,7 @@ const CONSULTANDO: Record<string, string> = {
   mi_agenda: "Mirando tu agenda",
   sugerir_navegacion: "Preparando accesos",
   graficar: "Armando el gráfico",
+  analizar_patron_fondo: "Analizando el patrón",
 };
 
 // El texto del modelo llega como texto plano con **negritas** — se renderiza
@@ -243,6 +244,22 @@ export function Walter({ rol, nombre, usuarioId }: { rol: Rol; nombre: string; u
   }, [messages, claveChat]);
 
   const ocupado = status === "submitted" || status === "streaming";
+
+  // STORY-1051 Fase 2: la bandeja "Para revisar de fondo" abre a Walter con el
+  // pedido ya cargado vía un CustomEvent de window (están en ramas distintas del
+  // árbol). Walter se abre y manda el mensaje; después el usuario puede
+  // repreguntar normal en el mismo chat.
+  useEffect(() => {
+    function alPreguntar(e: Event) {
+      const texto = (e as CustomEvent<{ texto?: string }>).detail?.texto?.trim();
+      if (!texto) return;
+      setAbierto(true);
+      clearError();
+      void sendMessage({ text: texto.slice(0, LIMITES.caracteresInput) });
+    }
+    window.addEventListener("walter:preguntar", alPreguntar);
+    return () => window.removeEventListener("walter:preguntar", alPreguntar);
+  }, [sendMessage, clearError]);
 
   // Autoscroll al fondo con cada novedad del stream.
   useEffect(() => {

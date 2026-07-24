@@ -7,6 +7,13 @@ import { NAV_POR_ROL } from "@/features/auth/types";
 // compuestas, el upgrade path es "claude-sonnet-5" (decisión party 2026-07-19).
 export const MODELO_ASISTENTE = "claude-haiku-4-5";
 
+// STORY-1051 Fase 2: el análisis de patrones de fondo (¿estas obras son la
+// misma causa raíz?) es un juicio duro sobre las notas de inspección, y Haiku
+// no razona tan fino. Corre en un modelo más fuerte SOLO para esa tool
+// (override por-llamada; el chat sigue en Haiku). Documentado a propósito: no
+// es un descuido, el análisis y el chat usan modelos distintos a conciencia.
+export const MODELO_ANALISIS = "claude-sonnet-5";
+
 export const LIMITES = {
   pasosMaximos: 5, // corta loops de tools (stopWhen)
   tokensSalida: 1200,

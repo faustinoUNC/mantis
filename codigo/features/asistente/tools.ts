@@ -28,6 +28,7 @@ import {
 import { ETAPAS, ETAPAS_TERMINALES, type GestionResumen, type StatsTecnico } from "@/features/gestiones/types";
 import { listarAdelantos } from "@/features/finanzas/consultas";
 import { obtenerMetricas, type Metricas } from "@/features/metricas/service";
+import { analizarPatronFondo } from "@/features/patrones-fondo/service";
 import { misNotificaciones } from "@/features/notificaciones/service";
 import { NOMBRE_ROL, RUTA_POR_ROL } from "@/features/auth/types";
 import { listarTecnicos, misFranjas } from "@/features/tecnicos/service";
@@ -928,6 +929,35 @@ export function crearTools(usuario: UsuarioActual) {
     }),
   });
 
+  // STORY-1051 Fase 2: análisis de patrón de fondo. Lee las notas de inspección
+  // de las obras repetidas de un rubro en una propiedad y devuelve un veredicto
+  // (fondo/coincidencia/insuficiente) con cita textual — el trabajo pesado lo
+  // hace Sonnet 5 adentro del service; Walter (Haiku) solo relata el resultado.
+  const analizar_patron_fondo = tool({
+    description:
+      "Analiza si las obras repetidas de un MISMO rubro en una MISMA propiedad son un PROBLEMA DE FONDO (misma causa raíz) o coincidencias, leyendo las notas de inspección del técnico. Usala cuando el usuario pide analizar/revisar un patrón de fondo de una propiedad (típicamente viene de la bandeja 'Para revisar de fondo'). Pasale la dirección y el rubro TAL CUAL vienen en el pedido. Al responder, presentá el veredicto y las citas textuales que devuelve; NO las cambies ni afirmes de más que la herramienta.",
+    inputSchema: z.object({
+      direccion: z.string().describe("La dirección de la propiedad, tal cual"),
+      especialidad: z.string().describe("El rubro/especialidad, ej. Electricidad, Cerrajería"),
+      plazo_anios: z
+        .number()
+        .nullable()
+        .optional()
+        .describe("Ventana en años; omitir/null = todo el histórico"),
+    }),
+    execute: seguro(async ({ direccion, especialidad, plazo_anios }) => {
+      const r = await analizarPatronFondo(direccion, especialidad, plazo_anios ?? null);
+      if (!r.ok) return { error: r.error };
+      return {
+        veredicto: r.veredicto,
+        confianza: r.confianza,
+        razonamiento: r.razonamiento,
+        sugerencia: r.sugerencia,
+        evidencia: r.obras, // [{ numero, cita_textual }]
+      };
+    }),
+  });
+
   // El catálogo del rol ES la matriz de guards de las pantallas — el asistente
   // nunca sabe más que las pantallas del rol.
   return {
@@ -937,7 +967,7 @@ export function crearTools(usuario: UsuarioActual) {
     mis_pendientes,
     mis_notificaciones,
     sugerir_navegacion,
-    ...(esStaff && { resumen_tablero, metricas_negocio, graficar }),
+    ...(esStaff && { resumen_tablero, metricas_negocio, graficar, analizar_patron_fondo }),
     ...(veFinanzas && { adelantos_tecnicos }),
     ...(veCartera && { consultar_cartera, historial_propiedad }),
     ...(veTecnicos && { ranking_tecnicos, detalle_tecnico, inbox_reportes }),

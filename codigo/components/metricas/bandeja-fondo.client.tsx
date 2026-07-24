@@ -48,6 +48,7 @@ function FilaPatron({
   abierta,
   onToggle,
   onDescartar,
+  onAnalizar,
   descartando,
   puedeIniciar,
 }: {
@@ -55,6 +56,7 @@ function FilaPatron({
   abierta: boolean;
   onToggle: () => void;
   onDescartar: () => void;
+  onAnalizar: () => void;
   descartando: boolean;
   puedeIniciar: boolean;
 }) {
@@ -105,11 +107,19 @@ function FilaPatron({
             ))}
           </ul>
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variante="secundario"
+              className="min-h-0 h-8 px-3 text-sm"
+              onClick={onAnalizar}
+            >
+              Analizar con Walter
+            </Button>
             {puedeIniciar && (
               <Link href={urlNuevaGestionFondo(patron)}>
                 <Button
                   type="button"
-                  variante="secundario"
+                  variante="fantasma"
                   className="min-h-0 h-8 px-3 text-sm"
                 >
                   Iniciar gestión de fondo
@@ -169,6 +179,18 @@ export function BandejaFondo({
     const r = await descartarPatron(p.propiedadId, p.especialidadId);
     setDescartando(null);
     if (r.ok) router.refresh();
+  }
+
+  // "Analizar con Walter": abre el chat de Walter con el pedido ya cargado. El
+  // puente es un CustomEvent de window que el componente Walter escucha (está
+  // montado flotante en otro punto del árbol). Walter llama a la tool
+  // `analizar_patron_fondo`, que por dentro corre Sonnet 5 sobre las notas de
+  // inspección — y el usuario puede repreguntar en el mismo chat.
+  function analizarConWalter(p: PatronFondo) {
+    const ventana =
+      ventanaAnios != null ? `, mirando los últimos ${ventanaAnios} años` : "";
+    const texto = `Analizá si las obras de ${p.especialidad} en ${p.direccion} son un problema de fondo${ventana}.`;
+    window.dispatchEvent(new CustomEvent("walter:preguntar", { detail: { texto } }));
   }
 
   return (
@@ -239,6 +261,7 @@ export function BandejaFondo({
                   abierta={abierta === k}
                   onToggle={() => setAbierta(abierta === k ? null : k)}
                   onDescartar={() => descartar(p)}
+                  onAnalizar={() => analizarConWalter(p)}
                   descartando={descartando === k}
                   puedeIniciar={puedeIniciar}
                 />
