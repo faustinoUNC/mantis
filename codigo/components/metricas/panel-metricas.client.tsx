@@ -34,6 +34,7 @@ const GRID = "#e4e4e7";
 const INK_MUTED = "#71717a";
 const TENDENCIA = "#52525b"; // neutro para la recta de tendencia (no es un acento)
 const MAGNITUD_PEOR = "#c2410c"; // terracota (extremo "peor") — NO es el rojo de error
+const NEUTRO_CARGA = "#d4d4d8"; // gris neutro (zinc-300) para "en curso" del reparto (STORY-1050)
 const N_MINIMO = 5;
 const MIN_CUBOS_TENDENCIA = 6; // con menos puntos, una tendencia miente
 const DIAS_ESTANCADA_AMBAR = 3;
@@ -190,7 +191,7 @@ function TooltipCaja({
   active?: boolean;
   payload?: { value: number; name?: string; payload?: Record<string, unknown> }[];
   label?: string;
-  render?: (p: { value: number; name?: string }[]) => ReactNode;
+  render?: (p: { value: number; name?: string; payload?: Record<string, unknown> }[]) => ReactNode;
 }) {
   if (!active || !payload?.length) return null;
   return (
@@ -351,6 +352,35 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
       .sort((a, b) => b.dias - a.dias);
     return { lista, n: lista.length, max: lista[0]?.dias ?? 1 };
   }, [filasEsp, ultimaTransicion, ahora]);
+
+  // ── Hoy: Reparto por gestor (STORY-1050, admin-only) ──
+  // Estado presente: cuánto tiene abierto cada Gestor Comercial, con la parte
+  // que espera una decisión SUYA resaltada. "De su lado" = solo los momentos
+  // sin ambigüedad y sin contaminación de terceros (ver STORY-1050): etapa
+  // `ingresado` (nadie la tocó, clasifica y asigna) o `conformidad` con una
+  // conformidad subida sin aprobar (el técnico entregó, falta que valide). La
+  // decisión de presupuesto se excluye a propósito: adentro está el tiempo del
+  // pagador (enviado_pagador), que no viaja en la fila → subcontar antes que
+  // acusar en falso.
+  const reparto = useMemo(() => {
+    const esperaDecision = (f: (typeof filasEsp)[number]) =>
+      f.etapa === "ingresado" ||
+      (f.etapa === "conformidad" &&
+        f.conformidades.includes("subida") &&
+        !f.conformidades.includes("aprobada"));
+    const porGestor = new Map<string, { nombre: string; total: number; deSuLado: number }>();
+    for (const f of filasEsp) {
+      if (ETAPAS_TERMINALES.has(f.etapa) || !f.gestorId) continue;
+      const g = porGestor.get(f.gestorId) ?? { nombre: f.gestorNombre ?? "—", total: 0, deSuLado: 0 };
+      g.total += 1;
+      if (esperaDecision(f)) g.deSuLado += 1;
+      porGestor.set(f.gestorId, g);
+    }
+    const data = [...porGestor.values()]
+      .map((g) => ({ name: g.nombre, deSuLado: g.deSuLado, enCurso: g.total - g.deSuLado, total: g.total }))
+      .sort((a, b) => b.total - a.total);
+    return { data, nGestores: data.length };
+  }, [filasEsp]);
 
   // ── Hoy: Pendientes de cobro (en facturación, hace cuántos días) ──
   const cobranza = useMemo(
@@ -741,6 +771,42 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           </div>
         </MetricCard>
       </Bloque>
+
+      {/* ══ 1b. Reparto del trabajo — SOLO admin (STORY-1050). El Gestor
+          Comercial se vería a sí mismo (RLS) y el Financiero no conduce el
+          funnel. Eje persona: cuánto lleva cada gestor y cuánto espera su
+          decisión. No se pisa con "estancadas" (lista plana cross-gestor). ══ */}
+      {metricas.rol === "administrador" && (
+      <Bloque titulo="Reparto del trabajo" cols={1}>
+        <MetricCard titulo="Reparto por gestor" ayuda="Cuánto tiene abierto cada Gestor Comercial. En esmeralda, lo que espera una decisión suya (ingresado o conformidad por validar)." n={reparto.nGestores} unidad="gestores" alcance="ahora" humildad={false}>
+          <ResponsiveContainer width="100%" height={Math.max(140, reparto.data.length * 44 + 40)}>
+            <BarChart data={reparto.data} layout="vertical" margin={{ left: 12, right: 28 }}>
+              <CartesianGrid stroke={GRID} horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={{ stroke: GRID }} allowDecimals={false} />
+              <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11, fill: INK_MUTED }} tickLine={false} axisLine={false} />
+              <Tooltip cursor={{ fill: "rgba(24,24,27,0.04)" }} content={<TooltipCaja render={(p) => {
+                const d = p[0]?.payload as { name: string; total: number; deSuLado: number; enCurso: number } | undefined;
+                if (!d) return null;
+                return (
+                  <div className="space-y-0.5">
+                    <p className="font-medium mb-0.5">{d.name}</p>
+                    <p className="text-muted">{d.total} {d.total === 1 ? "abierta" : "abiertas"}</p>
+                    <p className="text-muted"><span className="inline-block w-2.5 h-2.5 rounded-sm mr-1.5 align-middle" style={{ background: BRAND }} />{d.deSuLado} espera su decisión</p>
+                    <p className="text-muted"><span className="inline-block w-2.5 h-2.5 rounded-sm mr-1.5 align-middle" style={{ background: NEUTRO_CARGA }} />{d.enCurso} en curso</p>
+                  </div>
+                );
+              }} />} />
+              <Bar dataKey="deSuLado" stackId="carga" fill={BRAND} maxBarSize={20} radius={[4, 0, 0, 4]} />
+              <Bar dataKey="enCurso" stackId="carga" fill={NEUTRO_CARGA} maxBarSize={20} radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="flex flex-wrap items-center gap-4 mt-3 text-[12px] text-muted">
+            <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} />Espera su decisión</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: NEUTRO_CARGA }} />En curso (técnico, pagador o cobro)</span>
+          </div>
+        </MetricCard>
+      </Bloque>
+      )}
 
       {/* ══ 2. Orden por valor — dónde está la plata (fee) de la casa ══ */}
       <Bloque titulo="Orden por valor" cols={1}>
