@@ -1,6 +1,6 @@
 # STORY-1051 — Patrones de fondo: detectar problemas crónicos por propiedad y facilitar la obra que los ataca (v1.0)
 
-**Estado:** 🔨 en prueba — diseñada en party mode (Mary·John·Winston·Amelia·Sally·Paige·Boundary·Grumbal) el 2026-07-24 con Fausti podando en vivo; **Fase 1 implementada** el mismo día (rama `story-1051-patrones-de-fondo`, `tsc`/eslint/build verdes, sin commitear, sin E2E). Fase 2 (Walter) sin empezar. · **Origen:** Fausti, al abrir el legajo de una propiedad (Belgrano 1288 PH 3) y ver el badge "⚠ Electricidad reincidente — 4 obras": *"el sistema detecta el patrón crónico pero no lo convierte en una decisión — 4 reportes sueltos no dejan darse cuenta de que había que cambiar todo el tendido"*.
+**Estado:** 🔨 en prueba — diseñada en party mode (Mary·John·Winston·Amelia·Sally·Paige·Boundary·Grumbal) el 2026-07-24 con Fausti podando en vivo; **Fase 1 en `main`** el mismo día (commit `d31e065`, `tsc`/eslint/build verdes, E2E navegador OK). Fase 2 (Walter) sin empezar. · **Origen:** Fausti, al abrir el legajo de una propiedad (Belgrano 1288 PH 3) y ver el badge "⚠ Electricidad reincidente — 4 obras": *"el sistema detecta el patrón crónico pero no lo convierte en una decisión — 4 reportes sueltos no dejan darse cuenta de que había que cambiar todo el tendido"*.
 
 ## Problema
 
@@ -100,7 +100,7 @@ Fasable por fases (la #1 entrega valor sola — "la torta sin la frutilla"):
 
 ## Dev Agent Record
 
-- **Estado:** 🔨 **Fase 1 implementada** (2026-07-24, rama `story-1051-patrones-de-fondo`), `tsc` + eslint + `next build` verdes. **Sin commitear, sin E2E navegador.** Fase 2 (Walter) sin empezar.
+- **Estado:** 🔨 **Fase 1 en `main`** (2026-07-24, commit `d31e065`, rebaseado sobre origin/main sin perder nada — el fix de desvíos `cfc60ec` intacto). `tsc` + eslint + `next build` verdes, **E2E navegador OK** (ver abajo). Fase 2 (Walter) sin empezar.
 - **Migración (aplicada en prod, no en la rama):** `story_1051_revisiones_fondo` — tabla `revisiones_fondo` (`propiedad_id`, `especialidad_id`, `resultado` CHECK descartada|gestion_iniciada, `gestion_fondo_id` FK, `actor_id`, `atendida_en`) + RLS (SELECT/INSERT para los tres roles de gestión vía `rol_actual()`; INSERT exige `actor_id = auth.uid()`; append-only, sin UPDATE/DELETE) + índice `(propiedad_id, especialidad_id, atendida_en desc)`. **Ojo: descartar la rama NO borra la tabla** — revertir = `drop table revisiones_fondo`.
 - **Archivos (Fase 1):**
   - `codigo/features/patrones-fondo/patrones.ts` **(nuevo)** — módulo puro: `armarPatrones(obras, revisiones, {minReiteraciones, ventanaAnios}, ahora)`. Detección (≥N por rubro), orden peor-arriba (cantidad → span → recencia, sin fórmula con constantes ocultas), y el ciclo de vida "no leído" (oculta atendidas; reaparece con obra nueva; skip de fondo cancelada; motivo de reaparición incl. "no aguantó"). Reusa `estadoObra` del historial.
@@ -118,4 +118,4 @@ Fasable por fases (la #1 entrega valor sola — "la torta sin la frutilla"):
   - **Descartar:** "No están relacionadas" en Av. General Paz 356 6°B · Plomería → `revisiones_fondo(descartada)` + sale de la bandeja.
   - **Reaparecer (feedback loop):** insertada una obra nueva de plomería en General Paz posterior al descarte → reaparece con badge **"Volvió"** + motivo "Descartada antes, pero entró una obra nueva de este rubro", cuenta 4→5.
   - **Cleanup:** las 2 gestiones de prueba (#259/#260) y todas las revisiones borradas → prod restaurado (max #258, revisiones=0, bandeja de vuelta en 22 con Belgrano).
-  - **Pendiente: commit + Fase 2 (Walter).**
+  - **Pendiente: Fase 2 (Walter).**
