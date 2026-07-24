@@ -58,7 +58,7 @@ Tres cómputos del desvío, misma fórmula STORY-937, mismo denominador nuevo:
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente de OK de Fausti)_. Sin migración de DB.
+- **Commit:** `c642806` (2026-07-23). Sin migración de DB.
 - **Archivos:**
   - `codigo/features/gestiones/desvio.ts` **(nuevo)** — helper único `sumaAmpliacionesAprobadas(ampliaciones)`: Σ `monto` de las de estado `aprobada`. La definición ÚNICA de "cuánta plata de ampliación se autorizó", consumida por los 3 call-sites. Módulo puro (sin `'use server'`) → importable desde server y client.
   - `codigo/features/gestiones/service.ts` (`estadisticasTecnicos`, scorecard picker/Walter) — embed `ampliaciones(monto, estado)` en el SELECT; `GFila` suma `ampliaciones`; denominador `matPresupuestados += monto_materiales + sumaAmpliacionesAprobadas(g.ampliaciones)`.
