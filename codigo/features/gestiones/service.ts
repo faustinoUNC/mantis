@@ -250,6 +250,10 @@ export async function crearGestion(datos: {
   // STORY-1001: gestión de la que surgió esta (trabajo adicional descubierto
   // en la inspección/ejecución). Opcional; el vínculo se fija acá y no se edita.
   gestion_origen_id?: string;
+  // STORY-1051: la gestión nace desde la bandeja "Para revisar de fondo" como
+  // la obra que ataca un problema crónico → se registra la revisión que saca
+  // ese patrón (propiedad+especialidad) de la bandeja.
+  es_patron_fondo?: boolean;
 }): Promise<ActionResult<{ gestionId: string }>> {
   const actual = await obtenerUsuarioActual();
   if (!actual) return { ok: false, error: "Sin sesión." };
@@ -317,6 +321,19 @@ export async function crearGestion(datos: {
     tipo: "creada",
     actor_id: actual.id,
   });
+
+  // STORY-1051: si nació desde la bandeja de patrones de fondo, la propiedad +
+  // especialidad quedan "atendidas" (salen de la bandeja hasta que entre una
+  // obra nueva de ese rubro). Ligada a esta gestión: si se cancela, reaparece.
+  if (datos.es_patron_fondo) {
+    await supabase.from("revisiones_fondo").insert({
+      propiedad_id: propiedadId,
+      especialidad_id: datos.especialidad_id,
+      resultado: "gestion_iniciada",
+      gestion_fondo_id: gestion.id,
+      actor_id: actual.id,
+    });
+  }
 
   await emailEstadoGestion(gestion.id, "reporte_recibido");
 

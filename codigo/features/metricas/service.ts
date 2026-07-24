@@ -3,6 +3,8 @@
 import { obtenerUsuarioActual } from "@/features/auth/service";
 import { ETAPAS_TERMINALES } from "@/features/gestiones/types";
 import { sumaAmpliacionesAprobadas } from "@/features/gestiones/desvio";
+import { listarRevisionesFondo } from "@/features/patrones-fondo/service";
+import type { RevisionFondo } from "@/features/patrones-fondo/patrones";
 import { createClient } from "@/shared/lib/supabase/server";
 
 // STORY-914 — El service entrega datos GRANULARES (una fila por gestión +
@@ -12,6 +14,7 @@ import { createClient } from "@/shared/lib/supabase/server";
 
 export interface FilaMetrica {
   id: string;
+  numero: number; // STORY-1051: identificador corto #N (citar antecedentes)
   descripcion: string; // STORY-917: para las listas accionables
   etapa: string;
   especialidad: string;
@@ -23,6 +26,10 @@ export interface FilaMetrica {
   gestorNombre: string | null;
   gestorRol: string | null; // STORY-1050: el reparto solo cuenta Gestores Comerciales
   propiedadId: string; // STORY-917: reincidencia por propiedad
+  // STORY-1051: id de la especialidad (además del nombre) — la bandeja de
+  // patrones de fondo agrupa por (propiedad, especialidad) y matchea las
+  // revisiones por FK, no por el nombre visible.
+  especialidadId: string | null;
   direccion: string | null;
   creadoEn: string;
   cobradoEn: string | null;
@@ -76,6 +83,9 @@ export interface Metricas {
   // STORY-966: abandonos por técnico (desasignaciones imputadas al técnico),
   // leídos de los eventos congelados — el tecnico_id de la gestión se pisa.
   abandonos: { tecnico: string; n: number }[];
+  // STORY-1051: revisiones de patrones de fondo, para derivar el ciclo de vida
+  // (ocultar/reaparecer) de la bandeja "Para revisar de fondo".
+  revisionesFondo: RevisionFondo[];
 }
 
 // STORY-1024: los eventos superaron el tope de 1000 filas por request de
@@ -105,11 +115,11 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
   if (!actual || actual.rol === "tecnico") return null;
 
   const supabase = await createClient();
-  const [{ data: gestiones }, eventos, { data: cobertura }, { data: usuariosTec }, { data: eventosAbandono }] = await Promise.all([
+  const [{ data: gestiones }, eventos, { data: cobertura }, { data: usuariosTec }, { data: eventosAbandono }, revisionesFondo] = await Promise.all([
     supabase
       .from("gestiones")
       .select(
-        "id, descripcion, etapa, urgencia, pagador, tecnico_id, gestor_id, propiedad_id, costo_final, cargo_admin, cargo_cancelacion, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), ampliaciones(monto, estado), calificaciones(estrellas)"
+        "id, numero, descripcion, etapa, urgencia, pagador, tecnico_id, gestor_id, propiedad_id, especialidad_id, costo_final, cargo_admin, cargo_cancelacion, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), ampliaciones(monto, estado), calificaciones(estrellas)"
       ),
     todosLosEventos(supabase),
     // STORY-954: capacidad = técnicos aprobados y activos por especialidad.
@@ -126,10 +136,13 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       .eq("tipo", "transicion")
       .eq("a_etapa", "asignacion")
       .eq("detalle->>imputado", "tecnico"),
+    // STORY-1051: revisiones de patrones de fondo (RLS scopea por rol).
+    listarRevisionesFondo(),
   ]);
 
   type G = {
     id: string;
+    numero: number;
     descripcion: string;
     etapa: string;
     urgencia: string;
@@ -137,6 +150,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     tecnico_id: string | null;
     gestor_id: string | null;
     propiedad_id: string;
+    especialidad_id: string | null;
     costo_final: number | null;
     cargo_admin: number | null;
     cargo_cancelacion: number | null;
@@ -168,6 +182,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     const calif = Array.isArray(g.calificaciones) ? g.calificaciones[0] : g.calificaciones;
     return {
       id: g.id,
+      numero: g.numero,
       descripcion: g.descripcion,
       etapa: g.etapa,
       especialidad: g.especialidades?.nombre ?? "Otros",
@@ -178,6 +193,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       gestorNombre: g.gestor?.nombre ?? null,
       gestorRol: g.gestor?.rol ?? null,
       propiedadId: g.propiedad_id,
+      especialidadId: g.especialidad_id,
       direccion: g.propiedades?.direccion ?? null,
       creadoEn: g.creado_en,
       cobradoEn: g.cobrado_en,
@@ -272,5 +288,6 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     especialidades,
     capacidad,
     abandonos,
+    revisionesFondo,
   };
 }

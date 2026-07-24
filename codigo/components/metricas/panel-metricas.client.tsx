@@ -17,6 +17,8 @@ import {
 } from "recharts";
 import { Card } from "@/components/ui/card";
 import { RefrescoVivo } from "@/components/refresco-vivo.client";
+import { BandejaFondo } from "@/components/metricas/bandeja-fondo.client";
+import type { ObraParaPatron } from "@/features/patrones-fondo/patrones";
 import type { Metricas } from "@/features/metricas/service";
 import { ETAPAS_TERMINALES } from "@/features/gestiones/types";
 import { ejecucionParaPlazoDias, ultimaEjecucionDias } from "@/features/gestiones/ejecucion";
@@ -324,6 +326,25 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
     [filasEsp, desde]
   );
   const idsPeriodo = useMemo(() => new Set(filas.map((f) => f.id)), [filas]);
+
+  // STORY-1051: obras para la bandeja de patrones de fondo. Sobre TODAS las
+  // filas (no las del período): la bandeja tiene su propia ventana en años.
+  const obrasFondo = useMemo<ObraParaPatron[]>(
+    () =>
+      filasEsp.map((f) => ({
+        id: f.id,
+        numero: f.numero,
+        propiedadId: f.propiedadId,
+        especialidadId: f.especialidadId,
+        especialidad: f.especialidad,
+        direccion: f.direccion,
+        descripcion: f.descripcion,
+        etapa: f.etapa,
+        cargoCancelacion: f.cargoCancelacion,
+        creadoEn: f.creadoEn,
+      })),
+    [filasEsp]
+  );
 
   // ── Última transición por gestión (base de estancadas/cobranza) ──
   const ultimaTransicion = useMemo(() => {
@@ -761,6 +782,15 @@ export function PanelMetricas({ metricas }: { metricas: Metricas }) {
           </div>
         </MetricCard>
       </Bloque>
+
+      {/* ══ 1a. Para revisar de fondo (STORY-1051) — propiedades con un rubro
+          repetido. Detección tonta sobre las mismas filas; Walter (análisis)
+          llega en la Fase 2. Se auto-oculta si no hay ningún rubro repetido. ══ */}
+      <BandejaFondo
+        obras={obrasFondo}
+        revisiones={metricas.revisionesFondo}
+        puedeIniciar={metricas.rol === "administrador" || metricas.rol === "gestor_mantenimiento"}
+      />
 
       {/* ══ 1b. Reparto del trabajo — SOLO admin (STORY-1050). El Gestor
           Comercial se vería a sí mismo (RLS) y el Financiero no conduce el

@@ -179,17 +179,25 @@ function FormNueva({
   propiedades,
   especialidades,
   vinculables,
+  prefill,
   onListo,
 }: {
   propiedades: { id: string; direccion: string }[];
   especialidades: Especialidad[];
   // STORY-1001: gestiones en curso que pueden ser origen de esta
   vinculables: { id: string; label: string; propiedad_id: string; direccion: string }[];
+  // STORY-1051: pre-carga desde la bandeja de patrones de fondo
+  prefill?: {
+    propiedadId: string;
+    especialidadId: string;
+    descripcion: string;
+    esFondo: boolean;
+  };
   onListo: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const [propiedadId, setPropiedadId] = useState("");
+  const [propiedadId, setPropiedadId] = useState(prefill?.propiedadId ?? "");
   const [origenId, setOrigenId] = useState("");
 
   // STORY-1001: con origen elegido, la propiedad es la del origen (la
@@ -213,6 +221,9 @@ function FormNueva({
       especialidad_id: String(form.get("especialidad_id")),
       urgencia: String(form.get("urgencia")) as Urgencia,
       gestion_origen_id: origenId || undefined,
+      // STORY-1051: sin origen (la fondo no "surge" de una gestión viva) y con
+      // el flag, marca el patrón como atendido al crearse.
+      es_patron_fondo: prefill?.esFondo && !origenId ? true : undefined,
     });
     setEnviando(false);
     if (!r.ok) return setError(r.error);
@@ -223,7 +234,7 @@ function FormNueva({
     <Card className="animate-aparecer p-5 mb-5">
       <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="sm:col-span-2 lg:col-span-3">
-          <Input label="Descripción" name="descripcion" required placeholder="Qué hay que arreglar y dónde (ambiente)" />
+          <Input label="Descripción" name="descripcion" required placeholder="Qué hay que arreglar y dónde (ambiente)" defaultValue={prefill?.descripcion} />
         </div>
         {/* STORY-1001 (card #19): trabajo adicional descubierto en la
             inspección/ejecución — la gestión nueva puede nacer vinculada a la
@@ -247,7 +258,7 @@ function FormNueva({
             placeholder="Buscar por dirección…"
           />
         )}
-        <Select label="Especialidad" name="especialidad_id" required>
+        <Select label="Especialidad" name="especialidad_id" required defaultValue={prefill?.especialidadId || ""}>
           {especialidades.map((e) => (
             <option key={e.id} value={e.id}>
               {e.nombre}
@@ -282,18 +293,31 @@ const CAMPOS_BUSQUEDA: CampoBusqueda<GestionResumen>[] = [
   { id: "tecnico", label: "Técnico", de: (g) => [g.tecnico_nombre] },
 ];
 
+// STORY-1051: pre-carga de Nueva Gestión desde la bandeja de patrones de fondo.
+type PrefillFondo = {
+  propiedadId: string;
+  especialidadId: string;
+  descripcion: string;
+  esFondo: boolean;
+};
+
 export function Tablero({
   gestiones,
   rol,
   propiedades,
   especialidades,
+  prefill,
 }: {
   gestiones: GestionResumen[];
   rol: Rol;
   propiedades: { id: string; direccion: string }[];
   especialidades: Especialidad[];
+  prefill?: PrefillFondo;
 }) {
-  const [creando, setCreando] = useState(false);
+  // STORY-1051: si viene pre-cargada desde la bandeja, el form abre solo.
+  const [creando, setCreando] = useState(
+    () => !!prefill && (rol === "administrador" || rol === "gestor_mantenimiento")
+  );
   const [consulta, setConsulta] = useState("");
   const [campo, setCampo] = useState("todo");
   const [gestor, setGestor] = useState("");
@@ -382,6 +406,7 @@ export function Tablero({
           propiedades={propiedades}
           especialidades={especialidades}
           vinculables={vinculables}
+          prefill={prefill}
           onListo={() => setCreando(false)}
         />
       )}
