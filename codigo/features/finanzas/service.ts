@@ -1263,10 +1263,11 @@ export async function registrarLiquidacion(
 ): Promise<ActionResult> {
   const actual = await exigirAdministrativo();
   if (!actual) return { ok: false, error: "No tenés permiso." };
+  // STORY-977 v1.4: el medio se valida MÁS ABAJO, recién cuando ya sabemos si
+  // hay plata a entregar (montoPagado > 0). Si la liquidación cierra en $0
+  // (adelanto que cubrió todo, sobrante, o todo descontado a deudas), no hay
+  // pago y no se pide medio.
   const medio = String(formData.get("medio")) as MedioLiquidacion;
-  if (!MEDIOS_LIQUIDACION.includes(medio)) {
-    return { ok: false, error: "Indicá el método de pago." };
-  }
 
   // STORY-986: comprobante de pago real, opcional. Se valida y sube ANTES de
   // registrar la liquidación — si el archivo es inválido no se liquida a medias.
@@ -1373,11 +1374,18 @@ export async function registrarLiquidacion(
   const totalDescontado = descuentos.reduce((s, d) => s + d.monto, 0);
   const montoPagado = monto - totalDescontado;
 
+  // STORY-977 v1.4: el medio solo se exige y se guarda si hay plata a entregar.
+  // Con montoPagado <= 0 la liquidación cierra la cuenta sin pago (adelanto que
+  // cubrió todo, sobrante, o todo descontado a deudas) → liq_medio null.
+  if (montoPagado > 0 && !MEDIOS_LIQUIDACION.includes(medio)) {
+    return { ok: false, error: "Indicá el método de pago." };
+  }
+
   const { error } = await supabase
     .from("gestiones")
     .update({
       liq_monto: montoPagado,
-      liq_medio: medio,
+      liq_medio: montoPagado > 0 ? medio : null,
       liq_pagada_en: new Date().toISOString(),
       liq_comprobante_path: comprobantePath,
     })
@@ -1413,7 +1421,10 @@ export async function registrarLiquidacion(
   // descontadas de acá (así la re-descarga también las muestra).
   await registrarEvento(gestionId, "liquidacion_registrada", actual.id, {
     monto: montoPagado,
-    medio,
+    // STORY-977 v1.4: sin pago (montoPagado <= 0) no hay medio — se omite del
+    // evento para que Actividad no muestre "Medio: null" (formData sin el campo
+    // devuelve el string "null" al castear).
+    ...(montoPagado > 0 ? { medio } : {}),
     ...(sobrante > 0 ? { sobrante } : {}),
     ...(comprobantePath ? { comprobante: true } : {}),
     ...(descuentos.length > 0

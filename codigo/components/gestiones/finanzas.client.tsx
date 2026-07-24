@@ -897,17 +897,29 @@ export function FinanzasAcciones({
             correr("liq", () => registrarLiquidacion(gestion.id, formData));
           }}
         >
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-44">
-              <Select label="Método de pago" name="medio" defaultValue="transferencia">
-                {MEDIOS_LIQUIDACION.map((m) => (
-                  <option key={m} value={m}>
-                    {MEDIO_LIQUIDACION_LABEL[m]}
-                  </option>
-                ))}
-              </Select>
+          {/* STORY-977 v1.4: si no hay plata a entregar (adelanto que cubrió
+              todo, sobrante o todo descontado a deudas) no se pide medio de
+              pago — la liquidación solo cierra la cuenta. */}
+          {aPagar > 0 ? (
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-44">
+                <Select label="Método de pago" name="medio" defaultValue="transferencia">
+                  {MEDIOS_LIQUIDACION.map((m) => (
+                    <option key={m} value={m}>
+                      {MEDIO_LIQUIDACION_LABEL[m]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
-          </div>
+          ) : (
+            sobrante <= 0 &&
+            totalDescontado <= 0 && (
+              <p className="max-w-md text-sm text-muted">
+                El adelanto cubrió la liquidación. No hay pago que registrar.
+              </p>
+            )
+          )}
           {/* STORY-986: comprobante de pago real, opcional. Si se sube, se suma
               al email del técnico junto al detalle de la liquidación. */}
           <div className="max-w-md">
@@ -923,7 +935,11 @@ export function FinanzasAcciones({
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" disabled={cargando !== null}>
-              {cargando === "liq" ? "Registrando…" : "Liquidar y finalizar →"}
+              {cargando === "liq"
+                ? "Registrando…"
+                : aPagar > 0
+                  ? "Liquidar y finalizar →"
+                  : "Cerrar liquidación"}
             </Button>
             {error && <p className="text-sm font-medium text-error w-full">{error}</p>}
           </div>
