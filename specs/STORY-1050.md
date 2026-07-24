@@ -78,5 +78,11 @@ Todo lo demás abierto (`asignacion`, `presupuesto`, `en_ejecucion`) cuenta como
 
 ## Dev Agent Record
 
-- **Commit:** _(pendiente)_
-- **Verificación:** _(pendiente)_
+- **Commit:** `9347411` (2026-07-24). Sin migración, sin cambios en el service. `tsc --noEmit`, `eslint` y `next build` verdes (Compiled successfully).
+- **Verificación E2E** (navegador Playwright, dev local :3000, data real, 2026-07-24):
+  - **Admin** → Informes: aparece "Reparto por gestor" con **9 gestores** (Ramiro Zarate, Giuliano Vigetti, GestorComercial Uno, Admin, etc.), barras horizontales apiladas ordenadas por carga total, esmeralda "espera su decisión" + gris "en curso", tooltip con desglose, badge "ahora". ✅
+  - **Gestor Comercial** (`ausitesis+gestorcomercialuno`) → Informes: la card **NO aparece** (0 coincidencias de "Reparto"/"Espera su decisión"), pero sí ve el resto de sus Informes (estancadas presente). ✅ Gate `rol === "administrador"` demostrado.
+  - "Gestiones estancadas" intacta (no se pisa). ✅
+- **Archivos:**
+  - `components/metricas/panel-metricas.client.tsx`: `useMemo` `reparto` (agrupa por gestor, `deSuLado` = ingresado ∨ conformidad-subida-sin-aprobar); nuevo `<Bloque>` "Reparto del trabajo" gateado a admin entre "Para resolver hoy" y "Orden por valor"; barra recharts apilada (BRAND + `NEUTRO_CARGA` #d4d4d8) con leyenda y tooltip; se amplió el tipo de `render` de `TooltipCaja` para exponer `payload`.
+  - `specs/STORY-1050.md` (esta), `specs/README.md` (índice).
