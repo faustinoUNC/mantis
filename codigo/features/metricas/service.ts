@@ -21,6 +21,7 @@ export interface FilaMetrica {
   // STORY-1026: dimensión gestor para los cruces dinámicos de Walter.
   gestorId: string | null;
   gestorNombre: string | null;
+  gestorRol: string | null; // STORY-1050: el reparto solo cuenta Gestores Comerciales
   propiedadId: string; // STORY-917: reincidencia por propiedad
   direccion: string | null;
   creadoEn: string;
@@ -108,7 +109,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     supabase
       .from("gestiones")
       .select(
-        "id, descripcion, etapa, urgencia, pagador, tecnico_id, gestor_id, propiedad_id, costo_final, cargo_admin, cargo_cancelacion, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), ampliaciones(monto, estado), calificaciones(estrellas)"
+        "id, descripcion, etapa, urgencia, pagador, tecnico_id, gestor_id, propiedad_id, costo_final, cargo_admin, cargo_cancelacion, materiales_total, cobrado_monto, cobrado_fee, cobrado_en, creado_en, asignacion_aceptada, propiedades(direccion), especialidades(nombre), tecnico:tecnicos!gestiones_tecnico_id_fkey(nombre), gestor:usuarios!gestiones_gestor_id_fkey(nombre, rol), presupuestos(estado, monto_materiales, monto_mano_obra, plazo_dias), conformidades(estado), ampliaciones(monto, estado), calificaciones(estrellas)"
       ),
     todosLosEventos(supabase),
     // STORY-954: capacidad = técnicos aprobados y activos por especialidad.
@@ -148,7 +149,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
     propiedades: { direccion: string } | null;
     especialidades: { nombre: string } | null;
     tecnico: { nombre: string } | null;
-    gestor: { nombre: string } | null;
+    gestor: { nombre: string; rol: string } | null;
     presupuestos: { estado: string; monto_materiales: number; monto_mano_obra: number; plazo_dias: number | null }[] | null;
     conformidades: { estado: string }[] | null;
     ampliaciones: { monto: number; estado: string }[] | null; // STORY-1049
@@ -175,6 +176,7 @@ export async function obtenerMetricas(): Promise<Metricas | null> {
       tecnicoNombre: g.tecnico?.nombre ?? null,
       gestorId: g.gestor_id,
       gestorNombre: g.gestor?.nombre ?? null,
+      gestorRol: g.gestor?.rol ?? null,
       propiedadId: g.propiedad_id,
       direccion: g.propiedades?.direccion ?? null,
       creadoEn: g.creado_en,
